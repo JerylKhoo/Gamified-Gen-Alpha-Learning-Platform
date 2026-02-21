@@ -7,7 +7,7 @@ export default function LandingPage({ onLogin, onSignup }) {
     <>
       <Navbar onLogin={onLogin} onSignup={onSignup} />
       <main>
-        <Hero />
+        <Hero onSignup={onSignup} />
       </main>
       <Footer />
     </>

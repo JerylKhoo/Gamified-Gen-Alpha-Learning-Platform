@@ -1,7 +1,7 @@
 import '../../styles/Hero.css';
 import heroBg from '../../assets/astronauts.mp4';
 
-export default function Hero() {
+export default function Hero({ onSignup }) {
   return (
     <section className="hero">
       {/* Background video */}
@@ -29,7 +29,7 @@ export default function Hero() {
             Explore. Discover. Grow. Master the slangs, memes, and lingo
             that define the internet's next generation.
           </p>
-          <a href="#start" className="hero-btn">Start Now →</a>
+          <a className="hero-btn" onClick={onSignup} style={{ cursor: 'pointer' }}>Start Now →</a>
         </div>
 
       </div>
