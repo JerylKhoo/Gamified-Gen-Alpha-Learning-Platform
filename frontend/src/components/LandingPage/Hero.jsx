@@ -23,7 +23,7 @@ export default function Hero() {
         <div className="hero-content">
           <span className="hero-eyebrow">✦ The Next-Gen Language Platform</span>
           <h1 className="hero-title">
-            Speak <span className="hero-accent">Gen Alpha</span>,<br />No Cap.
+            Smart <span className="hero-accent">Adaptive</span> Learning.<br /> Gen Alpha Slang.
           </h1>
           <p className="hero-desc">
             Explore. Discover. Grow. Master the slangs, memes, and lingo
