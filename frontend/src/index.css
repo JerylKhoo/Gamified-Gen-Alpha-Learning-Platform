@@ -38,3 +38,26 @@ html, body {
 a {
   text-decoration: none;
 }
+
+/* Themed scrollbar for in-card scrollable lists */
+.styled-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(139, 92, 246, 0.4) transparent;
+}
+
+.styled-scroll::-webkit-scrollbar {
+  width: 4px;
+}
+
+.styled-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.styled-scroll::-webkit-scrollbar-thumb {
+  background: rgba(139, 92, 246, 0.4);
+  border-radius: 999px;
+}
+
+.styled-scroll::-webkit-scrollbar-thumb:hover {
+  background: rgba(139, 92, 246, 0.7);
+}
