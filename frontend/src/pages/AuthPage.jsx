@@ -2,7 +2,7 @@ import { useState } from 'react';
 import '../styles/AuthPage.css';
 import Navbar from '../components/LandingPage/Navbar';
 
-export default function AuthPage({ initialMode = 'signup', onBack }) {
+export default function AuthPage({ initialMode = 'signup', onBack, onLogin }) {
   const [isLogin, setIsLogin] = useState(initialMode === 'login');
 
   return (
@@ -78,7 +78,7 @@ export default function AuthPage({ initialMode = 'signup', onBack }) {
             </div>
           </div>
           <a href="#" className="auth-forgot">Forgot Password?</a>
-          <button className="auth-submit">Login</button>
+          <button className="auth-submit" onClick={onLogin}>Login</button>
           <p className="auth-social-label">or login with social platforms</p>
           <div className="auth-social-btns">
             <button className="social-btn">

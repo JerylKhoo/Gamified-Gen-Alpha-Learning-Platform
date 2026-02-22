@@ -1,0 +1,416 @@
+.home-page {
+  min-height: 100vh;
+  background: radial-gradient(ellipse at 20% 20%, #110d2e 0%, #050508 70%);
+  display: flex;
+  flex-direction: row;
+  align-items: stretch;
+}
+
+.home-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 1.75rem;
+  overflow: auto;
+  min-height: 0;
+}
+
+/* ── Bento Grid ── */
+.bento-grid {
+  height: 88vh;
+  display: grid;
+  grid-template-columns: auto auto;
+  grid-template-rows: auto 1fr;
+  gap: 1.1rem;
+  width: fit-content;
+  min-width: 70%;
+}
+
+/* ── Base Card ── */
+.bento-card {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(139, 92, 246, 0.18);
+  border-radius: 20px;
+  padding: 1.6rem;
+  backdrop-filter: blur(12px);
+  position: relative;
+  overflow: hidden;
+  transition: border-color 0.3s, box-shadow 0.3s;
+}
+
+.bento-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 20px;
+  background: radial-gradient(ellipse at top left, rgba(139, 92, 246, 0.06) 0%, transparent 65%);
+  pointer-events: none;
+}
+
+.bento-card:hover {
+  border-color: rgba(139, 92, 246, 0.35);
+  box-shadow: 0 0 32px rgba(139, 92, 246, 0.1);
+}
+
+.card-title {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #7c6ea8;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  margin: 0 0 1rem;
+}
+
+/* ── Profile Card ── */
+.profile-card {
+  grid-column: 1;
+  grid-row: 1;
+  display: flex;
+  align-items: center;
+  gap: 1.75rem;
+}
+
+.profile-avatar-wrap {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.avatar-ring {
+  width: 90px;
+  height: 90px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, rgba(139, 92, 246, 0.25), rgba(79, 70, 229, 0.15));
+  border: 2px solid rgba(167, 139, 250, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 0 24px rgba(139, 92, 246, 0.2);
+}
+
+.avatar-level {
+  position: absolute;
+  bottom: -4px;
+  right: -4px;
+  background: linear-gradient(135deg, #7c3aed, #4f46e5);
+  color: #fff;
+  font-size: 0.65rem;
+  font-weight: 800;
+  padding: 2px 7px;
+  border-radius: 20px;
+  border: 1.5px solid #0d0b1e;
+}
+
+.profile-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.profile-greeting {
+  font-size: 0.78rem;
+  color: #7c6ea8;
+  margin: 0;
+}
+
+.profile-name {
+  font-size: 1.7rem;
+  font-weight: 800;
+  color: #f0eeff;
+  margin: 0;
+  letter-spacing: -0.5px;
+}
+
+.profile-stats {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  flex-shrink: 0;
+}
+
+.badge-streak {
+  background: rgba(251, 146, 60, 0.12);
+  color: #fb923c;
+  border: 1px solid rgba(251, 146, 60, 0.25);
+}
+
+.badge {
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 0.3rem 0.75rem;
+  border-radius: 20px;
+}
+
+.badge-xp {
+  background: rgba(251, 146, 60, 0.15);
+  color: #fbbf24;
+  border: 1px solid rgba(251, 191, 36, 0.25);
+}
+
+.badge-rank {
+  background: rgba(139, 92, 246, 0.15);
+  color: #a78bfa;
+  border: 1px solid rgba(139, 92, 246, 0.3);
+}
+
+.btn-stats {
+  margin-top: 0.25rem;
+  align-self: flex-start;
+  padding: 0.45rem 1.1rem;
+  background: rgba(139, 92, 246, 0.15);
+  color: #a78bfa;
+  border: 1px solid rgba(139, 92, 246, 0.3);
+  border-radius: 10px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s, box-shadow 0.2s;
+}
+
+.btn-stats:hover {
+  background: rgba(139, 92, 246, 0.28);
+  color: #ede9fe;
+  box-shadow: 0 0 14px rgba(139, 92, 246, 0.25);
+}
+
+/* ── Daily Goals Card ── */
+.daily-card {
+  grid-column: 2;
+  grid-row: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.daily-header {
+  margin-bottom: 1rem;
+}
+
+.daily-badge {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #fb923c;
+  background: rgba(251, 146, 60, 0.12);
+  border: 1px solid rgba(251, 146, 60, 0.25);
+  padding: 0.25rem 0.65rem;
+  border-radius: 20px;
+}
+
+.daily-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.daily-item {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  padding: 0.65rem 0.9rem;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(139, 92, 246, 0.12);
+  border-radius: 10px;
+  font-size: 0.85rem;
+  color: #9d93c4;
+  font-weight: 500;
+  transition: border-color 0.2s;
+}
+
+.daily-item.done {
+  color: #6b6490;
+  text-decoration: line-through;
+  border-color: rgba(139, 92, 246, 0.06);
+}
+
+.daily-item.done .daily-check {
+  background: rgba(139, 92, 246, 0.25);
+  border-color: rgba(139, 92, 246, 0.4);
+  color: #a78bfa;
+}
+
+.daily-check {
+  width: 20px;
+  height: 20px;
+  border-radius: 6px;
+  border: 1.5px solid rgba(139, 92, 246, 0.25);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.65rem;
+  flex-shrink: 0;
+  color: transparent;
+}
+
+/* ── Activity Card ── */
+.activity-card {
+  grid-column: 1 / -1;
+  grid-row: 2;
+  display: grid;
+  grid-template-columns: 1.35fr 1fr;
+  gap: 1.1rem;
+  align-items: stretch;
+}
+
+.activity-left {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  min-width: 0;
+}
+
+.activity-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.activity-range {
+  font-size: 0.72rem;
+  color: #5a5278;
+  font-weight: 600;
+}
+
+.chart-wrap {
+  flex: 1;
+  min-height: 120px;
+}
+
+.chart-svg {
+  width: 100%;
+  height: 100%;
+}
+
+.streak-row {
+  display: flex;
+  gap: 0.6rem;
+}
+
+.streak-day {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.streak-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: rgba(139, 92, 246, 0.15);
+  border: 1.5px solid rgba(139, 92, 246, 0.2);
+  transition: background 0.2s;
+}
+
+.streak-dot.active {
+  background: #8b5cf6;
+  border-color: #a78bfa;
+  box-shadow: 0 0 8px rgba(139, 92, 246, 0.5);
+}
+
+.streak-label {
+  font-size: 0.65rem;
+  color: #5a5278;
+  font-weight: 600;
+}
+
+.activity-right {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 1.1rem;
+  border-left: 1px solid rgba(139, 92, 246, 0.15);
+  padding-left: 1.1rem;
+}
+
+/* Course Stripe Pill */
+.course-pill {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.course-pill-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #7c6ea8;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+.course-stripe-wrap {
+  position: relative;
+  height: 44px;
+  border-radius: 22px;
+  background: rgba(139, 92, 246, 0.1);
+  border: 1px solid rgba(139, 92, 246, 0.25);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.course-stripe {
+  position: absolute;
+  top: -10px;
+  width: 2px;
+  height: 64px;
+  background: rgba(139, 92, 246, 0.18);
+  transform: rotate(30deg);
+}
+
+.course-stripe:nth-child(1) { left: 15%; }
+.course-stripe:nth-child(2) { left: 28%; }
+.course-stripe:nth-child(3) { left: 41%; }
+.course-stripe:nth-child(4) { left: 54%; }
+.course-stripe:nth-child(5) { left: 67%; }
+.course-stripe:nth-child(6) { left: 80%; }
+
+.course-name {
+  position: relative;
+  z-index: 1;
+  font-size: 1.05rem;
+  font-weight: 900;
+  color: #c4b5fd;
+  letter-spacing: 0.15em;
+}
+
+.course-meta {
+  display: flex;
+  gap: 0.75rem;
+}
+
+.course-meta-item {
+  font-size: 0.78rem;
+  color: #6b6490;
+  font-weight: 600;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(139, 92, 246, 0.1);
+  padding: 0.3rem 0.7rem;
+  border-radius: 8px;
+}
+
+.btn-lockin {
+  padding: 0.75rem 1.5rem;
+  background: linear-gradient(135deg, #7c3aed, #4f46e5);
+  color: #fff;
+  border: none;
+  border-radius: 12px;
+  font-size: 0.9rem;
+  font-weight: 800;
+  cursor: pointer;
+  letter-spacing: 0.03em;
+  box-shadow: 0 4px 20px rgba(124, 58, 237, 0.35);
+  transition: transform 0.15s, box-shadow 0.2s;
+}
+
+.btn-lockin:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 28px rgba(124, 58, 237, 0.5);
+}
+
+.btn-lockin:active {
+  transform: translateY(0);
+}
