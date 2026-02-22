@@ -196,7 +196,7 @@
   background: linear-gradient(145deg, #6d28d9 0%, #8b5cf6 100%);
   z-index: 10;
   overflow: hidden;
-  transition: transform 0.65s cubic-bezier(0.77, 0, 0.175, 1);
+  transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .is-login .auth-overlay {
