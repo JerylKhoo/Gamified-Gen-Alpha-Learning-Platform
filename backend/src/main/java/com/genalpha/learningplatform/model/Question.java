@@ -30,6 +30,9 @@ public class Question {
 
     private String explanation;
 
+    @Column(nullable = false)
+    private Integer score = 1;
+
     public UUID getQuestionId() { return questionId; }
     public void setQuestionId(UUID questionId) { this.questionId = questionId; }
     public String getLessonId() { return lessonId; }
@@ -42,4 +45,6 @@ public class Question {
     public void setAnswer(String answer) { this.answer = answer; }
     public String getExplanation() { return explanation; }
     public void setExplanation(String explanation) { this.explanation = explanation; }
+    public Integer getScore() { return score; }
+    public void setScore(Integer score) { this.score = score; }
 }

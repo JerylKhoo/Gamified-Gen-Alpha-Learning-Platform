@@ -47,6 +47,7 @@ public class QuestionService {
         if (updates.getOptions() != null) question.setOptions(updates.getOptions());
         if (updates.getAnswer() != null) question.setAnswer(updates.getAnswer());
         if (updates.getExplanation() != null) question.setExplanation(updates.getExplanation());
+        if (updates.getScore() != null) question.setScore(updates.getScore());
         return questionRepository.save(question);
     }
 

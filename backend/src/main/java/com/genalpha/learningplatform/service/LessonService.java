@@ -42,7 +42,6 @@ public class LessonService {
         requireAdmin(requesterId);
         Lesson lesson = getById(lessonId);
         if (updates.getCategory() != null) lesson.setCategory(updates.getCategory());
-        if (updates.getName() != null) lesson.setName(updates.getName());
         return lessonRepository.save(lesson);
     }
 
