@@ -1,14 +1,17 @@
 import { useState, useRef, useEffect } from 'react';
+import { NavLink, useNavigate } from 'react-router-dom';
 
 const navItems = [
   {
     label: 'Home',
+    to: '/home',
     icon: (
       <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"><path fill="currentColor" d="M20.25 10a1.25 1.25 0 1 0-2.5 0zm-14 0a1.25 1.25 0 1 0-2.5 0zm13.866 2.884a1.25 1.25 0 0 0 1.768-1.768zM12 3l.884-.884a1.25 1.25 0 0 0-1.768 0zm-9.884 8.116a1.25 1.25 0 0 0 1.768 1.768zM7 22.25h10v-2.5H7zM20.25 19v-9h-2.5v9zm-14 0v-9h-2.5v9zm15.634-7.884l-9-9l-1.768 1.768l9 9zm-10.768-9l-9 9l1.768 1.768l9-9zM17 22.25A3.25 3.25 0 0 0 20.25 19h-2.5a.75.75 0 0 1-.75.75zm-10-2.5a.75.75 0 0 1-.75-.75h-2.5A3.25 3.25 0 0 0 7 22.25z"/></svg>
     ),
   },
   {
     label: 'Learn',
+    to: '/home/learn',
     icon: (
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>
@@ -17,6 +20,7 @@ const navItems = [
   },
   {
     label: 'Community',
+    to: '/home/community',
     icon: (
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
@@ -25,6 +29,7 @@ const navItems = [
   },
   {
     label: 'Dashboard',
+    to: '/home/dashboard',
     icon: (
       <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="13" width="6" height="9" rx="1"/><rect x="9" y="1" width="6" height="21" rx="1"/><rect x="17" y="9" width="6" height="13" rx="1"/></svg>
     ),
@@ -37,10 +42,11 @@ const ToggleIcon = () => (
   </svg>
 );
 
-export default function Sidebar({ activePage, onNavigate, onLogout }) {
+export default function Sidebar() {
   const [collapsed, setCollapsed] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const profileRef = useRef(null);
+  const navigate = useNavigate();
 
   useEffect(() => {
     function handleClickOutside(e) {
@@ -53,7 +59,7 @@ export default function Sidebar({ activePage, onNavigate, onLogout }) {
   }, []);
 
   const itemCls = (active) =>
-    `flex items-center gap-3 py-[0.7rem] rounded-[10px] border-none bg-transparent text-[0.95rem] font-semibold cursor-pointer transition-all w-full text-left ${
+    `flex items-center gap-3 py-[0.7rem] rounded-[10px] no-underline text-[0.95rem] font-semibold cursor-pointer transition-all w-full ${
       collapsed ? 'justify-center px-0' : 'px-3'
     } ${
       active
@@ -84,16 +90,17 @@ export default function Sidebar({ activePage, onNavigate, onLogout }) {
 
       {/* Nav */}
       <nav className="flex flex-col gap-1">
-        {navItems.map(({ label, icon }) => (
-          <button
+        {navItems.map(({ label, icon, to }) => (
+          <NavLink
             key={label}
-            className={itemCls(activePage === label)}
-            onClick={() => onNavigate?.(label)}
+            to={to}
+            end={to === '/home'}
+            className={({ isActive }) => itemCls(isActive)}
             title={collapsed ? label : undefined}
           >
             <span className="flex items-center flex-shrink-0">{icon}</span>
             {!collapsed && <span className="max-sm:hidden">{label}</span>}
-          </button>
+          </NavLink>
         ))}
       </nav>
 
@@ -103,14 +110,14 @@ export default function Sidebar({ activePage, onNavigate, onLogout }) {
           <div className="absolute bottom-[calc(100%+8px)] left-0 right-0 bg-[rgba(22,18,48,0.98)] border border-[rgba(139,92,246,0.25)] rounded-[10px] overflow-hidden shadow-[0_-4px_20px_rgba(0,0,0,0.4)]">
             <button
               className="flex items-center gap-[0.6rem] w-full px-4 py-[0.7rem] border-none bg-transparent text-[#c0b8e8] text-[0.9rem] font-medium cursor-pointer transition-all text-left hover:bg-[rgba(139,92,246,0.12)] hover:text-[#f0eeff]"
-              onClick={() => { onNavigate?.('Profile'); setProfileOpen(false); }}
+              onClick={() => { navigate('/home/profile'); setProfileOpen(false); }}
             >
               <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"><path fill="currentColor" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10s10-4.48 10-10S17.52 2 12 2m0 4c1.93 0 3.5 1.57 3.5 3.5S13.93 13 12 13s-3.5-1.57-3.5-3.5S10.07 6 12 6m0 14c-2.03 0-4.43-.82-6.14-2.88a9.95 9.95 0 0 1 12.28 0C16.43 19.18 14.03 20 12 20"/></svg>
               View Profile
             </button>
             <button
               className="flex items-center gap-[0.6rem] w-full px-4 py-[0.7rem] border-t border-[rgba(139,92,246,0.15)] bg-transparent text-[#e57373] text-[0.9rem] font-medium cursor-pointer transition-all text-left hover:bg-[rgba(229,115,115,0.1)] hover:text-[#ef9a9a]"
-              onClick={() => { onLogout?.(); setProfileOpen(false); }}
+              onClick={() => { navigate('/'); setProfileOpen(false); }}
             >
               <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"><path fill="currentColor" d="M5 21q-.825 0-1.412-.587T3 19V5q0-.825.588-1.412T5 3h7v2H5v14h7v2zm11-4l-1.375-1.45l2.55-2.55H9v-2h8.175l-2.55-2.55L16 7l5 5z"/></svg>
               Log Out
