@@ -4,6 +4,7 @@ import AuthPage from './pages/AuthPage';
 import HomeLayout from './pages/HomeLayout';
 import HomePage from './pages/HomePage';
 import LearnPage from './components/HomePage/LearnPage';
+import CommunityPage from './components/HomePage/CommunityPage';
 
 function ComingSoon({ label }) {
   return (
@@ -23,7 +24,7 @@ export default function App() {
         <Route path="/home" element={<HomeLayout />}>
           <Route index element={<HomePage />} />
           <Route path="learn" element={<LearnPage />} />
-          <Route path="community" element={<ComingSoon label="Community" />} />
+          <Route path="community" element={<CommunityPage />} />
           <Route path="dashboard" element={<ComingSoon label="Dashboard" />} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
