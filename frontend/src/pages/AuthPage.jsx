@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import Navbar from '../components/LandingPage/Navbar';
 
 const inputCls =
@@ -34,12 +35,18 @@ const GoogleIcon = () => (
   </svg>
 );
 
-export default function AuthPage({ initialMode = 'signup', onBack, onLogin }) {
-  const [isLogin, setIsLogin] = useState(initialMode === 'login');
+export default function AuthPage() {
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const [isLogin, setIsLogin] = useState(searchParams.get('mode') === 'login');
 
   return (
     <div className="min-h-screen bg-[radial-gradient(ellipse_at_center,#0d0b1e_0%,#050508_100%)] flex flex-col">
-      <Navbar onLogoClick={onBack} onLogin={() => setIsLogin(true)} onSignup={() => setIsLogin(false)} />
+      <Navbar
+        onLogoClick={() => navigate('/')}
+        onLogin={() => setIsLogin(true)}
+        onSignup={() => setIsLogin(false)}
+      />
 
       <div className="flex-1 flex items-center justify-center p-8 max-sm:p-4">
         {/* Auth card */}
@@ -87,7 +94,7 @@ export default function AuthPage({ initialMode = 'signup', onBack, onLogin }) {
             </div>
 
             <a href="#" className="self-end text-[0.82rem] text-[#8b5cf6] no-underline -mt-1 hover:underline">Forgot Password?</a>
-            <button className={submitBtnCls} onClick={onLogin}>Login</button>
+            <button className={submitBtnCls} onClick={() => navigate('/home')}>Login</button>
             <p className="text-[0.82rem] text-[#6060a0] m-0">or login with social platforms</p>
             <div className="w-full">
               <button className={googleBtnCls}><GoogleIcon /> Sign in with Google</button>
