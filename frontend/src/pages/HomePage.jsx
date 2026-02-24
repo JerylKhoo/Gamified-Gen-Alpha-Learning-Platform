@@ -1,3 +1,5 @@
+import characterImg from '../assets/trippiTroppi.png';
+
 const xpData = [20, 45, 30, 65, 50, 80, 60, 90, 72, 95, 68, 100];
 
 function ActivityChart() {
@@ -49,15 +51,6 @@ const cardTitleCls = "text-[0.8rem] font-bold text-[#7c6ea8] uppercase tracking-
 
 const stripePositions = [15, 28, 41, 54, 67, 80];
 
-const CHARACTER_ICON = (
-  <svg xmlns="http://www.w3.org/2000/svg" width="90" height="90" viewBox="0 0 32 32" fill="#c4b5fd">
-    <g fill="#c4b5fd">
-      <path d="M12.959 12.258h6.017a3.027 3.027 0 0 0-3.014-3.015a3.01 3.01 0 0 0-3.003 3.015m1.258-3.701a.534.534 0 0 1-.537-.537v-.745c0-.298.239-.537.537-.537s.537.239.537.537v.745a.534.534 0 0 1-.537.537m2.958-.537c0 .298.239.537.537.537a.534.534 0 0 0 .537-.537v-.745a.534.534 0 0 0-.537-.537a.535.535 0 0 0-.537.537z"/>
-      <path d="M24.244 9.711c-.336-3.657-4.12-7.356-8.155-7.356c-4.511 0-7.79 3.615-8.434 7.356c-.041.238-.146.729-.284 1.379l-.228 1.078C5.543 14 .653 20.796 2.579 22.723c.65.65 2.052.24 3.617-.604c.231.972.61 1.905 1.111 2.769a10.06 10.06 0 0 0-1.402 4.685a.933.933 0 0 0 .938.972h18.235a.933.933 0 0 0 .938-.972a10.06 10.06 0 0 0-1.387-4.66c.52-.88.912-1.83 1.145-2.81c1.578.854 2.993 1.273 3.647.62c1.978-1.978-3.232-9.09-4.685-10.691l-.044-.048c-.234-1.074-.415-1.915-.448-2.273M7.924 25.832c1.242 1.696 2.987 3.03 5.013 3.713h-6.03a9.1 9.1 0 0 1 1.018-3.713m11.068 3.713c2.022-.684 3.767-2.02 5.013-3.696a9.1 9.1 0 0 1 1.008 3.696zM21.45 14.14a7.9 7.9 0 0 1 2.618 5.876c0 4.408-3.626 7.982-8.1 7.982c-4.472 0-8.098-3.574-8.098-7.982a7.9 7.9 0 0 1 2.615-5.873c-.58-.922-.92-2.13-.92-3.677c0-3.102 3.073-5.921 5.163-5.921c.247 0 .35.287.465.608c.145.405.31.865.811.865c.49 0 .634-.44.763-.84c.108-.33.206-.633.485-.633c2.105 0 5.12 2.893 5.12 5.921c0 1.52-.333 2.736-.922 3.674"/>
-    </g>
-  </svg>
-);
-
 export default function HomePage() {
   return (
     <main className="flex flex-col items-center justify-center p-7 overflow-auto max-sm:p-4">
@@ -67,7 +60,7 @@ export default function HomePage() {
         <div className={`${cardCls} col-start-1 row-start-1 flex items-center gap-7`}>
           <div className="flex-shrink-0 flex flex-col items-center gap-2">
             <div className="relative">
-              {CHARACTER_ICON}
+              <img src={characterImg} alt="Character" className="w-[90px] h-[90px] object-contain drop-shadow-lg select-none" />
               <div className="absolute -bottom-1 -right-1 bg-gradient-to-br from-[#7c3aed] to-[#4f46e5] text-white text-[0.65rem] font-extrabold px-[7px] py-[2px] rounded-[20px] border-[1.5px] border-[#0d0b1e]">
                 Lv.9
               </div>
