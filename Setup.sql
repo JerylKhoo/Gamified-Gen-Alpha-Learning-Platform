@@ -86,8 +86,21 @@ CREATE TABLE PROGRESS (
     Adaptive_History JSONB DEFAULT '[]',
     Correct_Questions JSONB DEFAULT '[]',
     Wrong_Questions JSONB DEFAULT '[]',
+    Last_Updated TIMESTAMPTZ DEFAULT NOW(),
     UNIQUE (USER_ID, LESSON_ID)
 );
+
+CREATE OR REPLACE FUNCTION set_progress_last_updated()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.Last_Updated = NOW();
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trg_progress_last_updated
+BEFORE UPDATE ON PROGRESS
+FOR EACH ROW EXECUTE FUNCTION set_progress_last_updated();
 
 -- =====================
 -- BADGES TABLE
