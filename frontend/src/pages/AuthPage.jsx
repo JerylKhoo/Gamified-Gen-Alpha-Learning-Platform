@@ -36,10 +36,57 @@ const GoogleIcon = () => (
   </svg>
 );
 
+const API_URL = import.meta.env.VITE_API_URL;
+
 export default function AuthPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [isLogin, setIsLogin] = useState(searchParams.get('mode') === 'login');
+
+  const [registerForm, setRegisterForm] = useState({ username: '', email: '', password: '' });
+  const [loginForm, setLoginForm] = useState({ email: '', password: '' });
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  async function handleRegister() {
+    setError('');
+    setLoading(true);
+    try {
+      const res = await fetch(`${API_URL}/api/v1/auth/register`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: registerForm.email, password: registerForm.password }),
+      });
+      if (!res.ok) throw new Error('Registration failed');
+      const { access_token, refresh_token } = await res.json();
+      await supabase.auth.setSession({ access_token, refresh_token });
+      navigate('/home', { replace: true });
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleLogin() {
+    setError('');
+    setLoading(true);
+    try {
+      const res = await fetch(`${API_URL}/api/v1/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: loginForm.email, password: loginForm.password }),
+      });
+      if (!res.ok) throw new Error('Invalid email or password');
+      const { access_token, refresh_token } = await res.json();
+      await supabase.auth.setSession({ access_token, refresh_token });
+      navigate('/home', { replace: true });
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  }
 
   async function handleGoogleSignIn() {
     await supabase.auth.signInWithOAuth({
@@ -68,20 +115,21 @@ export default function AuthPage() {
 
             <div className="w-full flex flex-col gap-3">
               <div className="relative">
-                <input type="text" placeholder="Username" className={inputCls} />
+                <input type="text" placeholder="Username" className={inputCls} value={registerForm.username} onChange={e => setRegisterForm(f => ({ ...f, username: e.target.value }))} />
                 <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[#6060a0] pointer-events-none"><IconUser /></span>
               </div>
               <div className="relative">
-                <input type="email" placeholder="Email" className={inputCls} />
+                <input type="email" placeholder="Email" className={inputCls} value={registerForm.email} onChange={e => setRegisterForm(f => ({ ...f, email: e.target.value }))} />
                 <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[#6060a0] pointer-events-none"><IconEmail /></span>
               </div>
               <div className="relative">
-                <input type="password" placeholder="Password" className={inputCls} />
+                <input type="password" placeholder="Password" className={inputCls} value={registerForm.password} onChange={e => setRegisterForm(f => ({ ...f, password: e.target.value }))} />
                 <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[#6060a0] pointer-events-none"><IconLock /></span>
               </div>
             </div>
 
-            <button className={submitBtnCls}>Register</button>
+            {error && !isLogin && <p className="text-[0.82rem] text-red-400 m-0 w-full">{error}</p>}
+            <button className={submitBtnCls} onClick={handleRegister} disabled={loading}>{loading ? 'Registering…' : 'Register'}</button>
             <p className="text-[0.82rem] text-[#6060a0] m-0">or register with social platforms</p>
             <div className="w-full">
               <button className={googleBtnCls} onClick={handleGoogleSignIn}><GoogleIcon /> Sign up with Google</button>
@@ -94,17 +142,18 @@ export default function AuthPage() {
 
             <div className="w-full flex flex-col gap-3">
               <div className="relative">
-                <input type="text" placeholder="Username" className={inputCls} />
-                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[#6060a0] pointer-events-none"><IconUser /></span>
+                <input type="email" placeholder="Email" className={inputCls} value={loginForm.email} onChange={e => setLoginForm(f => ({ ...f, email: e.target.value }))} />
+                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[#6060a0] pointer-events-none"><IconEmail /></span>
               </div>
               <div className="relative">
-                <input type="password" placeholder="Password" className={inputCls} />
+                <input type="password" placeholder="Password" className={inputCls} value={loginForm.password} onChange={e => setLoginForm(f => ({ ...f, password: e.target.value }))} />
                 <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[#6060a0] pointer-events-none"><IconLock /></span>
               </div>
             </div>
 
+            {error && isLogin && <p className="text-[0.82rem] text-red-400 m-0 w-full">{error}</p>}
             <a href="#" className="self-end text-[0.82rem] text-[#8b5cf6] no-underline -mt-1 hover:underline">Forgot Password?</a>
-            <button className={submitBtnCls} onClick={() => navigate('/home')}>Login</button>
+            <button className={submitBtnCls} onClick={handleLogin} disabled={loading}>{loading ? 'Logging in…' : 'Login'}</button>
             <p className="text-[0.82rem] text-[#6060a0] m-0">or login with social platforms</p>
             <div className="w-full">
               <button className={googleBtnCls} onClick={handleGoogleSignIn}><GoogleIcon /> Sign in with Google</button>
