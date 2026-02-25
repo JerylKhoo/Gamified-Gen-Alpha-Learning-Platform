@@ -40,21 +40,30 @@ function CourseCard({ lesson, onClick }) {
       onClick={onClick}
       className="group bg-[#0d0f18] border border-[rgba(255,255,255,0.07)] rounded-xl overflow-hidden cursor-pointer transition-all duration-300 hover:border-[rgba(139,92,246,0.45)] hover:shadow-[0_0_28px_rgba(139,92,246,0.18)] hover:-translate-y-1 flex flex-col"
     >
-      {/* Thumbnail */}
+      {/* Thumbnail — image if available, else gradient + emoji fallback */}
       <div className={`relative h-[160px] bg-gradient-to-br ${bg} flex items-end overflow-hidden flex-shrink-0`}>
-        <div className="absolute inset-0" style={{ background: pattern }} />
-        <div className="absolute inset-0 opacity-[0.06]"
-          style={{ backgroundImage: 'repeating-linear-gradient(0deg,transparent,transparent 20px,rgba(255,255,255,0.5) 20px,rgba(255,255,255,0.5) 21px),repeating-linear-gradient(90deg,transparent,transparent 20px,rgba(255,255,255,0.5) 20px,rgba(255,255,255,0.5) 21px)' }}
-        />
-        <div className="absolute inset-0 flex items-center justify-center">
-          <span className="text-[3.5rem] drop-shadow-lg select-none">{emoji}</span>
-        </div>
+        {lesson.image ? (
+          <img src={lesson.image} alt={title} className="absolute inset-0 w-full h-full object-cover" />
+        ) : (
+          <>
+            <div className="absolute inset-0" style={{ background: pattern }} />
+            <div className="absolute inset-0 opacity-[0.06]"
+              style={{ backgroundImage: 'repeating-linear-gradient(0deg,transparent,transparent 20px,rgba(255,255,255,0.5) 20px,rgba(255,255,255,0.5) 21px),repeating-linear-gradient(90deg,transparent,transparent 20px,rgba(255,255,255,0.5) 20px,rgba(255,255,255,0.5) 21px)' }}
+            />
+            <div className="absolute inset-0 flex items-center justify-center">
+              <span className="text-[3.5rem] drop-shadow-lg select-none">{emoji}</span>
+            </div>
+          </>
+        )}
       </div>
 
       {/* Content */}
       <div className="p-4 flex flex-col gap-2 flex-1">
         <span className="text-[0.68rem] text-[#4b5563] font-semibold tracking-[0.12em] uppercase">COURSE</span>
         <h3 className="text-[#f0eeff] font-bold text-[0.97rem] leading-snug m-0 group-hover:text-white transition-colors">{title}</h3>
+        {lesson.description && (
+          <p className="text-[#6b7280] text-[0.82rem] leading-relaxed m-0 line-clamp-2 flex-1">{lesson.description}</p>
+        )}
         <span className="mt-auto text-[0.72rem] font-semibold text-[#8b5cf6] bg-[rgba(139,92,246,0.1)] border border-[rgba(139,92,246,0.2)] rounded-md px-2 py-[0.25rem] w-fit">
           {lesson.category}
         </span>
@@ -83,15 +92,21 @@ function CourseModal({ lesson, onClose }) {
         onClick={e => e.stopPropagation()}
         style={{ animation: 'modalIn 0.18s cubic-bezier(0.2,0,0.2,1)' }}
       >
-        {/* Header thumbnail */}
+        {/* Header thumbnail — image if available, else gradient + emoji fallback */}
         <div className={`relative h-[180px] bg-gradient-to-br ${bg} overflow-hidden`}>
-          <div className="absolute inset-0" style={{ background: pattern }} />
-          <div className="absolute inset-0 opacity-[0.06]"
-            style={{ backgroundImage: 'repeating-linear-gradient(0deg,transparent,transparent 20px,rgba(255,255,255,0.5) 20px,rgba(255,255,255,0.5) 21px),repeating-linear-gradient(90deg,transparent,transparent 20px,rgba(255,255,255,0.5) 20px,rgba(255,255,255,0.5) 21px)' }}
-          />
-          <div className="absolute inset-0 flex items-center justify-center">
-            <span className="text-[4.5rem] drop-shadow-lg select-none">{emoji}</span>
-          </div>
+          {lesson.image ? (
+            <img src={lesson.image} alt={title} className="absolute inset-0 w-full h-full object-cover" />
+          ) : (
+            <>
+              <div className="absolute inset-0" style={{ background: pattern }} />
+              <div className="absolute inset-0 opacity-[0.06]"
+                style={{ backgroundImage: 'repeating-linear-gradient(0deg,transparent,transparent 20px,rgba(255,255,255,0.5) 20px,rgba(255,255,255,0.5) 21px),repeating-linear-gradient(90deg,transparent,transparent 20px,rgba(255,255,255,0.5) 20px,rgba(255,255,255,0.5) 21px)' }}
+              />
+              <div className="absolute inset-0 flex items-center justify-center">
+                <span className="text-[4.5rem] drop-shadow-lg select-none">{emoji}</span>
+              </div>
+            </>
+          )}
         </div>
 
         {/* Close button */}
@@ -114,6 +129,10 @@ function CourseModal({ lesson, onClose }) {
           <span className="text-[0.78rem] font-semibold text-[#8b5cf6] bg-[rgba(139,92,246,0.1)] border border-[rgba(139,92,246,0.2)] rounded-md px-[0.7rem] py-[0.25rem] w-fit">
             {lesson.category}
           </span>
+
+          {lesson.description && (
+            <p className="text-[#9ca3af] text-[0.88rem] leading-relaxed m-0">{lesson.description}</p>
+          )}
 
           <button className="w-full py-3 bg-gradient-to-br from-[#8b5cf6] to-[#6d28d9] text-white font-bold text-[0.95rem] rounded-xl border-none cursor-pointer shadow-[0_4px_18px_rgba(139,92,246,0.4)] transition-all hover:opacity-90 hover:shadow-[0_6px_24px_rgba(139,92,246,0.55)] hover:-translate-y-px active:translate-y-0">
             Start Course →
