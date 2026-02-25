@@ -128,10 +128,14 @@ public class AdaptiveLearningService {
         // ── 3. Select next question ───────────────────────────────────────────
         double abilityScore = thetaToScore(currentState.getTheta());
 
+        // Always read the latest correctList (updated above if questionId != null)
+        List<String> answeredCorrectly = parseStringList(progress.getCorrectQuestions());
+
         Question next = selectNext(
                 questionRepository.findByLessonId(lessonId),
                 currentState,
-                abilityScore
+                abilityScore,
+                answeredCorrectly
         );
 
         // ── 4. Lesson mastered — pin progress to 100 ─────────────────────────
@@ -211,9 +215,11 @@ public class AdaptiveLearningService {
      */
     private Question selectNext(List<Question> candidates,
                                 IRTState state,
-                                double abilityScore) {
+                                double abilityScore,
+                                List<String> answeredCorrectly) {
         return candidates.stream()
                 .filter(q -> q.getScore() > abilityScore)
+                .filter(q -> !answeredCorrectly.contains(q.getQuestionId().toString()))
                 .max(Comparator.comparingDouble(q -> priority(q, state)))
                 .orElse(null);
     }
