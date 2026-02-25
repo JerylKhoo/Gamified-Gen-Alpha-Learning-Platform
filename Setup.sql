@@ -15,11 +15,27 @@ CREATE TABLE "USER" (
 -- =====================
 -- AUTO-CREATE USER TRIGGER
 -- =====================
+
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS TRIGGER AS $$
+DECLARE
+    v_avatar_name TEXT;
+    v_avatar_url  TEXT;
 BEGIN
-    INSERT INTO public."USER" (USER_ID, Name)
-    VALUES (NEW.id, split_part(NEW.email, '@', 1));
+    -- Pick a random file from the avatars bucket
+    SELECT name INTO v_avatar_name
+    FROM storage.objects
+    WHERE bucket_id = 'avatars'
+    ORDER BY random()
+    LIMIT 1;
+
+    IF v_avatar_name IS NOT NULL THEN
+        v_avatar_url := 'https://thuyecuhlufqvabzeqlg.supabase.co/storage/v1/object/public/avatars/' || v_avatar_name;
+    END IF;
+
+    INSERT INTO public."USER" (USER_ID, Name, Profile_Pic)
+    VALUES (NEW.id, split_part(NEW.email, '@', 1), v_avatar_url);
+
     RETURN NEW;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
@@ -167,11 +183,6 @@ VALUES
 -- =====================
 -- STORAGE POLICIES
 -- =====================
-CREATE POLICY "Avatar upload for own user"
-ON storage.objects FOR INSERT
-TO authenticated
-WITH CHECK (bucket_id = 'avatars' AND auth.uid()::text = (storage.foldername(name))[1]);
-
 CREATE POLICY "Avatar update for own user"
 ON storage.objects FOR UPDATE
 TO authenticated
