@@ -13,9 +13,11 @@ import java.util.UUID;
 public class PostService {
 
     private final PostRepository postRepository;
+    private final UserService userService;
 
-    public PostService(PostRepository postRepository) {
+    public PostService(PostRepository postRepository, UserService userService) {
         this.postRepository = postRepository;
+        this.userService = userService;
     }
 
     public List<Post> getAll() {
@@ -32,7 +34,10 @@ public class PostService {
     }
 
     public Post create(Post post, UUID requesterId) {
-        post.setPostId(null); // let DB generate
+        if (!userService.isAdmin(requesterId) && !userService.isCollaborator(requesterId)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only collaborators and admins can create posts");
+        }
+        post.setPostId(null);
         post.setUserId(requesterId);
         post.setReportCount(0);
         post.setUpvote(0);
@@ -41,7 +46,8 @@ public class PostService {
 
     public Post update(UUID postId, Post updates, UUID requesterId) {
         Post post = getById(postId);
-        if (!post.getUserId().equals(requesterId)) {
+        boolean isAdmin = userService.isAdmin(requesterId);
+        if (!isAdmin && !post.getUserId().equals(requesterId)) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Cannot edit another user's post");
         }
         if (updates.getPicture() != null) post.setPicture(updates.getPicture());
@@ -51,7 +57,8 @@ public class PostService {
 
     public void delete(UUID postId, UUID requesterId) {
         Post post = getById(postId);
-        if (!post.getUserId().equals(requesterId)) {
+        boolean isAdmin = userService.isAdmin(requesterId);
+        if (!isAdmin && !post.getUserId().equals(requesterId)) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Cannot delete another user's post");
         }
         postRepository.delete(post);
