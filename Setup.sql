@@ -7,7 +7,7 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 CREATE TABLE "USER" (
     USER_ID UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
     Name TEXT NOT NULL,
-    Points JSONB DEFAULT '{}',
+    Points INT4 DEFAULT 0,
     Profile_Pic TEXT,
     Role TEXT NOT NULL DEFAULT 'User' CHECK (Role IN ('Admin', 'User', 'Collaborator'))
 );
@@ -173,12 +173,35 @@ CREATE TRIGGER on_streak_updated
     FOR EACH ROW EXECUTE FUNCTION handle_streak_update();
 
 -- =====================
+-- LESSON IMAGE TRIGGER
+-- =====================
+CREATE OR REPLACE FUNCTION public.handle_new_lesson()
+RETURNS TRIGGER AS $$
+BEGIN
+    IF NEW.image IS NULL THEN
+        IF EXISTS (
+            SELECT 1 FROM storage.objects
+            WHERE bucket_id = 'lessons' AND name = NEW.lesson_id || '.png'
+        ) THEN
+            NEW.image := 'https://thuyecuhlufqvabzeqlg.supabase.co/storage/v1/object/public/lessons/' || NEW.lesson_id || '.png';
+        END IF;
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER on_lesson_created
+    BEFORE INSERT ON lessons
+    FOR EACH ROW EXECUTE FUNCTION public.handle_new_lesson();
+
+-- =====================
 -- STORAGE BUCKETS
 -- =====================
 INSERT INTO storage.buckets (id, name, public)
-VALUES 
+VALUES
     ('avatars', 'avatars', true),
-    ('posts', 'posts', true);
+    ('posts', 'posts', true),
+    ('lessons', 'lessons', true);
 
 -- =====================
 -- STORAGE POLICIES
@@ -202,6 +225,16 @@ CREATE POLICY "Post images are publicly viewable"
 ON storage.objects FOR SELECT
 TO public
 USING (bucket_id = 'posts');
+
+CREATE POLICY "Lesson images are publicly viewable"
+ON storage.objects FOR SELECT
+TO public
+USING (bucket_id = 'lessons');
+
+CREATE POLICY "Lesson image upload for admin"
+ON storage.objects FOR INSERT
+TO authenticated
+WITH CHECK (bucket_id = 'lessons');
 
 -- =====================
 -- ROW LEVEL SECURITY (RLS)
