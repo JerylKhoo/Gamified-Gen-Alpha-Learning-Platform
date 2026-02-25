@@ -45,7 +45,9 @@ CREATE TABLE POSTS (
 -- =====================
 CREATE TABLE LESSONS (
     LESSON_ID TEXT PRIMARY KEY,
-    Category TEXT NOT NULL
+    Category TEXT NOT NULL,
+    Description TEXT,
+    Image TEXT
 );
 
 -- =====================
