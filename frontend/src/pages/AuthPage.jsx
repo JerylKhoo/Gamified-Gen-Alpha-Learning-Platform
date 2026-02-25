@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import Navbar from '../components/LandingPage/Navbar';
+import { supabase } from '../lib/supabaseClient';
 
 const inputCls =
   'w-full py-[0.7rem] pl-[0.9rem] pr-10 bg-[#1a1530] border border-[rgba(139,92,246,0.2)] rounded-lg text-[0.95rem] text-[#f0eeff] outline-none transition-all placeholder:text-[#6060a0] focus:bg-[#201a40] focus:border-[rgba(139,92,246,0.6)] focus:ring-2 focus:ring-[rgba(139,92,246,0.2)]';
@@ -40,6 +41,15 @@ export default function AuthPage() {
   const [searchParams] = useSearchParams();
   const [isLogin, setIsLogin] = useState(searchParams.get('mode') === 'login');
 
+  async function handleGoogleSignIn() {
+    await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: `${window.location.origin}/auth/callback`,
+      },
+    });
+  }
+
   return (
     <div className="min-h-screen bg-[radial-gradient(ellipse_at_center,#0d0b1e_0%,#050508_100%)] flex flex-col">
       <Navbar
@@ -74,7 +84,7 @@ export default function AuthPage() {
             <button className={submitBtnCls}>Register</button>
             <p className="text-[0.82rem] text-[#6060a0] m-0">or register with social platforms</p>
             <div className="w-full">
-              <button className={googleBtnCls}><GoogleIcon /> Sign up with Google</button>
+              <button className={googleBtnCls} onClick={handleGoogleSignIn}><GoogleIcon /> Sign up with Google</button>
             </div>
           </div>
 
@@ -97,7 +107,7 @@ export default function AuthPage() {
             <button className={submitBtnCls} onClick={() => navigate('/home')}>Login</button>
             <p className="text-[0.82rem] text-[#6060a0] m-0">or login with social platforms</p>
             <div className="w-full">
-              <button className={googleBtnCls}><GoogleIcon /> Sign in with Google</button>
+              <button className={googleBtnCls} onClick={handleGoogleSignIn}><GoogleIcon /> Sign in with Google</button>
             </div>
           </div>
 

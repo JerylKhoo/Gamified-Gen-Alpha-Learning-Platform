@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
+import { supabase } from '../../lib/supabaseClient';
 
 const navItems = [
   {
@@ -117,7 +118,7 @@ export default function Sidebar() {
             </button>
             <button
               className="flex items-center gap-[0.6rem] w-full px-4 py-[0.7rem] border-t border-[rgba(139,92,246,0.15)] bg-transparent text-[#e57373] text-[0.9rem] font-medium cursor-pointer transition-all text-left hover:bg-[rgba(229,115,115,0.1)] hover:text-[#ef9a9a]"
-              onClick={() => { navigate('/'); setProfileOpen(false); }}
+              onClick={async () => { await supabase.auth.signOut(); setProfileOpen(false); }}
             >
               <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"><path fill="currentColor" d="M5 21q-.825 0-1.412-.587T3 19V5q0-.825.588-1.412T5 3h7v2H5v14h7v2zm11-4l-1.375-1.45l2.55-2.55H9v-2h8.175l-2.55-2.55L16 7l5 5z"/></svg>
               Log Out
