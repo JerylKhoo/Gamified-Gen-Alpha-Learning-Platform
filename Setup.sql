@@ -7,7 +7,7 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 CREATE TABLE "USER" (
     USER_ID UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
     Name TEXT NOT NULL,
-    Points JSONB DEFAULT '{}',
+    Points INT4 DEFAULT 0,
     Profile_Pic TEXT,
     Role TEXT NOT NULL DEFAULT 'User' CHECK (Role IN ('Admin', 'User', 'Collaborator'))
 );

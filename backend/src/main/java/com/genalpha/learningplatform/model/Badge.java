@@ -18,7 +18,7 @@ public class Badge {
     @Column
     private String description;
 
-    @Column(length = 255)
+    @Column(columnDefinition = "TEXT")
     private String icon;
 
     public UUID getBadgeId() { return badgeId; }
