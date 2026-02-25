@@ -26,6 +26,5 @@ supabase.jwks.uri=https://<project-ref>.supabase.co/auth/v1/.well-known/jwks.jso
 
 # ── SpringDoc / Swagger UI ────────────────────────────────────────────────────
 springdoc.api-docs.path=/api-docs
-springdoc.swagger-ui.path=/swagger-ui.html
 springdoc.swagger-ui.operationsSorter=method
 springdoc.swagger-ui.tryItOutEnabled=true
