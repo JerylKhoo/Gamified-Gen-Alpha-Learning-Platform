@@ -23,14 +23,26 @@ public class UserService {
     }
 
     public User update(UUID userId, User updates, UUID requesterId) {
-        if (!userId.equals(requesterId)) {
+        boolean isAdmin = isAdmin(requesterId);
+
+        if (!isAdmin && !userId.equals(requesterId)) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Cannot update another user's profile");
         }
+
         User user = getById(userId);
-        if (updates.getName() != null) user.setName(updates.getName());
-        if (updates.getProfilePic() != null) user.setProfilePic(updates.getProfilePic());
-        if (updates.getPoints() != null) user.setPoints(updates.getPoints());
-        // Role is intentionally not updatable via this endpoint
+
+        // Any user can update their own name and profilePic
+        if (!isAdmin) {
+            if (updates.getName() != null)       user.setName(updates.getName());
+            if (updates.getProfilePic() != null) user.setProfilePic(updates.getProfilePic());
+        } else {
+            // Admins can update everything
+            if (updates.getName() != null)       user.setName(updates.getName());
+            if (updates.getProfilePic() != null) user.setProfilePic(updates.getProfilePic());
+            if (updates.getPoints() != null)     user.setPoints(updates.getPoints());
+            if (updates.getRole() != null)       user.setRole(updates.getRole());
+        }
+
         return userRepository.save(user);
     }
 
