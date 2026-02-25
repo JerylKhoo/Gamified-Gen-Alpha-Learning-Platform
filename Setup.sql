@@ -46,6 +46,8 @@ CREATE TABLE POSTS (
 CREATE TABLE LESSONS (
     LESSON_ID TEXT PRIMARY KEY,
     Category TEXT NOT NULL,
+    Description TEXT,
+    Image TEXT
 );
 
 -- =====================
@@ -85,6 +87,60 @@ CREATE TABLE PROGRESS (
     Wrong_Questions JSONB DEFAULT '[]',
     UNIQUE (USER_ID, LESSON_ID)
 );
+
+-- =====================
+-- BADGES TABLE
+-- =====================
+CREATE TABLE BADGES (
+    BADGE_ID UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    Name TEXT NOT NULL,
+    Description TEXT,
+    Icon VARCHAR(255)
+);
+
+-- =====================
+-- USER_BADGES TABLE
+-- =====================
+CREATE TABLE USER_BADGES (
+    ID UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    USER_ID UUID NOT NULL REFERENCES "USER"(USER_ID) ON DELETE CASCADE,
+    BADGE_ID UUID NOT NULL REFERENCES BADGES(BADGE_ID) ON DELETE CASCADE,
+    Earned_At TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    UNIQUE (USER_ID, BADGE_ID)
+);
+
+-- =====================
+-- USER_STREAKS TABLE
+-- =====================
+CREATE TABLE USER_STREAKS (
+    STREAK_ID UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    USER_ID UUID NOT NULL REFERENCES "USER"(USER_ID) ON DELETE CASCADE UNIQUE,
+    Current_Streak INT NOT NULL DEFAULT 0,
+    Longest_Streak INT NOT NULL DEFAULT 0,
+    Last_Activity_Date DATE DEFAULT CURRENT_DATE
+);
+
+-- Trigger: on update, reset streak if gap > 2 days; keep longest_streak in sync
+CREATE OR REPLACE FUNCTION handle_streak_update()
+RETURNS TRIGGER AS $$
+BEGIN
+    -- Reset streak if more than 2 days have passed since last activity
+    IF CURRENT_DATE - OLD.Last_Activity_Date > 2 THEN
+        NEW.Current_Streak := 0;
+    END IF;
+
+    -- Keep longest_streak up to date
+    IF NEW.Current_Streak > NEW.Longest_Streak THEN
+        NEW.Longest_Streak := NEW.Current_Streak;
+    END IF;
+
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER on_streak_updated
+    BEFORE UPDATE ON USER_STREAKS
+    FOR EACH ROW EXECUTE FUNCTION handle_streak_update();
 
 -- =====================
 -- STORAGE BUCKETS
@@ -206,6 +262,47 @@ WITH CHECK (auth.uid() = USER_ID);
 
 CREATE POLICY "Users can update own progress"
 ON PROGRESS FOR UPDATE TO authenticated
+USING (auth.uid() = USER_ID);
+
+-- BADGES policies
+ALTER TABLE BADGES ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Badges are publicly viewable"
+ON BADGES FOR SELECT TO public USING (true);
+
+CREATE POLICY "Only admins can manage badges"
+ON BADGES FOR ALL TO authenticated
+USING (
+    EXISTS (
+        SELECT 1 FROM "USER"
+        WHERE USER_ID = auth.uid() AND Role = 'Admin'
+    )
+);
+
+-- USER_BADGES policies
+ALTER TABLE USER_BADGES ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can view own badges"
+ON USER_BADGES FOR SELECT TO authenticated
+USING (auth.uid() = USER_ID);
+
+CREATE POLICY "Users can insert own badges"
+ON USER_BADGES FOR INSERT TO authenticated
+WITH CHECK (auth.uid() = USER_ID);
+
+-- USER_STREAKS policies
+ALTER TABLE USER_STREAKS ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can view own streak"
+ON USER_STREAKS FOR SELECT TO authenticated
+USING (auth.uid() = USER_ID);
+
+CREATE POLICY "Users can insert own streak"
+ON USER_STREAKS FOR INSERT TO authenticated
+WITH CHECK (auth.uid() = USER_ID);
+
+CREATE POLICY "Users can update own streak"
+ON USER_STREAKS FOR UPDATE TO authenticated
 USING (auth.uid() = USER_ID);
 
 -- Add LESSON_ID
