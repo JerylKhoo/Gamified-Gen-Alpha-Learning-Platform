@@ -4,6 +4,7 @@ import com.genalpha.learningplatform.model.User;
 import com.genalpha.learningplatform.repository.UserRepository;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.UUID;
@@ -22,16 +23,18 @@ public class UserService {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
     }
 
+    @Transactional
     public User update(UUID userId, User updates, UUID requesterId) {
         if (!userId.equals(requesterId)) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Cannot update another user's profile");
         }
-        User user = getById(userId);
-        if (updates.getName() != null) user.setName(updates.getName());
-        if (updates.getProfilePic() != null) user.setProfilePic(updates.getProfilePic());
-        if (updates.getPoints() != null) user.setPoints(updates.getPoints());
-        // Role is intentionally not updatable via this endpoint
-        return userRepository.save(user);
+        // Use a direct JPQL update so Hibernate never touches the JSONB points column
+        userRepository.updateProfile(
+                userId,
+                updates.getName(),
+                updates.getProfilePic()
+        );
+        return getById(userId);
     }
 
     public boolean isAdmin(UUID userId) {
