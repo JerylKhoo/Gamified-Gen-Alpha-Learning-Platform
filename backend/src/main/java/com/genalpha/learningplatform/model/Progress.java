@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
+import java.time.Instant;
 import java.util.UUID;
 
 @Entity
@@ -37,6 +38,9 @@ public class Progress {
     @Column(name = "wrong_questions", columnDefinition = "jsonb")
     private String wrongQuestions;
 
+    @Column(name = "last_updated", insertable = false, updatable = false)
+    private Instant lastUpdated;
+
     public UUID getProgressId() { return progressId; }
     public void setProgressId(UUID progressId) { this.progressId = progressId; }
     public UUID getUserId() { return userId; }
@@ -51,4 +55,5 @@ public class Progress {
     public void setCorrectQuestions(String correctQuestions) { this.correctQuestions = correctQuestions; }
     public String getWrongQuestions() { return wrongQuestions; }
     public void setWrongQuestions(String wrongQuestions) { this.wrongQuestions = wrongQuestions; }
+    public Instant getLastUpdated() { return lastUpdated; }
 }
