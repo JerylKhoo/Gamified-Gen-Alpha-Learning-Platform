@@ -421,7 +421,7 @@ export default function CommunityPage() {
       <div className="flex items-start justify-between gap-4 mb-6 flex-wrap">
         <div>
           <h1 className="text-[1.8rem] font-extrabold text-[#f0eeff] m-0 mb-1 flex items-center gap-3">
-            <span>💬</span> Community Forum
+            Community Forum
           </h1>
           <p className="text-[#6b6490] text-sm m-0">
             Share W takes, ask slang questions, and vibe with the community.

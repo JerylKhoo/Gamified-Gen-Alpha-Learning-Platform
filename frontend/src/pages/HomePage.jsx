@@ -54,26 +54,33 @@ function ActivityChart({ data }) {
   const ys = pts.map(v => py + (1 - (v - minV) / range) * (h - py * 2));
   const line = xs.map((x, i) => `${i === 0 ? 'M' : 'L'}${x},${ys[i]}`).join(' ');
   const area = `${line} L${xs.at(-1)},${h} L${xs[0]},${h} Z`;
+
+  // End-point position as % so the overlay circle is always a true circle
+  const endXPct = (xs.at(-1) / w) * 100;
+  const endYPct = (ys.at(-1) / h) * 100;
+
   return (
-    <svg viewBox={`0 0 ${w} ${h}`} className="w-full h-full" preserveAspectRatio="none">
-      <defs>
-        <linearGradient id="areaGrad" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="#8b5cf6" stopOpacity="0.35" />
-          <stop offset="100%" stopColor="#8b5cf6" stopOpacity="0" />
-        </linearGradient>
-        <filter id="glow">
-          <feGaussianBlur stdDeviation="2.5" result="blur" />
-          <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
-        </filter>
-      </defs>
-      <path d={area} fill="url(#areaGrad)" />
-      <path d={line} fill="none" stroke="#8b5cf6" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" filter="url(#glow)" />
-      {xs.map((x, i) => (
-        <circle key={i} cx={x} cy={ys[i]} r={i === pts.length - 1 ? 5 : 3}
-          fill={i === pts.length - 1 ? '#a78bfa' : '#8b5cf6'}
-          stroke={i === pts.length - 1 ? '#fff' : 'none'} strokeWidth="1.5" />
-      ))}
-    </svg>
+    <div className="relative w-full h-full">
+      <svg viewBox={`0 0 ${w} ${h}`} className="w-full h-full" preserveAspectRatio="none">
+        <defs>
+          <linearGradient id="areaGrad" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#8b5cf6" stopOpacity="0.35" />
+            <stop offset="100%" stopColor="#8b5cf6" stopOpacity="0" />
+          </linearGradient>
+          <filter id="glow">
+            <feGaussianBlur stdDeviation="2.5" result="blur" />
+            <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
+          </filter>
+        </defs>
+        <path d={area} fill="url(#areaGrad)" />
+        <path d={line} fill="none" stroke="#8b5cf6" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" filter="url(#glow)" />
+      </svg>
+      {/* End-point indicator rendered as an HTML element so it stays a perfect circle at any zoom/aspect ratio */}
+      <div
+        className="absolute w-2.5 h-2.5 rounded-full bg-[#a78bfa] border-2 border-white shadow-[0_0_6px_rgba(167,139,250,0.8)] -translate-x-1/2 -translate-y-1/2 pointer-events-none"
+        style={{ left: `${endXPct}%`, top: `${endYPct}%` }}
+      />
+    </div>
   );
 }
 
@@ -149,18 +156,25 @@ export default function HomePage() {
         }
         setCourses(courseList);
 
-        // Chart data: full score history across all lessons, in order answered
-        const history = progress.flatMap(p => {
-          try { return JSON.parse(p.adaptiveHistory || '[]'); }
-          catch { return []; }
-        });
+        // Last touched course: most recent updatedAt, fallback to last in array
+        const lastTouchedRecord = progress.length > 0
+          ? [...progress].sort((a, b) => {
+              const tA = new Date(a.lastUpdated || 0).getTime();
+              const tB = new Date(b.lastUpdated || 0).getTime();
+              return tB - tA;
+            })[0]
+          : null;
+
+        // Chart data: only the last touched course's history
+        const history = lastTouchedRecord
+          ? (() => { try { return JSON.parse(lastTouchedRecord.adaptiveHistory || '[]'); } catch { return []; } })()
+          : [];
         setChartData(history.length > 0 ? history : [0]);
 
-        // Current course: highest in-progress (>0% and <100%) lesson
-        const active =
-          courseList.find(c => c.progress > 0 && c.progress < 100) ??
-          courseList[0] ??
-          null;
+        // Current course: last touched (so chart and panel always match)
+        const active = lastTouchedRecord
+          ? courseList.find(c => c.lessonId === lastTouchedRecord.lessonId) ?? courseList[0] ?? null
+          : courseList[0] ?? null;
         setCurrentCourse(active);
 
         // Fetch question count for the current course
@@ -290,8 +304,7 @@ export default function HomePage() {
           {/* Left: XP Chart */}
           <div className="flex flex-col gap-3 min-w-0">
             <div className="flex items-center justify-between">
-              <h3 className={cardTitleCls}>XP Progress</h3>
-              <span className="text-[0.72rem] text-[#5a5278] font-semibold">All Questions</span>
+              <h3 className={cardTitleCls}>Skill Wave</h3>
             </div>
             <div className="flex-1 min-h-[120px]">
               <ActivityChart data={chartData} />
@@ -303,7 +316,7 @@ export default function HomePage() {
             <div className="flex flex-col justify-center gap-[1.1rem] border-l border-[rgba(139,92,246,0.15)] pl-[1.1rem] max-sm:border-l-0 max-sm:border-t max-sm:border-[rgba(139,92,246,0.15)] max-sm:pl-0 max-sm:pt-4">
               <div className="flex flex-col gap-2">
                 <div className="flex items-center justify-between">
-                  <span className="text-[0.72rem] font-bold text-[#7c6ea8] uppercase tracking-[0.1em]">Current Course</span>
+                  <span className="text-[0.72rem] font-bold text-[#7c6ea8] uppercase tracking-[0.1em]">Most recent Course</span>
                   <span className="text-[0.82rem] font-extrabold text-[#a78bfa]">{currentCourse.progress}%</span>
                 </div>
                 <span className="text-[1.05rem] font-black text-[#c4b5fd] tracking-[0.15em]">{currentCourse.name}</span>
