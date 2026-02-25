@@ -7,14 +7,12 @@ import com.genalpha.learningplatform.dto.IRTState;
 import com.genalpha.learningplatform.dto.IRTState.SRItem;
 import com.genalpha.learningplatform.model.Progress;
 import com.genalpha.learningplatform.model.Question;
-import com.genalpha.learningplatform.repository.LessonRepository;
 import com.genalpha.learningplatform.repository.ProgressRepository;
 import com.genalpha.learningplatform.repository.QuestionRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.*;
-import java.util.stream.Collectors;
 
 /**
  * ═══════════════════════════════════════════════════════════════
@@ -70,22 +68,18 @@ import java.util.stream.Collectors;
 @Service
 public class AdaptiveLearningService {
 
-    private static final double K              = 0.3;   // IRT learning rate
-    private static final double OPTIMAL_P      = 0.7;   // target success probability
-    private static final long   DAY_MS         = 86_400_000L;
+    private static final double K         = 0.3;  // IRT learning rate
+    private static final double OPTIMAL_P = 0.7;  // target success probability
 
     private final QuestionRepository questionRepository;
     private final ProgressRepository progressRepository;
-    private final LessonRepository   lessonRepository;
     private final ObjectMapper       objectMapper;
 
     public AdaptiveLearningService(QuestionRepository questionRepository,
                                    ProgressRepository progressRepository,
-                                   LessonRepository lessonRepository,
                                    ObjectMapper objectMapper) {
         this.questionRepository = questionRepository;
         this.progressRepository = progressRepository;
-        this.lessonRepository   = lessonRepository;
         this.objectMapper       = objectMapper;
     }
 
@@ -93,7 +87,6 @@ public class AdaptiveLearningService {
     public AdaptiveResponse getNextQuestion(UUID userId, AdaptiveRequest request) {
         String  lessonId         = request.getLessonId();
         String  previousLessonId = request.getPreviousLessonId();
-        String  category         = request.getCategory();
         UUID    questionId       = request.getQuestionId();
         boolean correct          = request.isCorrect();
 
@@ -159,21 +152,15 @@ public class AdaptiveLearningService {
                 abilityScore
         );
 
-        // ── 4. Category fallback ──────────────────────────────────────────────
-        if (next == null && category != null && !category.isBlank()) {
-            List<String> otherIds = lessonRepository.findByCategory(category)
-                    .stream()
-                    .map(l -> l.getLessonId())
-                    .filter(id -> !id.equals(lessonId))
-                    .collect(Collectors.toList());
-
-            if (!otherIds.isEmpty()) {
-                next = selectNext(
-                        questionRepository.findByLessonIdIn(otherIds),
-                        currentState,
-                        abilityScore
-                );
-            }
+        // ── 4. Lesson mastered — pin progress to 100 ─────────────────────────
+        if (next == null) {
+            currentState.setTheta(3.0); // max theta → abilityScore = 100
+            Progress masteredProgress = progressRepository
+                    .findByUserIdAndLessonId(userId, lessonId)
+                    .orElseGet(() -> createProgress(userId, lessonId));
+            masteredProgress.setAdaptiveScore(toJson(currentState));
+            progressRepository.save(masteredProgress);
+            abilityScore = 100.0;
         }
 
         return new AdaptiveResponse(abilityScore, next);
@@ -228,7 +215,10 @@ public class AdaptiveLearningService {
             item.setInterval(1);
         }
 
-        item.setDue(System.currentTimeMillis() + (long) item.getInterval() * DAY_MS);
+        // due = questions answered so far + interval
+        // e.g. interval=6 means "show again after 6 more questions"
+        state.setQuestionCount(state.getQuestionCount() + 1);
+        item.setDue(state.getQuestionCount() + item.getInterval());
         state.getItems().put(qId, item);
     }
 
@@ -243,21 +233,20 @@ public class AdaptiveLearningService {
     private Question selectNext(List<Question> candidates,
                                 IRTState state,
                                 double abilityScore) {
-        long now = System.currentTimeMillis();
-
         return candidates.stream()
                 .filter(q -> q.getScore() > abilityScore)
-                .max(Comparator.comparingDouble(q -> priority(q, state, now)))
+                .max(Comparator.comparingDouble(q -> priority(q, state)))
                 .orElse(null);
     }
 
-    private double priority(Question q, IRTState state, long now) {
-        double b      = toIRT(q.getScore());
-        double p      = irtP(state.getTheta(), b);
-        double gap    = Math.abs(p - OPTIMAL_P);   // closer to 0.7 = better match
+    private double priority(Question q, IRTState state) {
+        double b   = toIRT(q.getScore());
+        double p   = irtP(state.getTheta(), b);
+        double gap = Math.abs(p - OPTIMAL_P);   // closer to 0.7 = better match
 
-        SRItem item   = state.getItems().get(q.getQuestionId().toString());
-        boolean overdue = (item == null) || (item.getDue() <= now);
+        SRItem item     = state.getItems().get(q.getQuestionId().toString());
+        // overdue when never seen (item==null) or questionCount has reached the due threshold
+        boolean overdue = (item == null) || (state.getQuestionCount() >= item.getDue());
 
         return (overdue ? 10.0 : 0.0) + (1.0 - gap);
     }
