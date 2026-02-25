@@ -50,16 +50,18 @@ public class AuthService {
         );
 
         try {
-            ResponseEntity<AuthResponse> response = restTemplate.exchange(
+            restTemplate.exchange(
                     supabaseUrl + "/auth/v1/signup",
                     HttpMethod.POST,
                     new HttpEntity<>(body, headers),
                     AuthResponse.class
             );
-            return response.getBody();
         } catch (HttpClientErrorException e) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Registration failed: " + e.getMessage());
         }
+
+        // Log the user in immediately after registration so a token is always returned
+        return login(request);
     }
 
     private HttpHeaders buildHeaders() {
