@@ -51,4 +51,10 @@ public class UserService {
                 .map(u -> "Admin".equals(u.getRole()))
                 .orElse(false);
     }
+
+    public boolean isCollaborator(UUID userId) {
+        return userRepository.findById(userId)
+                .map(u -> "Collaborator".equals(u.getRole()))
+                .orElse(false);
+    }
 }

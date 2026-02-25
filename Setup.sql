@@ -176,9 +176,10 @@ CREATE TRIGGER on_streak_updated
 -- STORAGE BUCKETS
 -- =====================
 INSERT INTO storage.buckets (id, name, public)
-VALUES 
+VALUES
     ('avatars', 'avatars', true),
-    ('posts', 'posts', true);
+    ('posts', 'posts', true),
+    ('lessons', 'lessons', true);
 
 -- =====================
 -- STORAGE POLICIES
@@ -202,6 +203,16 @@ CREATE POLICY "Post images are publicly viewable"
 ON storage.objects FOR SELECT
 TO public
 USING (bucket_id = 'posts');
+
+CREATE POLICY "Lesson images are publicly viewable"
+ON storage.objects FOR SELECT
+TO public
+USING (bucket_id = 'lessons');
+
+CREATE POLICY "Lesson image upload for admin"
+ON storage.objects FOR INSERT
+TO authenticated
+WITH CHECK (bucket_id = 'lessons');
 
 -- =====================
 -- ROW LEVEL SECURITY (RLS)
