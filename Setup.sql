@@ -173,6 +173,28 @@ CREATE TRIGGER on_streak_updated
     FOR EACH ROW EXECUTE FUNCTION handle_streak_update();
 
 -- =====================
+-- LESSON IMAGE TRIGGER
+-- =====================
+CREATE OR REPLACE FUNCTION public.handle_new_lesson()
+RETURNS TRIGGER AS $$
+BEGIN
+    IF NEW.image IS NULL THEN
+        IF EXISTS (
+            SELECT 1 FROM storage.objects
+            WHERE bucket_id = 'lessons' AND name = NEW.lesson_id || '.png'
+        ) THEN
+            NEW.image := 'https://thuyecuhlufqvabzeqlg.supabase.co/storage/v1/object/public/lessons/' || NEW.lesson_id || '.png';
+        END IF;
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER on_lesson_created
+    BEFORE INSERT ON lessons
+    FOR EACH ROW EXECUTE FUNCTION public.handle_new_lesson();
+
+-- =====================
 -- STORAGE BUCKETS
 -- =====================
 INSERT INTO storage.buckets (id, name, public)
