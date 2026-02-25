@@ -115,10 +115,6 @@ export default function AuthPage() {
 
             <div className="w-full flex flex-col gap-3">
               <div className="relative">
-                <input type="text" placeholder="Username" className={inputCls} value={registerForm.username} onChange={e => setRegisterForm(f => ({ ...f, username: e.target.value }))} />
-                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[#6060a0] pointer-events-none"><IconUser /></span>
-              </div>
-              <div className="relative">
                 <input type="email" placeholder="Email" className={inputCls} value={registerForm.email} onChange={e => setRegisterForm(f => ({ ...f, email: e.target.value }))} />
                 <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[#6060a0] pointer-events-none"><IconEmail /></span>
               </div>
