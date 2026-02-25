@@ -383,7 +383,7 @@ export default function HomePage() {
 
   if (loading) {
     return (
-      <main className="flex flex-col items-center justify-center p-7 overflow-auto max-sm:p-4">
+      <main className="h-full flex flex-col items-center justify-center p-7 overflow-auto max-sm:p-4">
         <style>{`
           @keyframes shimmer {
             0%   { background-position: -600px 0; }
@@ -473,7 +473,7 @@ export default function HomePage() {
   }
 
   return (
-    <main className="flex flex-col items-center justify-center p-7 overflow-auto max-sm:p-4">
+    <main className="h-full flex flex-col items-center justify-center p-7 overflow-auto max-sm:p-4">
       {showEditModal && (
         <EditProfileModal
           userData={userData}
