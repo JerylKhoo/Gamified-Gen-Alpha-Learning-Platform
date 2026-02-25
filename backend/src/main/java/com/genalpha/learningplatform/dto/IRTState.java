@@ -18,7 +18,7 @@ import java.util.Map;
  */
 public class IRTState {
 
-    private double theta = 0.0;                  // starts at midpoint (score ≈ 50)
+    private double theta = -3.0;                 // starts at minimum → abilityScore = 0 → easiest question first
     private int    questionCount = 0;            // questions answered so far (SR clock)
     private Map<String, SRItem> items = new HashMap<>();
 

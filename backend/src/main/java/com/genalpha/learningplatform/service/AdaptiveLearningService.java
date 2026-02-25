@@ -85,24 +85,19 @@ public class AdaptiveLearningService {
 
     @Transactional
     public AdaptiveResponse getNextQuestion(UUID userId, AdaptiveRequest request) {
-        String  lessonId         = request.getLessonId();
-        String  previousLessonId = request.getPreviousLessonId();
-        UUID    questionId       = request.getQuestionId();
-        boolean correct          = request.isCorrect();
+        String  lessonId   = request.getLessonId();
+        UUID    questionId = request.getQuestionId();
+        boolean correct    = request.isCorrect();
 
-        // The lesson that owns the answered question (falls back to current lesson)
-        String  answerLessonId = (previousLessonId != null && !previousLessonId.isBlank())
-                ? previousLessonId : lessonId;
+        // ── 1. Load (or create) progress for this lesson ─────────────────────
+        Progress progress = progressRepository
+                .findByUserIdAndLessonId(userId, lessonId)
+                .orElseGet(() -> createProgress(userId, lessonId));
 
-        // ── 1. Update IRT state & correct/wrong lists for the answered question ─
-        IRTState state = new IRTState(); // will be overwritten below when questionId != null
+        IRTState state = parseIRTState(progress.getAdaptiveScore());
+
+        // ── 2. Update IRT state & correct/wrong lists for the answered question
         if (questionId != null) {
-            Progress answerProgress = progressRepository
-                    .findByUserIdAndLessonId(userId, answerLessonId)
-                    .orElseGet(() -> createProgress(userId, answerLessonId));
-
-            state = parseIRTState(answerProgress.getAdaptiveScore());
-
             Question answered = questionRepository.findById(questionId).orElse(null);
             if (answered != null) {
                 double b = toIRT(answered.getScore());
@@ -110,10 +105,9 @@ public class AdaptiveLearningService {
                 updateSR(state, questionId.toString(), correct);
             }
 
-            // Update correct_questions / wrong_questions arrays
             String qIdStr = questionId.toString();
-            List<String> correctList = parseStringList(answerProgress.getCorrectQuestions());
-            List<String> wrongList   = parseStringList(answerProgress.getWrongQuestions());
+            List<String> correctList = parseStringList(progress.getCorrectQuestions());
+            List<String> wrongList   = parseStringList(progress.getWrongQuestions());
 
             if (correct) {
                 if (!correctList.contains(qIdStr)) correctList.add(qIdStr);
@@ -123,25 +117,13 @@ public class AdaptiveLearningService {
                 correctList.remove(qIdStr);
             }
 
-            answerProgress.setAdaptiveScore(toJson(state));
-            answerProgress.setCorrectQuestions(toJson(correctList));
-            answerProgress.setWrongQuestions(toJson(wrongList));
-            progressRepository.save(answerProgress);
+            progress.setAdaptiveScore(toJson(state));
+            progress.setCorrectQuestions(toJson(correctList));
+            progress.setWrongQuestions(toJson(wrongList));
+            progressRepository.save(progress);
         }
 
-        // ── 2. Load (or create) progress for the current lesson ───────────────
-        //    (needed to determine abilityScore for next-question selection)
-        Progress currentProgress;
-        IRTState currentState;
-        if (answerLessonId.equals(lessonId)) {
-            // Same lesson — state is already up-to-date from step 1
-            currentState = state;
-        } else {
-            currentProgress = progressRepository
-                    .findByUserIdAndLessonId(userId, lessonId)
-                    .orElseGet(() -> createProgress(userId, lessonId));
-            currentState = parseIRTState(currentProgress.getAdaptiveScore());
-        }
+        IRTState currentState = state;
 
         // ── 3. Select next question ───────────────────────────────────────────
         double abilityScore = thetaToScore(currentState.getTheta());
@@ -155,11 +137,8 @@ public class AdaptiveLearningService {
         // ── 4. Lesson mastered — pin progress to 100 ─────────────────────────
         if (next == null) {
             currentState.setTheta(3.0); // max theta → abilityScore = 100
-            Progress masteredProgress = progressRepository
-                    .findByUserIdAndLessonId(userId, lessonId)
-                    .orElseGet(() -> createProgress(userId, lessonId));
-            masteredProgress.setAdaptiveScore(toJson(currentState));
-            progressRepository.save(masteredProgress);
+            progress.setAdaptiveScore(toJson(currentState));
+            progressRepository.save(progress);
             abilityScore = 100.0;
         }
 
