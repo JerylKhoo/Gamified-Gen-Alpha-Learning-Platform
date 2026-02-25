@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabaseClient';
 
 const API_URL = import.meta.env.VITE_API_URL;
@@ -75,6 +76,7 @@ function CourseCard({ lesson, onClick }) {
 function CourseModal({ lesson, onClose }) {
   const { emoji, bg, pattern } = getVisuals(lesson.category);
   const title = formatLessonId(lesson.lessonId);
+  const navigate = useNavigate();
 
   useEffect(() => {
     function onKey(e) { if (e.key === 'Escape') onClose(); }
@@ -134,7 +136,10 @@ function CourseModal({ lesson, onClose }) {
             <p className="text-[#9ca3af] text-[0.88rem] leading-relaxed m-0">{lesson.description}</p>
           )}
 
-          <button className="w-full py-3 bg-gradient-to-br from-[#8b5cf6] to-[#6d28d9] text-white font-bold text-[0.95rem] rounded-xl border-none cursor-pointer shadow-[0_4px_18px_rgba(139,92,246,0.4)] transition-all hover:opacity-90 hover:shadow-[0_6px_24px_rgba(139,92,246,0.55)] hover:-translate-y-px active:translate-y-0">
+          <button
+            onClick={() => navigate(`/home/learn/${lesson.lessonId}`)}
+            className="w-full py-3 bg-gradient-to-br from-[#8b5cf6] to-[#6d28d9] text-white font-bold text-[0.95rem] rounded-xl border-none cursor-pointer shadow-[0_4px_18px_rgba(139,92,246,0.4)] transition-all hover:opacity-90 hover:shadow-[0_6px_24px_rgba(139,92,246,0.55)] hover:-translate-y-px active:translate-y-0"
+          >
             Start Course →
           </button>
         </div>
