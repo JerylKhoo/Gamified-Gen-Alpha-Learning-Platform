@@ -1,0 +1,31 @@
+spring.application.name=learning-platform
+server.port=8080
+
+# ── Supabase PostgreSQL ───────────────────────────────────────────────────────
+# Found at: Supabase Dashboard → Project Settings → Database → Connection string (JDBC)
+spring.datasource.url=jdbc:postgresql://<host>:5432/postgres
+spring.datasource.driver-class-name=org.postgresql.Driver
+spring.datasource.username=postgres.<project-ref>
+spring.datasource.password=YOUR_DB_PASSWORD
+
+# ── JPA / Hibernate ───────────────────────────────────────────────────────────
+spring.jpa.database-platform=org.hibernate.dialect.PostgreSQLDialect
+spring.jpa.hibernate.ddl-auto=none
+spring.jpa.show-sql=true
+spring.jpa.properties.hibernate.format_sql=true
+spring.jpa.open-in-view=false
+spring.jpa.hibernate.naming.physical-strategy=org.hibernate.boot.model.naming.PhysicalNamingStrategyStandardImpl
+
+# ── Supabase ─────────────────────────────────────────────────────────────────
+# Project URL: Supabase Dashboard → Project Settings → API → Project URL
+supabase.url=https://<project-ref>.supabase.co
+# Anon key: Supabase Dashboard → Project Settings → API → Project API keys → anon/public
+supabase.anon.key=YOUR_SUPABASE_ANON_KEY
+# JWKS endpoint — used to verify ES256-signed access tokens
+supabase.jwks.uri=https://<project-ref>.supabase.co/auth/v1/.well-known/jwks.json
+
+# ── SpringDoc / Swagger UI ────────────────────────────────────────────────────
+springdoc.api-docs.path=/api-docs
+springdoc.swagger-ui.path=/swagger-ui.html
+springdoc.swagger-ui.operationsSorter=method
+springdoc.swagger-ui.tryItOutEnabled=true
