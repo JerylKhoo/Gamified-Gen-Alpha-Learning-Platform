@@ -77,6 +77,184 @@ function ActivityChart({ data }) {
   );
 }
 
+// ── Edit Profile Modal ──────────────────────────────────────────────────────
+function EditProfileModal({ userData, onClose, onSave }) {
+  const [name, setName]             = useState(userData?.name || '');
+  const [characters, setCharacters] = useState([]);
+  const [selected, setSelected]     = useState(userData?.profilePic || null);
+  const [saving, setSaving]         = useState(false);
+  const [loadingChars, setLoadingChars] = useState(true);
+  const [saveError, setSaveError]   = useState(null);
+
+  useEffect(() => {
+    async function fetchChars() {
+      const { data } = await supabase.storage.from('avatars').list('', { limit: 200, sortBy: { column: 'name', order: 'asc' } });
+      if (data) {
+        const imgs = data
+          .filter(f => /\.(png|jpe?g|gif|webp|svg)$/i.test(f.name))
+          .map(f => ({
+            name: f.name,
+            url: supabase.storage.from('avatars').getPublicUrl(f.name).data.publicUrl,
+          }));
+        setCharacters(imgs);
+      }
+      setLoadingChars(false);
+    }
+    fetchChars();
+
+    const onKey = e => { if (e.key === 'Escape') onClose(); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [onClose]);
+
+  async function handleSave() {
+    setSaving(true);
+    setSaveError(null);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+
+      const body = {};
+      if (name.trim()) body.name = name.trim();
+      if (selected)    body.profilePic = selected;
+
+      const res = await fetch(`${API_URL}/api/v1/users/${session.user.id}`, {
+        method: 'PUT',
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(body),
+      });
+
+      if (res.ok) {
+        onSave(await res.json());
+        onClose();
+      } else {
+        const errText = await res.text();
+        console.error('Profile update failed:', res.status, errText);
+        setSaveError(`Save failed (${res.status}): ${errText || 'Unknown error'}`);
+      }
+    } catch (err) {
+      console.error('Update profile error:', err);
+      setSaveError(`Save failed: ${err.message}`);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  const previewSrc = selected || userData?.profilePic || characterImg;
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
+      onClick={e => { if (e.target === e.currentTarget) onClose(); }}
+    >
+      <div
+        className="bg-[#0d0f18] border border-[rgba(139,92,246,0.25)] rounded-[20px] p-6 w-full max-w-[560px] mx-4 shadow-[0_0_60px_rgba(139,92,246,0.2)]"
+        style={{ animation: 'modalIn 0.18s cubic-bezier(0.2,0,0.2,1)' }}
+      >
+        <style>{`
+          @keyframes modalIn {
+            from { opacity: 0; transform: scale(0.94) translateY(8px); }
+            to   { opacity: 1; transform: scale(1)    translateY(0);   }
+          }
+        `}</style>
+
+        {/* Header */}
+        <div className="flex items-center justify-between mb-5">
+          <h2 className="text-[#f0eeff] font-extrabold text-lg m-0">Edit Profile</h2>
+          <button
+            onClick={onClose}
+            className="w-8 h-8 flex items-center justify-center rounded-full bg-[rgba(255,255,255,0.05)] text-[#7c6ea8] hover:text-[#f0eeff] hover:bg-[rgba(139,92,246,0.2)] transition-all cursor-pointer border-none text-lg leading-none"
+          >×</button>
+        </div>
+
+        {/* Name input */}
+        <label className="block text-[0.75rem] font-bold text-[#7c6ea8] uppercase tracking-[0.1em] mb-1">
+          Display Name
+        </label>
+        <input
+          value={name}
+          onChange={e => setName(e.target.value)}
+          placeholder="Enter your name…"
+          className="w-full bg-[rgba(255,255,255,0.04)] border border-[rgba(139,92,246,0.18)] rounded-[10px] px-4 py-2 text-[#f0eeff] text-sm placeholder-[#5a5278] outline-none focus:border-[rgba(139,92,246,0.55)] focus:shadow-[0_0_0_3px_rgba(139,92,246,0.1)] transition-all mb-5"
+        />
+
+        {/* Character picker */}
+        <p className="text-[0.75rem] font-bold text-[#7c6ea8] uppercase tracking-[0.1em] m-0 mb-3">
+          Choose Character
+        </p>
+        <div className="flex gap-4">
+          {/* Large preview */}
+          <div className="flex-shrink-0 w-[130px] h-[130px] bg-[rgba(139,92,246,0.07)] border border-[rgba(139,92,246,0.2)] rounded-[14px] flex items-center justify-center">
+            <img
+              src={previewSrc}
+              alt="Preview"
+              className="w-[100px] h-[100px] object-contain drop-shadow-lg"
+              onError={e => { e.currentTarget.src = characterImg; }}
+            />
+          </div>
+
+          {/* Character grid */}
+          <div className="flex-1 min-h-0">
+            {loadingChars ? (
+              <p className="text-[#5a5278] text-sm">Loading characters…</p>
+            ) : characters.length === 0 ? (
+              <p className="text-[#5a5278] text-sm">No characters found.</p>
+            ) : (
+              <div className="grid grid-cols-4 gap-2 max-h-[160px] overflow-y-auto styled-scroll pr-1">
+                {characters.map(c => (
+                  <button
+                    key={c.name}
+                    onClick={() => setSelected(c.url)}
+                    className={`w-full aspect-square rounded-[10px] bg-[rgba(255,255,255,0.04)] border-2 flex items-center justify-center p-1 cursor-pointer transition-all hover:border-[#8b5cf6] hover:bg-[rgba(139,92,246,0.1)] ${
+                      selected === c.url
+                        ? 'border-[#8b5cf6] bg-[rgba(139,92,246,0.18)] shadow-[0_0_10px_rgba(139,92,246,0.35)]'
+                        : 'border-[rgba(139,92,246,0.15)]'
+                    }`}
+                  >
+                    <img
+                      src={c.url}
+                      alt={c.name}
+                      className="w-full h-full object-contain"
+                      onError={e => { e.currentTarget.src = characterImg; }}
+                    />
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Error message */}
+        {saveError && (
+          <p className="mt-4 mb-0 text-[0.78rem] text-[#f87171] bg-[rgba(248,113,113,0.08)] border border-[rgba(248,113,113,0.25)] rounded-[8px] px-3 py-2">
+            {saveError}
+          </p>
+        )}
+
+        {/* Actions */}
+        <div className="flex gap-3 mt-4 justify-end">
+          <button
+            onClick={onClose}
+            className="px-5 py-2 rounded-[10px] bg-[rgba(255,255,255,0.05)] border border-[rgba(139,92,246,0.18)] text-[#9090b0] text-sm font-bold cursor-pointer hover:bg-[rgba(255,255,255,0.09)] hover:text-[#f0eeff] transition-all"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={handleSave}
+            disabled={saving}
+            className="px-6 py-2 bg-gradient-to-br from-[#7c3aed] to-[#4f46e5] text-white border-none rounded-[10px] text-sm font-extrabold cursor-pointer shadow-[0_4px_20px_rgba(124,58,237,0.35)] transition-all hover:-translate-y-0.5 hover:shadow-[0_8px_28px_rgba(124,58,237,0.5)] disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:translate-y-0"
+          >
+            {saving ? 'Saving…' : 'Save changes'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 const cardCls =
   "bg-[rgba(255,255,255,0.03)] border border-[rgba(139,92,246,0.18)] rounded-[20px] p-[1.6rem] backdrop-blur-md relative overflow-hidden transition-all duration-300 hover:border-[rgba(139,92,246,0.35)] hover:shadow-[0_0_32px_rgba(139,92,246,0.1)] before:content-[''] before:absolute before:inset-0 before:rounded-[20px] before:bg-[radial-gradient(ellipse_at_top_left,rgba(139,92,246,0.06)_0%,transparent_65%)] before:pointer-events-none";
 
@@ -92,6 +270,7 @@ export default function HomePage() {
   const [currentCourse, setCurrentCourse] = useState(null);
   const [questionCount, setQuestionCount] = useState(null);
   const [loading,       setLoading]       = useState(true);
+  const [showEditModal, setShowEditModal] = useState(false);
 
   useEffect(() => {
     async function fetchAll() {
@@ -198,6 +377,13 @@ export default function HomePage() {
 
   return (
     <main className="flex flex-col items-center justify-center p-7 overflow-auto max-sm:p-4">
+      {showEditModal && (
+        <EditProfileModal
+          userData={userData}
+          onClose={() => setShowEditModal(false)}
+          onSave={updated => setUserData(updated)}
+        />
+      )}
       <div className="h-[88vh] grid grid-cols-[auto_auto] grid-rows-[auto_1fr] gap-[1.1rem] w-fit min-w-[70%] max-lg:min-w-[90%] max-sm:h-auto max-sm:w-full max-sm:flex max-sm:flex-col">
 
         {/* ── Profile Card ── */}
@@ -214,7 +400,7 @@ export default function HomePage() {
                 Lv.{level}
               </div>
             </div>
-            <button className="flex items-center gap-1 px-3 py-[0.25rem] rounded-lg bg-[rgba(139,92,246,0.15)] border border-[rgba(139,92,246,0.3)] text-[#a78bfa] text-[0.7rem] font-bold cursor-pointer transition-all hover:bg-[rgba(139,92,246,0.28)] hover:text-[#ede9fe]">
+            <button onClick={() => setShowEditModal(true)} className="flex items-center gap-1 px-3 py-[0.25rem] rounded-lg bg-[rgba(139,92,246,0.15)] border border-[rgba(139,92,246,0.3)] text-[#a78bfa] text-[0.7rem] font-bold cursor-pointer transition-all hover:bg-[rgba(139,92,246,0.28)] hover:text-[#ede9fe]">
               <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
                 <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4z"/>
