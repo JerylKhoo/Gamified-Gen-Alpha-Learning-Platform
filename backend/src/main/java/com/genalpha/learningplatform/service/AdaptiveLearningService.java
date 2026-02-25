@@ -117,7 +117,11 @@ public class AdaptiveLearningService {
                 correctList.remove(qIdStr);
             }
 
+            List<Double> history = parseDoubleList(progress.getAdaptiveHistory());
+            history.add(thetaToScore(state.getTheta()));
+
             progress.setAdaptiveScore(toJson(state));
+            progress.setAdaptiveHistory(toJson(history));
             progress.setCorrectQuestions(toJson(correctList));
             progress.setWrongQuestions(toJson(wrongList));
             progressRepository.save(progress);
@@ -251,6 +255,17 @@ public class AdaptiveLearningService {
         }
     }
 
+    /** Parse a JSON double array (adaptive_history) into a mutable list. */
+    @SuppressWarnings("unchecked")
+    private List<Double> parseDoubleList(String json) {
+        if (json == null || json.isBlank() || json.equals("[]")) return new ArrayList<>();
+        try {
+            return objectMapper.readValue(json, ArrayList.class);
+        } catch (Exception e) {
+            return new ArrayList<>();
+        }
+    }
+
     private IRTState parseIRTState(String json) {
         if (json == null || json.isBlank() || json.equals("[]")) return new IRTState();
         try {
@@ -273,6 +288,7 @@ public class AdaptiveLearningService {
         p.setUserId(userId);
         p.setLessonId(lessonId);
         p.setAdaptiveScore("{}");
+        p.setAdaptiveHistory("[]");
         p.setCorrectQuestions("[]");
         p.setWrongQuestions("[]");
         return p;

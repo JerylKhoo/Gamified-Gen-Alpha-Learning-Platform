@@ -26,6 +26,10 @@ public class Progress {
     private String adaptiveScore;
 
     @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "adaptive_history", columnDefinition = "jsonb")
+    private String adaptiveHistory;
+
+    @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "correct_questions", columnDefinition = "jsonb")
     private String correctQuestions;
 
@@ -41,6 +45,8 @@ public class Progress {
     public void setLessonId(String lessonId) { this.lessonId = lessonId; }
     public String getAdaptiveScore() { return adaptiveScore; }
     public void setAdaptiveScore(String adaptiveScore) { this.adaptiveScore = adaptiveScore; }
+    public String getAdaptiveHistory() { return adaptiveHistory; }
+    public void setAdaptiveHistory(String adaptiveHistory) { this.adaptiveHistory = adaptiveHistory; }
     public String getCorrectQuestions() { return correctQuestions; }
     public void setCorrectQuestions(String correctQuestions) { this.correctQuestions = correctQuestions; }
     public String getWrongQuestions() { return wrongQuestions; }
