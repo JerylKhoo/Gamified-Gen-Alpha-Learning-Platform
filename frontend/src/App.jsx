@@ -7,6 +7,7 @@ import AuthCallback from './pages/AuthCallback';
 import HomeLayout from './pages/HomeLayout';
 import HomePage from './pages/HomePage';
 import LearnPage from './components/HomePage/LearnPage';
+import AdaptiveLearningPage from './pages/AdaptiveLearningPage';
 import CommunityPage from './components/HomePage/CommunityPage';
 
 function ComingSoon({ label }) {
@@ -29,6 +30,7 @@ export default function App() {
           <Route path="/home" element={<ProtectedRoute><HomeLayout /></ProtectedRoute>}>
             <Route index element={<HomePage />} />
             <Route path="learn" element={<LearnPage />} />
+            <Route path="learn/:lessonId" element={<AdaptiveLearningPage />} />
             <Route path="community" element={<CommunityPage />} />
             <Route path="dashboard" element={<ComingSoon label="Dashboard" />} />
           </Route>
