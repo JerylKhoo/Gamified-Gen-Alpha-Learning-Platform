@@ -15,11 +15,27 @@ CREATE TABLE "USER" (
 -- =====================
 -- AUTO-CREATE USER TRIGGER
 -- =====================
+
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS TRIGGER AS $$
+DECLARE
+    v_avatar_name TEXT;
+    v_avatar_url  TEXT;
 BEGIN
-    INSERT INTO public."USER" (USER_ID, Name)
-    VALUES (NEW.id, split_part(NEW.email, '@', 1));
+    -- Pick a random file from the avatars bucket
+    SELECT name INTO v_avatar_name
+    FROM storage.objects
+    WHERE bucket_id = 'avatars'
+    ORDER BY random()
+    LIMIT 1;
+
+    IF v_avatar_name IS NOT NULL THEN
+        v_avatar_url := 'https://thuyecuhlufqvabzeqlg.supabase.co/storage/v1/object/public/avatars/' || v_avatar_name;
+    END IF;
+
+    INSERT INTO public."USER" (USER_ID, Name, Profile_Pic)
+    VALUES (NEW.id, split_part(NEW.email, '@', 1), v_avatar_url);
+
     RETURN NEW;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
@@ -45,7 +61,9 @@ CREATE TABLE POSTS (
 -- =====================
 CREATE TABLE LESSONS (
     LESSON_ID TEXT PRIMARY KEY,
-    Category TEXT NOT NULL
+    Category TEXT NOT NULL,
+    Description TEXT,
+    Image TEXT
 );
 
 -- =====================
@@ -81,10 +99,24 @@ CREATE TABLE PROGRESS (
     USER_ID UUID NOT NULL REFERENCES "USER"(USER_ID) ON DELETE CASCADE,
     LESSON_ID TEXT NOT NULL REFERENCES LESSONS(LESSON_ID) ON DELETE CASCADE,
     Adaptive_Score JSONB DEFAULT '{}',
+    Adaptive_History JSONB DEFAULT '[]',
     Correct_Questions JSONB DEFAULT '[]',
     Wrong_Questions JSONB DEFAULT '[]',
+    Last_Updated TIMESTAMPTZ DEFAULT NOW(),
     UNIQUE (USER_ID, LESSON_ID)
 );
+
+CREATE OR REPLACE FUNCTION set_progress_last_updated()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.Last_Updated = NOW();
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trg_progress_last_updated
+BEFORE UPDATE ON PROGRESS
+FOR EACH ROW EXECUTE FUNCTION set_progress_last_updated();
 
 -- =====================
 -- BADGES TABLE
@@ -151,11 +183,6 @@ VALUES
 -- =====================
 -- STORAGE POLICIES
 -- =====================
-CREATE POLICY "Avatar upload for own user"
-ON storage.objects FOR INSERT
-TO authenticated
-WITH CHECK (bucket_id = 'avatars' AND auth.uid()::text = (storage.foldername(name))[1]);
-
 CREATE POLICY "Avatar update for own user"
 ON storage.objects FOR UPDATE
 TO authenticated
@@ -304,22 +331,22 @@ ON USER_STREAKS FOR UPDATE TO authenticated
 USING (auth.uid() = USER_ID);
 
 -- Add LESSON_ID
-INSERT INTO LESSONS (LESSON_ID, Category) VALUES
-('The Basics', 'Slang & Communication'),
-('Texting Like Gen Alpha', 'Slang & Communication'),
-('Advanced Slang', 'Slang & Communication'),
-('Emoji as Language', 'Emoji & Digital Expression'),
-('Meme Formats & References', 'Emoji & Digital Expression'),
-('TikTok Ecosystem 101', 'TikTok & Social Media'),
-('Platform Etiquette', 'TikTok & Social Media'),
-('Gaming Terminology Essentials', 'Gaming Culture'),
-('Popular Games Culture', 'Gaming Culture'),
-('Gen Alpha Mental Health Vocabulary', 'Mental Health Awareness'),
-('Authenticity & Personal Branding', 'Mental Health Awareness'),
-('Understanding Gen Alpha Activism', 'Social Justice & Activism'),
-('Just Memes', 'Meme Culture'),
-('Understanding Brain Rot', 'Meme Culture'),
-('AI Slop Detector', 'AI Slop');
+INSERT INTO LESSONS (LESSON_ID, Category, Description) VALUES
+('The Basics', 'Slang & Communication', 'Get started with the most essential Gen Alpha slang terms and phrases used in everyday conversation.'),
+('Texting Like Gen Alpha', 'Slang & Communication', 'Learn how Gen Alpha types — from abbreviations and shorthand to the unspoken rules of digital messaging.'),
+('Advanced Slang', 'Slang & Communication', 'Level up your vocabulary with deeper, more nuanced slang that only true Gen Alpha insiders would know.'),
+('Emoji as Language', 'Emoji & Digital Expression', 'Discover how Gen Alpha uses emojis beyond their literal meaning to communicate tone, irony, and identity.'),
+('Meme Formats & References', 'Emoji & Digital Expression', 'Break down the most popular meme structures and the cultural references that make them hit differently.'),
+('TikTok Ecosystem 101', 'TikTok & Social Media', 'Understand the trends, sounds, and creator culture that define the TikTok experience for Gen Alpha.'),
+('Platform Etiquette', 'TikTok & Social Media', 'Learn the unwritten rules of how Gen Alpha behaves, comments, and engages across social platforms.'),
+('Gaming Terminology Essentials', 'Gaming Culture', 'Master the core vocabulary of gaming that Gen Alpha uses both in-game and in real life.'),
+('Popular Games Culture', 'Gaming Culture', 'Explore the games, characters, and in-jokes that are deeply embedded in Gen Alpha''s cultural identity.'),
+('Gen Alpha Mental Health Vocabulary', 'Mental Health Awareness', 'Understand the terms Gen Alpha uses to talk about emotions, mental health struggles, and self-care.'),
+('Authenticity & Personal Branding', 'Mental Health Awareness', 'Explore how Gen Alpha thinks about identity, staying true to themselves, and curating their online presence.'),
+('Understanding Gen Alpha Activism', 'Social Justice & Activism', 'Learn how Gen Alpha engages with social justice, online movements, and advocacy in their own language.'),
+('Just Memes', 'Meme Culture', 'A pure meme experience — test your knowledge of the formats, faces, and phrases that define meme culture.'),
+('Understanding Brain Rot', 'Meme Culture', 'Dive into the chaotic, absurdist content Gen Alpha calls brain rot and figure out what it all means.'),
+('AI Slop Detector', 'AI Slop', 'Train your eye to spot low-quality, AI-generated content and understand why Gen Alpha is so quick to call it out.');
 
 -- Add QUESTIONS
 INSERT INTO QUESTIONS (LESSON_ID, Question, Options, Answer, Explanation, Score) VALUES

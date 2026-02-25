@@ -41,7 +41,9 @@ public class LessonService {
     public Lesson update(String lessonId, Lesson updates, UUID requesterId) {
         requireAdmin(requesterId);
         Lesson lesson = getById(lessonId);
-        if (updates.getCategory() != null) lesson.setCategory(updates.getCategory());
+        if (updates.getCategory() != null)    lesson.setCategory(updates.getCategory());
+        if (updates.getDescription() != null) lesson.setDescription(updates.getDescription());
+        if (updates.getImage() != null)       lesson.setImage(updates.getImage());
         return lessonRepository.save(lesson);
     }
 
