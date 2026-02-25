@@ -369,8 +369,91 @@ export default function HomePage() {
 
   if (loading) {
     return (
-      <main className="flex items-center justify-center p-7 min-h-[88vh]">
-        <p className="text-[#6b6490] text-lg font-semibold animate-pulse">Loading...</p>
+      <main className="flex flex-col items-center justify-center p-7 overflow-auto max-sm:p-4">
+        <style>{`
+          @keyframes shimmer {
+            0%   { background-position: -600px 0; }
+            100% { background-position:  600px 0; }
+          }
+          .sk {
+            background: linear-gradient(90deg, rgba(139,92,246,0.07) 25%, rgba(139,92,246,0.16) 50%, rgba(139,92,246,0.07) 75%);
+            background-size: 600px 100%;
+            animation: shimmer 1.6s infinite linear;
+            border-radius: 10px;
+          }
+        `}</style>
+        <div className="h-[88vh] grid grid-cols-[auto_auto] grid-rows-[auto_1fr] gap-[1.1rem] w-fit min-w-[70%] max-lg:min-w-[90%] max-sm:h-auto max-sm:w-full max-sm:flex max-sm:flex-col">
+
+          {/* Profile Card Skeleton */}
+          <div className={`${cardCls} col-start-1 row-start-1 flex items-center gap-7 min-w-[440px] max-lg:min-w-0`}>
+            <div className="flex-shrink-0 flex flex-col items-center gap-2">
+              {/* Avatar circle */}
+              <div className="sk w-[90px] h-[90px] rounded-full" />
+              {/* Edit button */}
+              <div className="sk w-16 h-6 rounded-lg" />
+            </div>
+            <div className="flex flex-col gap-3 flex-1 min-w-0">
+              {/* "Welcome back" */}
+              <div className="sk w-24 h-3 rounded" />
+              {/* Name — tall to match text-[2.2rem] heading */}
+              <div className="sk w-52 h-10 rounded-lg" />
+              {/* View Stats button */}
+              <div className="sk w-28 h-9 rounded-[10px]" />
+            </div>
+            {/* XP + Rank badges */}
+            <div className="flex flex-col gap-2 flex-shrink-0 ml-auto max-sm:hidden">
+              <div className="sk w-24 h-9 rounded-[20px]" />
+              <div className="sk w-24 h-9 rounded-[20px]" />
+            </div>
+          </div>
+
+          {/* My Courses Card Skeleton */}
+          <div className={`${cardCls} col-start-2 row-start-1 flex flex-col min-w-[260px] max-lg:min-w-0`}>
+            {/* Title */}
+            <div className="sk w-28 h-3 rounded mb-4" />
+            <ul className="list-none m-0 p-0 flex flex-col gap-[0.55rem]">
+              {[140, 100, 120].map((w, i) => (
+                <li key={i} className="flex flex-col gap-[0.4rem] px-[0.9rem] py-[0.6rem] bg-[rgba(255,255,255,0.03)] border border-[rgba(139,92,246,0.12)] rounded-[10px]">
+                  <div className="flex items-center justify-between">
+                    <div className="flex flex-col gap-[0.25rem]">
+                      <div className="sk h-3 rounded" style={{ width: w }} />
+                      <div className="sk w-20 h-2.5 rounded" />
+                    </div>
+                    <div className="sk w-8 h-3 rounded ml-3" />
+                  </div>
+                  <div className="sk h-[5px] rounded-full w-full" />
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          {/* Activity + Course Card Skeleton */}
+          <div className={`${cardCls} col-span-full row-start-2 grid grid-cols-[1.35fr_1fr] gap-[1.1rem] items-stretch max-sm:grid-cols-1`}>
+            {/* Left: XP Chart */}
+            <div className="flex flex-col gap-3 min-w-0">
+              <div className="flex items-center justify-between">
+                <div className="sk w-24 h-3 rounded" />
+                <div className="sk w-20 h-3 rounded" />
+              </div>
+              <div className="sk flex-1 min-h-[120px] rounded-[14px]" />
+            </div>
+
+            {/* Right: Current Course */}
+            <div className="flex flex-col justify-center gap-[1.1rem] border-l border-[rgba(139,92,246,0.15)] pl-[1.1rem] max-sm:border-l-0 max-sm:border-t max-sm:border-[rgba(139,92,246,0.15)] max-sm:pl-0 max-sm:pt-4">
+              <div className="flex flex-col gap-2">
+                <div className="flex items-center justify-between">
+                  <div className="sk w-28 h-3 rounded" />
+                  <div className="sk w-10 h-3 rounded" />
+                </div>
+                <div className="sk w-44 h-5 rounded" />
+                <div className="sk h-3 rounded-full w-full" />
+              </div>
+              <div className="sk w-24 h-7 rounded-lg" />
+              <div className="sk w-full h-11 rounded-xl" />
+            </div>
+          </div>
+
+        </div>
       </main>
     );
   }
