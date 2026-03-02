@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
+import java.time.Instant;
 import java.util.UUID;
 
 @Entity
@@ -26,12 +27,19 @@ public class Progress {
     private String adaptiveScore;
 
     @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "adaptive_history", columnDefinition = "jsonb")
+    private String adaptiveHistory;
+
+    @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "correct_questions", columnDefinition = "jsonb")
     private String correctQuestions;
 
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "wrong_questions", columnDefinition = "jsonb")
     private String wrongQuestions;
+
+    @Column(name = "last_updated", insertable = false, updatable = false)
+    private Instant lastUpdated;
 
     public UUID getProgressId() { return progressId; }
     public void setProgressId(UUID progressId) { this.progressId = progressId; }
@@ -41,8 +49,11 @@ public class Progress {
     public void setLessonId(String lessonId) { this.lessonId = lessonId; }
     public String getAdaptiveScore() { return adaptiveScore; }
     public void setAdaptiveScore(String adaptiveScore) { this.adaptiveScore = adaptiveScore; }
+    public String getAdaptiveHistory() { return adaptiveHistory; }
+    public void setAdaptiveHistory(String adaptiveHistory) { this.adaptiveHistory = adaptiveHistory; }
     public String getCorrectQuestions() { return correctQuestions; }
     public void setCorrectQuestions(String correctQuestions) { this.correctQuestions = correctQuestions; }
     public String getWrongQuestions() { return wrongQuestions; }
     public void setWrongQuestions(String wrongQuestions) { this.wrongQuestions = wrongQuestions; }
+    public Instant getLastUpdated() { return lastUpdated; }
 }

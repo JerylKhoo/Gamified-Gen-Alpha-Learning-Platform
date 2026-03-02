@@ -31,7 +31,7 @@ function getVisuals(category) {
   return CATEGORY_VISUALS[category] ?? DEFAULT_VISUAL;
 }
 
-function CourseCard({ lesson, onClick }) {
+function CourseCard({ lesson, onClick, completed }) {
   const { emoji, bg, pattern } = getVisuals(lesson.category);
   const title = formatLessonId(lesson.lessonId);
 
@@ -42,11 +42,14 @@ function CourseCard({ lesson, onClick }) {
       className="group bg-[#0d0f18] border border-[rgba(255,255,255,0.07)] rounded-xl overflow-hidden cursor-pointer transition-all duration-300 hover:border-[rgba(139,92,246,0.45)] hover:shadow-[0_0_28px_rgba(139,92,246,0.18)] hover:-translate-y-1 flex flex-col"
     >
       {/* Thumbnail — image if available, else gradient + emoji fallback */}
-      <div className={`relative h-[160px] bg-gradient-to-br ${bg} flex items-end overflow-hidden flex-shrink-0`}>
+      <div className={`relative bg-gradient-to-br ${bg} flex-shrink-0 overflow-hidden h-[260px]`}>
         {lesson.image ? (
-          <img src={lesson.image} alt={title} className="absolute inset-0 w-full h-full object-cover" />
-        ) : (
           <>
+            <img src={lesson.image} alt={title} className="absolute inset-0 w-full h-full object-cover" />
+            <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-[#0d0f18] to-transparent pointer-events-none" />
+          </>
+        ) : (
+          <div className="relative h-[160px]">
             <div className="absolute inset-0" style={{ background: pattern }} />
             <div className="absolute inset-0 opacity-[0.06]"
               style={{ backgroundImage: 'repeating-linear-gradient(0deg,transparent,transparent 20px,rgba(255,255,255,0.5) 20px,rgba(255,255,255,0.5) 21px),repeating-linear-gradient(90deg,transparent,transparent 20px,rgba(255,255,255,0.5) 20px,rgba(255,255,255,0.5) 21px)' }}
@@ -54,12 +57,20 @@ function CourseCard({ lesson, onClick }) {
             <div className="absolute inset-0 flex items-center justify-center">
               <span className="text-[3.5rem] drop-shadow-lg select-none">{emoji}</span>
             </div>
-          </>
+          </div>
         )}
       </div>
 
-      {/* Content */}
-      <div className="p-4 flex flex-col gap-2 flex-1">
+      {/* Content — pulled up over the image when image exists */}
+      <div className={`relative p-4 flex flex-col gap-2 flex-1 ${lesson.image ? '-mt-7 bg-[#0d0f18] z-10' : ''}`}>
+        {completed && (
+          <div className="absolute top-3 right-3 flex items-center gap-1 bg-green-500/15 border border-green-500/30 text-green-400 text-[0.62rem] font-bold tracking-wide uppercase rounded-md px-2 py-[0.2rem]">
+            <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="20 6 9 17 4 12"/>
+            </svg>
+            Completed
+          </div>
+        )}
         <span className="text-[0.68rem] text-[#4b5563] font-semibold tracking-[0.12em] uppercase">COURSE</span>
         <h3 className="text-[#f0eeff] font-bold text-[0.97rem] leading-snug m-0 group-hover:text-white transition-colors">{title}</h3>
         {lesson.description && (
@@ -97,7 +108,7 @@ function CourseModal({ lesson, onClose }) {
         {/* Header thumbnail — image if available, else gradient + emoji fallback */}
         <div className={`relative h-[180px] bg-gradient-to-br ${bg} overflow-hidden`}>
           {lesson.image ? (
-            <img src={lesson.image} alt={title} className="absolute inset-0 w-full h-full object-cover" />
+            <img src={lesson.image} alt={title} className="absolute inset-0 w-full h-full object-contain" />
           ) : (
             <>
               <div className="absolute inset-0" style={{ background: pattern }} />
@@ -156,27 +167,45 @@ function CourseModal({ lesson, onClose }) {
 }
 
 export default function LearnPage() {
-  const [lessons, setLessons] = useState([]);
-  const [filters, setFilters] = useState(['All']);
-  const [activeFilter, setActiveFilter] = useState('All');
+  const [lessons, setLessons]             = useState([]);
+  const [completedLessons, setCompleted]  = useState(new Set());
+  const [filters, setFilters]             = useState(['All']);
+  const [activeFilter, setActiveFilter]   = useState('All');
   const [selectedLesson, setSelectedLesson] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const [loading, setLoading]             = useState(true);
+  const [error, setError]                 = useState('');
 
   useEffect(() => {
-    async function fetchLessons() {
+    async function fetchData() {
       try {
         const { data: { session } } = await supabase.auth.getSession();
-        const res = await fetch(`${API_URL}/api/v1/lessons`, {
-          headers: { Authorization: `Bearer ${session.access_token}` },
-        });
-        if (!res.ok) throw new Error('Failed to load lessons');
-        const data = await res.json();
-        setLessons(data);
+        const headers = { Authorization: `Bearer ${session.access_token}` };
 
-        // Build filter list dynamically from unique categories
-        const uniqueCategories = ['All', ...new Set(data.map(l => l.category))];
+        // Fetch lessons and progress records in parallel
+        const [lessonsRes, progressRes] = await Promise.all([
+          fetch(`${API_URL}/api/v1/lessons`,       { headers }),
+          fetch(`${API_URL}/api/v1/progress/me`,   { headers }),
+        ]);
+
+        if (!lessonsRes.ok) throw new Error('Failed to load lessons');
+        const lessonsData  = await lessonsRes.json();
+        setLessons(lessonsData);
+
+        const uniqueCategories = ['All', ...new Set(lessonsData.map(l => l.category))];
         setFilters(uniqueCategories);
+
+        // Build a Set of lessonIds where theta = 3.0 (fully mastered, 100/100)
+        if (progressRes.ok) {
+          const progressData = await progressRes.json();
+          const done = new Set();
+          for (const p of progressData) {
+            try {
+              const state = JSON.parse(p.adaptiveScore || '{}');
+              if (state.theta >= 3.0) done.add(p.lessonId);
+            } catch { /* skip malformed record */ }
+          }
+          setCompleted(done);
+        }
       } catch (err) {
         setError(err.message);
       } finally {
@@ -184,7 +213,7 @@ export default function LearnPage() {
       }
     }
 
-    fetchLessons();
+    fetchData();
   }, []);
 
   const filtered = activeFilter === 'All'
@@ -197,7 +226,7 @@ export default function LearnPage() {
       {/* Header */}
       <div className="mb-7">
         <h1 className="text-[1.8rem] font-extrabold text-[#f0eeff] m-0 mb-1 flex items-center gap-3">
-          <span>📋</span> All Courses
+          All Courses
         </h1>
         <p className="text-[#6b6490] text-sm m-0">Explore Gen Alpha slang, meme culture, and internet lingo.</p>
       </div>
@@ -240,6 +269,7 @@ export default function LearnPage() {
               <CourseCard
                 key={lesson.lessonId}
                 lesson={lesson}
+                completed={completedLessons.has(lesson.lessonId)}
                 onClick={() => setSelectedLesson(lesson)}
               />
             ))}
