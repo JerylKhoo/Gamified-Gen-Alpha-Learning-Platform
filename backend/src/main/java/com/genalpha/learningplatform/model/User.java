@@ -1,8 +1,6 @@
 package com.genalpha.learningplatform.model;
 
 import jakarta.persistence.*;
-import org.hibernate.annotations.JdbcTypeCode;
-import org.hibernate.type.SqlTypes;
 
 import java.util.UUID;
 
@@ -17,9 +15,8 @@ public class User {
     @Column(nullable = false)
     private String name;
 
-    @JdbcTypeCode(SqlTypes.JSON)
-    @Column(columnDefinition = "jsonb")
-    private String points;
+    @Column
+    private Integer points;
 
     @Column(name = "profile_pic")
     private String profilePic;
@@ -31,8 +28,8 @@ public class User {
     public void setUserId(UUID userId) { this.userId = userId; }
     public String getName() { return name; }
     public void setName(String name) { this.name = name; }
-    public String getPoints() { return points; }
-    public void setPoints(String points) { this.points = points; }
+    public Integer getPoints() { return points; }
+    public void setPoints(Integer points) { this.points = points; }
     public String getProfilePic() { return profilePic; }
     public void setProfilePic(String profilePic) { this.profilePic = profilePic; }
     public String getRole() { return role; }
