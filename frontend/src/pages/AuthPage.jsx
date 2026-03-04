@@ -42,6 +42,7 @@ export default function AuthPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [isLogin, setIsLogin] = useState(searchParams.get('mode') === 'login');
+  const redirectTo = searchParams.get('redirect') || '/home';
 
   const [registerForm, setRegisterForm] = useState({ username: '', email: '', password: '' });
   const [loginForm, setLoginForm] = useState({ email: '', password: '' });
@@ -60,7 +61,7 @@ export default function AuthPage() {
       if (!res.ok) throw new Error('Registration failed');
       const { access_token, refresh_token } = await res.json();
       await supabase.auth.setSession({ access_token, refresh_token });
-      navigate('/home', { replace: true });
+      navigate(redirectTo, { replace: true });
     } catch (err) {
       setError(err.message);
     } finally {
@@ -80,7 +81,7 @@ export default function AuthPage() {
       if (!res.ok) throw new Error('Invalid email or password');
       const { access_token, refresh_token } = await res.json();
       await supabase.auth.setSession({ access_token, refresh_token });
-      navigate('/home', { replace: true });
+      navigate(redirectTo, { replace: true });
     } catch (err) {
       setError(err.message);
     } finally {
