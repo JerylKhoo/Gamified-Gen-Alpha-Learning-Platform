@@ -1,5 +1,6 @@
 package com.genalpha.learningplatform.service;
 
+import java.util.List;
 import java.util.UUID;
 
 import org.springframework.http.HttpStatus;
@@ -50,5 +51,15 @@ public class UserService {
         return userRepository.findById(userId)
                 .map(u -> "Collaborator".equals(u.getRole()))
                 .orElse(false);
+    }
+
+    public List<User> getLeaderboard() {
+        List<User> users = new java.util.ArrayList<>(userRepository.findAll());
+        users.sort((User a, User b) -> {
+            int pa = a.getPoints() != null ? a.getPoints() : 0;
+            int pb = b.getPoints() != null ? b.getPoints() : 0;
+            return Integer.compare(pb, pa);
+        });
+        return users;
     }
 }

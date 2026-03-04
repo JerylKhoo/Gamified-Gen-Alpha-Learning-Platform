@@ -1,4 +1,6 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../../context/AuthContext';
 
 const API_URL = import.meta.env.VITE_API_URL;
 
@@ -10,7 +12,17 @@ const FALLBACK = [
   { question: 'What is "rizz" and how do you use it?', answer: '"Rizz" is the ability to charm others. E.g. "He\'s got rizz."' },
 ];
 
+const APP_LINKS = [
+  { label: 'Home',        path: '/home' },
+  { label: 'Learn',       path: '/home/learn' },
+  { label: 'Community',   path: '/home/community' },
+  { label: 'Dashboard',   path: '/home/dashboard' },
+  { label: 'Leaderboard', path: '/home/leaderboard' },
+];
+
 export default function Footer() {
+  const { session } = useAuth();
+  const navigate = useNavigate();
   const [card, setCard] = useState(FALLBACK[Math.floor(Math.random() * FALLBACK.length)]);
   const [flipped, setFlipped] = useState(false);
 
@@ -20,11 +32,28 @@ export default function Footer() {
       .then(data => {
         if (Array.isArray(data) && data.length > 0) {
           const q = data[Math.floor(Math.random() * data.length)];
-          setCard({ question: q.question, answer: q.answer || q.explanation || 'Think about it...' });
+          let answerText = q.explanation || q.answer || 'Think about it...';
+          try {
+            const opts = JSON.parse(q.options);
+            const idx = parseInt(q.answer, 10);
+            if (Array.isArray(opts) && !isNaN(idx)) {
+              // answer may be 1-indexed or 0-indexed — try both
+              answerText = opts[idx - 1] ?? opts[idx] ?? answerText;
+            }
+          } catch { /* keep answerText fallback */ }
+          setCard({ question: q.question, answer: answerText });
         }
       })
       .catch(() => {});
   }, []);
+
+  function goTo(path) {
+    if (session) {
+      navigate(path);
+    } else {
+      navigate(`/auth?mode=login&redirect=${encodeURIComponent(path)}`);
+    }
+  }
 
   return (
     <footer className="bg-[#0d0d0d] border-t border-[rgba(139,92,246,0.2)]">
@@ -85,17 +114,23 @@ export default function Footer() {
         {/* Right: Nav groups */}
         <div className="flex gap-14 flex-wrap items-start">
 
+          {/* App pages */}
           <div className="flex flex-col gap-3">
             <span className="text-[0.72rem] font-bold tracking-[0.12em] uppercase text-[#9ca3af]">App</span>
             <div className="flex flex-col gap-2.5">
-              {['Dictionary', 'Leaderboard', 'Challenges'].map(link => (
-                <a key={link} href="#" className="text-[0.88rem] text-[#6b7280] no-underline hover:text-[#8b5cf6] transition-colors">
-                  {link}
-                </a>
+              {APP_LINKS.map(({ label, path }) => (
+                <button
+                  key={label}
+                  onClick={() => goTo(path)}
+                  className="text-[0.88rem] text-[#6b7280] bg-transparent border-none p-0 cursor-pointer text-left hover:text-[#8b5cf6] transition-colors"
+                >
+                  {label}
+                </button>
               ))}
             </div>
           </div>
 
+          {/* Company */}
           <div className="flex flex-col gap-3">
             <span className="text-[0.72rem] font-bold tracking-[0.12em] uppercase text-[#9ca3af]">Company</span>
             <div className="flex flex-col gap-2.5">
@@ -107,6 +142,7 @@ export default function Footer() {
             </div>
           </div>
 
+          {/* Support */}
           <div className="flex flex-col gap-3">
             <span className="text-[0.72rem] font-bold tracking-[0.12em] uppercase text-[#9ca3af]">Support</span>
             <div className="flex flex-col gap-2.5">
