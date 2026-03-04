@@ -9,6 +9,7 @@ import HomePage from './pages/HomePage';
 import LearnPage from './components/HomePage/LearnPage';
 import AdaptiveLearningPage from './pages/AdaptiveLearningPage';
 import CommunityPage from './components/HomePage/CommunityPage';
+import LeaderboardPage from './pages/LeaderboardPage';
 
 function ComingSoon({ label }) {
   return (
@@ -33,6 +34,7 @@ export default function App() {
             <Route path="learn/:lessonId" element={<AdaptiveLearningPage />} />
             <Route path="community" element={<CommunityPage />} />
             <Route path="dashboard" element={<ComingSoon label="Dashboard" />} />
+            <Route path="leaderboard" element={<LeaderboardPage />} />
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
