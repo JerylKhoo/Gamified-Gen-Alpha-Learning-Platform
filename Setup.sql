@@ -201,7 +201,8 @@ INSERT INTO storage.buckets (id, name, public)
 VALUES
     ('avatars', 'avatars', true),
     ('posts', 'posts', true),
-    ('lessons', 'lessons', true);
+    ('lessons', 'lessons', true),
+    ('badges', 'badges', true);
 
 -- =====================
 -- STORAGE POLICIES
@@ -235,6 +236,16 @@ CREATE POLICY "Lesson image upload for admin"
 ON storage.objects FOR INSERT
 TO authenticated
 WITH CHECK (bucket_id = 'lessons');
+
+CREATE POLICY "Badge images are publicly viewable"
+ON storage.objects FOR SELECT
+TO public
+USING (bucket_id = 'badges');
+
+CREATE POLICY "Badge image upload for admin"
+ON storage.objects FOR INSERT
+TO authenticated
+WITH CHECK (bucket_id = 'badges');
 
 -- =====================
 -- ROW LEVEL SECURITY (RLS)
