@@ -16,6 +16,8 @@ public class Post {
     @Column(name = "user_id", nullable = false)
     private UUID userId;
 
+    private String title;
+    private String category;
     private String picture;
     private String description;
 
@@ -28,6 +30,10 @@ public class Post {
     public void setPostId(UUID postId) { this.postId = postId; }
     public UUID getUserId() { return userId; }
     public void setUserId(UUID userId) { this.userId = userId; }
+    public String getTitle() { return title; }
+    public void setTitle(String title) { this.title = title; }
+    public String getCategory() { return category; }
+    public void setCategory(String category) { this.category = category; }
     public String getPicture() { return picture; }
     public void setPicture(String picture) { this.picture = picture; }
     public String getDescription() { return description; }

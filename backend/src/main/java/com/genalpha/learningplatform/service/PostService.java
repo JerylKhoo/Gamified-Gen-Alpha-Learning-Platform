@@ -34,9 +34,6 @@ public class PostService {
     }
 
     public Post create(Post post, UUID requesterId) {
-        if (!userService.isAdmin(requesterId) && !userService.isCollaborator(requesterId)) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only collaborators and admins can create posts");
-        }
         post.setPostId(null);
         post.setUserId(requesterId);
         post.setReportCount(0);
@@ -50,6 +47,8 @@ public class PostService {
         if (!isAdmin && !post.getUserId().equals(requesterId)) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Cannot edit another user's post");
         }
+        if (updates.getTitle() != null) post.setTitle(updates.getTitle());
+        if (updates.getCategory() != null) post.setCategory(updates.getCategory());
         if (updates.getPicture() != null) post.setPicture(updates.getPicture());
         if (updates.getDescription() != null) post.setDescription(updates.getDescription());
         return postRepository.save(post);
