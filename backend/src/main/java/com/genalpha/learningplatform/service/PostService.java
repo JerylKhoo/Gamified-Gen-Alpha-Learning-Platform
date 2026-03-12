@@ -1,6 +1,8 @@
 package com.genalpha.learningplatform.service;
 
+import com.genalpha.learningplatform.dto.PostResponse;
 import com.genalpha.learningplatform.model.Post;
+import com.genalpha.learningplatform.model.User;
 import com.genalpha.learningplatform.repository.PostRepository;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -22,6 +24,30 @@ public class PostService {
 
     public List<Post> getAll() {
         return postRepository.findAll();
+    }
+
+    public List<PostResponse> getAllWithAuthor() {
+        return postRepository.findAll().stream().map(this::toResponse).toList();
+    }
+
+    private PostResponse toResponse(Post post) {
+        PostResponse r = new PostResponse();
+        r.setPostId(post.getPostId());
+        r.setUserId(post.getUserId());
+        r.setTitle(post.getTitle());
+        r.setCategory(post.getCategory());
+        r.setPicture(post.getPicture());
+        r.setDescription(post.getDescription());
+        r.setReportCount(post.getReportCount());
+        r.setUpvote(post.getUpvote());
+        try {
+            User author = userService.getById(post.getUserId());
+            r.setAuthorName(author.getName());
+            r.setAuthorProfilePic(author.getProfilePic());
+        } catch (ResponseStatusException ignored) {
+            r.setAuthorName("Unknown");
+        }
+        return r;
     }
 
     public Post getById(UUID postId) {

@@ -30,18 +30,6 @@ const CATEGORY_STYLE = {
   'Off-Topic':     'bg-[rgba(248,113,113,0.1)]  border-[rgba(248,113,113,0.2)]  text-[#f87171]',
 };
 
-// ─── Avatar styles for posts (cycled by index) ─────────────────────────────
-const AVATAR_STYLES = [
-  { emoji: '🧠', bg: 'from-[#7c3aed] to-[#4f46e5]' },
-  { emoji: '🔥', bg: 'from-[#dc2626] to-[#7f1d1d]' },
-  { emoji: '💡', bg: 'from-[#15803d] to-[#14532d]' },
-  { emoji: '🖼️', bg: 'from-[#0e7490] to-[#0f3460]' },
-  { emoji: '🚽', bg: 'from-[#0284c7] to-[#0f3460]' },
-  { emoji: '🤔', bg: 'from-[#a21caf] to-[#4a044e]' },
-  { emoji: '🤖', bg: 'from-[#d97706] to-[#78350f]' },
-  { emoji: '🌐', bg: 'from-[#0e7490] to-[#155e75]' },
-];
-
 // ─── Stat pill styles ────────────────────────────────────────────────────────
 const STAT_STYLES = {
   Threads: { color: 'text-[#a78bfa]', bg: 'bg-[rgba(139,92,246,0.12)] border-[rgba(139,92,246,0.2)]' },
@@ -100,13 +88,17 @@ function ThreadCard({ thread, onClick }) {
       className="group flex items-start gap-4 bg-[#0d0f18] border border-[rgba(255,255,255,0.07)] rounded-xl p-4 cursor-pointer transition-all duration-300 hover:border-[rgba(139,92,246,0.45)] hover:shadow-[0_0_28px_rgba(139,92,246,0.15)] hover:-translate-y-0.5"
     >
       {/* ── Author Avatar ── */}
-      {/* Gradient circle with emoji — matches the Level badge + XP pill style in HomePage.jsx */}
-      <div
-        className={`flex-shrink-0 w-10 h-10 rounded-full bg-gradient-to-br ${thread.avatarBg}
-          flex items-center justify-center text-[1.1rem] select-none shadow-[0_2px_8px_rgba(0,0,0,0.4)]`}
-      >
-        {thread.avatarEmoji}
-      </div>
+      {thread.authorProfilePic ? (
+        <img
+          src={thread.authorProfilePic}
+          alt={thread.author}
+          className="flex-shrink-0 w-10 h-10 rounded-full object-cover shadow-[0_2px_8px_rgba(0,0,0,0.4)]"
+        />
+      ) : (
+        <div className="flex-shrink-0 w-10 h-10 rounded-full bg-gradient-to-br from-[#7c3aed] to-[#4f46e5] flex items-center justify-center text-[1.1rem] font-bold text-white select-none shadow-[0_2px_8px_rgba(0,0,0,0.4)]">
+          {thread.author?.charAt(0)?.toUpperCase() || '?'}
+        </div>
+      )}
 
       {/* ── Thread Body ── */}
       <div className="flex-1 min-w-0 flex flex-col gap-[0.3rem]">
@@ -343,22 +335,18 @@ export default function CommunityPage() {
   useEffect(() => { fetchPosts(); }, []);
 
   // Map backend posts to thread-card shape
-  const threads = posts.map((p, i) => {
-    const avatar = AVATAR_STYLES[i % AVATAR_STYLES.length];
-    return {
-      id: p.postId,
-      title: p.title || '(Untitled)',
-      category: p.category || 'Off-Topic',
-      author: 'Member',
-      avatarEmoji: avatar.emoji,
-      avatarBg: avatar.bg,
-      timestamp: '',
-      replies: 0,
-      likes: p.upvote || 0,
-      isHot: (p.upvote || 0) >= 10,
-      preview: p.description || '',
-    };
-  });
+  const threads = posts.map((p) => ({
+    id: p.postId,
+    title: p.title || '(Untitled)',
+    category: p.category || 'Off-Topic',
+    author: p.authorName || 'Member',
+    authorProfilePic: p.authorProfilePic || null,
+    timestamp: '',
+    replies: 0,
+    likes: p.upvote || 0,
+    isHot: (p.upvote || 0) >= 10,
+    preview: p.description || '',
+  }));
 
   const filtered = threads.filter(t =>
     (activeCategory === 'All' || t.category === activeCategory) &&
