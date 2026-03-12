@@ -50,6 +50,8 @@ CREATE TRIGGER on_auth_user_created
 CREATE TABLE POSTS (
     POST_ID UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     USER_ID UUID NOT NULL REFERENCES "USER"(USER_ID) ON DELETE CASCADE,
+    Title TEXT,
+    Category TEXT,
     Picture TEXT,
     Description TEXT,
     Report_Count INT DEFAULT 0,
