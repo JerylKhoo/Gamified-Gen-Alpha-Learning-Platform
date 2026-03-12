@@ -36,9 +36,8 @@ export default function Footer() {
           try {
             const opts = JSON.parse(q.options);
             const idx = parseInt(q.answer, 10);
-            if (Array.isArray(opts) && !isNaN(idx)) {
-              // answer may be 1-indexed or 0-indexed — try both
-              answerText = opts[idx - 1] ?? opts[idx] ?? answerText;
+            if (Array.isArray(opts) && !isNaN(idx) && idx >= 0 && idx < opts.length) {
+              answerText = opts[idx];
             }
           } catch { /* keep answerText fallback */ }
           setCard({ question: q.question, answer: answerText });
