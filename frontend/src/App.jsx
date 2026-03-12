@@ -29,7 +29,8 @@ export default function App() {
           <Route path="/auth" element={<GuestRoute><AuthPage /></GuestRoute>} />
           <Route path="/auth/callback" element={<AuthCallback />} />
           <Route path="/home" element={<ProtectedRoute><HomeLayout /></ProtectedRoute>}>
-            <Route index element={<HomePage />} />
+            <Route index element={<Navigate to="learn" replace />} />
+            <Route path="profile" element={<HomePage />} />
             <Route path="learn" element={<LearnPage />} />
             <Route path="learn/:lessonId" element={<AdaptiveLearningPage />} />
             <Route path="community" element={<CommunityPage />} />
