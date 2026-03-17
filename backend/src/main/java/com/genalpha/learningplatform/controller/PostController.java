@@ -1,5 +1,6 @@
 package com.genalpha.learningplatform.controller;
 
+import com.genalpha.learningplatform.dto.PostResponse;
 import com.genalpha.learningplatform.model.Post;
 import com.genalpha.learningplatform.service.PostService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -25,8 +26,8 @@ public class PostController {
 
     @Operation(summary = "Get all posts")
     @GetMapping
-    public ResponseEntity<List<Post>> getAll() {
-        return ResponseEntity.ok(postService.getAll());
+    public ResponseEntity<List<PostResponse>> getAll() {
+        return ResponseEntity.ok(postService.getAllWithAuthor());
     }
 
     @Operation(summary = "Get post by ID")

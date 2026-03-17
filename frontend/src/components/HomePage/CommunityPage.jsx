@@ -1,4 +1,7 @@
 import { useState, useEffect } from 'react';
+import { supabase } from '../../lib/supabaseClient';
+
+const API_URL = import.meta.env.VITE_API_URL;
 
 // ─── Design tokens (strictly mirrors existing app theme) ──────────────────────
 // Primary accent:   #8b5cf6 | rgba(139,92,246,x)
@@ -27,129 +30,10 @@ const CATEGORY_STYLE = {
   'Off-Topic':     'bg-[rgba(248,113,113,0.1)]  border-[rgba(248,113,113,0.2)]  text-[#f87171]',
 };
 
-// ─── MOCK DATA ────────────────────────────────────────────────────────────────
-// TODO (backend): Replace static array with a fetch:
-//   const [threads, setThreads] = useState([]);
-//   useEffect(() => {
-//     fetch(`/api/forum/threads?category=${activeCategory}&q=${search}`)
-//       .then(r => r.json())
-//       .then(setThreads);
-//   }, [activeCategory, search]);
-
-const MOCK_THREADS = [
-  {
-    id: 1,
-    title: "No cap, what does 'delulu' actually mean? Asking fr fr",
-    category: 'Slang Help',
-    author: 'SkibidiSage',
-    avatarEmoji: '🧠',
-    avatarBg: 'from-[#7c3aed] to-[#4f46e5]',
-    timestamp: '2h ago',
-    replies: 24,
-    likes: 47,
-    isHot: true,
-    preview: "I keep seeing it everywhere on my FYP but I'm lowkey lost. Is it like delusion or something else entirely?",
-  },
-  {
-    id: 2,
-    title: "My rizz tier list based on the course material — W or L?",
-    category: 'Showcase',
-    author: 'RizzKingXD',
-    avatarEmoji: '🔥',
-    avatarBg: 'from-[#dc2626] to-[#7f1d1d]',
-    timestamp: '5h ago',
-    replies: 61,
-    likes: 132,
-    isHot: true,
-    preview: "After finishing Rizz Theory I ranked all the techniques. S tier: eye contact + silence. D tier: unsolicited opinions.",
-  },
-  {
-    id: 3,
-    title: "Can someone explain the 'Sigma' meme to my boomer dad? lmao",
-    category: 'Memes',
-    author: 'NoCap_Nathan',
-    avatarEmoji: '🐺',
-    avatarBg: 'from-[#15803d] to-[#14532d]',
-    timestamp: '1d ago',
-    replies: 38,
-    likes: 88,
-    isHot: false,
-    preview: "He saw me doing the sigma walk and now he thinks it's a math thing. Help.",
-  },
-  {
-    id: 4,
-    title: "Tips for memorising brainrot vocab faster — my Anki method",
-    category: 'Tips & Tricks',
-    author: 'StudyModeActivated',
-    avatarEmoji: '📖',
-    avatarBg: 'from-[#0e7490] to-[#0f3460]',
-    timestamp: '1d ago',
-    replies: 15,
-    likes: 54,
-    isHot: false,
-    preview: "I make Anki cards for each slang term with a meme as the image. Retention went from 40% to 90% no cap.",
-  },
-  {
-    id: 5,
-    title: "Skibidi Toilet lore explained — a full deep-dive thread",
-    category: 'Memes',
-    author: 'LoreKeeper99',
-    avatarEmoji: '🚽',
-    avatarBg: 'from-[#0284c7] to-[#0f3460]',
-    timestamp: '2d ago',
-    replies: 102,
-    likes: 240,
-    isHot: true,
-    preview: "Season 1-7 summary, character analysis, and what it actually says about Gen Alpha storytelling instincts.",
-  },
-  {
-    id: 6,
-    title: "Is 'based' still based or is it cringe now? A serious discussion",
-    category: 'Slang Help',
-    author: 'BasedPhilosopher',
-    avatarEmoji: '🤔',
-    avatarBg: 'from-[#a21caf] to-[#4a044e]',
-    timestamp: '3d ago',
-    replies: 77,
-    likes: 109,
-    isHot: false,
-    preview: "The half-life of internet slang is getting shorter. Is 'based' already too mainstream to be based?",
-  },
-  {
-    id: 7,
-    title: "Share your funniest 'NPC moment' IRL — I'll go first",
-    category: 'Off-Topic',
-    author: 'GlitchedInRL',
-    avatarEmoji: '🤖',
-    avatarBg: 'from-[#d97706] to-[#78350f]',
-    timestamp: '4d ago',
-    replies: 93,
-    likes: 175,
-    isHot: true,
-    preview: "I walked into a glass door at full speed in front of 20 people and just stood there smiling. Peak NPC energy.",
-  },
-  {
-    id: 8,
-    title: "W take: TikTok slang is actually improving linguistic creativity",
-    category: 'Off-Topic',
-    author: 'LinguistOnMain',
-    avatarEmoji: '🌐',
-    avatarBg: 'from-[#0e7490] to-[#155e75]',
-    timestamp: '5d ago',
-    replies: 44,
-    likes: 67,
-    isHot: false,
-    preview: "Hot take but language evolving via memes follows the same patterns as historical creole formation. Discuss.",
-  },
-];
-
-// ─── Stat summary bar (pinned above thread list) ──────────────────────────────
-// Mirrors the badge pill style used in HomePage.jsx profile card
-const STATS = [
-  { label: 'Threads',  value: '128',  color: 'text-[#a78bfa]', bg: 'bg-[rgba(139,92,246,0.12)] border-[rgba(139,92,246,0.2)]' },
-  { label: 'Members',  value: '2.4k', color: 'text-[#4ade80]', bg: 'bg-[rgba(74,222,128,0.08)] border-[rgba(74,222,128,0.2)]' },
-  { label: 'Online',   value: '37',   color: 'text-[#fbbf24]', bg: 'bg-[rgba(251,191,36,0.1)]  border-[rgba(251,191,36,0.25)]' },
-];
+// ─── Stat pill styles ────────────────────────────────────────────────────────
+const STAT_STYLES = {
+  Threads: { color: 'text-[#a78bfa]', bg: 'bg-[rgba(139,92,246,0.12)] border-[rgba(139,92,246,0.2)]' },
+};
 
 // ─── SVG icons (inline, no external dependency) ───────────────────────────────
 const IconPlus = () => (
@@ -197,7 +81,6 @@ function CategoryPill({ category, small = false }) {
 // ─── ThreadCard ───────────────────────────────────────────────────────────────
 // Layout mirrors CourseCard from LearnPage.jsx:
 //   dark bg, subtle border, hover lift + purple glow, transition-all duration-300
-// TODO (backend): Pass onClick={() => navigate(`/home/community/thread/${thread.id}`)}
 function ThreadCard({ thread, onClick }) {
   return (
     <div
@@ -205,13 +88,17 @@ function ThreadCard({ thread, onClick }) {
       className="group flex items-start gap-4 bg-[#0d0f18] border border-[rgba(255,255,255,0.07)] rounded-xl p-4 cursor-pointer transition-all duration-300 hover:border-[rgba(139,92,246,0.45)] hover:shadow-[0_0_28px_rgba(139,92,246,0.15)] hover:-translate-y-0.5"
     >
       {/* ── Author Avatar ── */}
-      {/* Gradient circle with emoji — matches the Level badge + XP pill style in HomePage.jsx */}
-      <div
-        className={`flex-shrink-0 w-10 h-10 rounded-full bg-gradient-to-br ${thread.avatarBg}
-          flex items-center justify-center text-[1.1rem] select-none shadow-[0_2px_8px_rgba(0,0,0,0.4)]`}
-      >
-        {thread.avatarEmoji}
-      </div>
+      {thread.authorProfilePic ? (
+        <img
+          src={thread.authorProfilePic}
+          alt={thread.author}
+          className="flex-shrink-0 w-10 h-10 rounded-full object-cover shadow-[0_2px_8px_rgba(0,0,0,0.4)]"
+        />
+      ) : (
+        <div className="flex-shrink-0 w-10 h-10 rounded-full bg-gradient-to-br from-[#7c3aed] to-[#4f46e5] flex items-center justify-center text-[1.1rem] font-bold text-white select-none shadow-[0_2px_8px_rgba(0,0,0,0.4)]">
+          {thread.author?.charAt(0)?.toUpperCase() || '?'}
+        </div>
+      )}
 
       {/* ── Thread Body ── */}
       <div className="flex-1 min-w-0 flex flex-col gap-[0.3rem]">
@@ -265,14 +152,7 @@ function ThreadCard({ thread, onClick }) {
 // Structure mirrors CourseModal from LearnPage.jsx:
 //   fixed overlay + backdrop-blur, centered card, Escape-to-close, modalIn animation
 //
-// TODO (backend): Replace handleSubmit body with:
-//   const res = await fetch('/api/forum/threads', {
-//     method: 'POST',
-//     headers: { 'Content-Type': 'application/json' },
-//     body: JSON.stringify({ title, category, content, authorId: currentUser.id }),
-//   });
-//   if (res.ok) { refreshThreads(); onClose(); }
-function CreatePostModal({ onClose }) {
+function CreatePostModal({ onClose, onCreated }) {
   const [title,    setTitle]    = useState('');
   const [category, setCategory] = useState(CATEGORIES[1]); // default: first real category
   const [content,  setContent]  = useState('');
@@ -290,10 +170,35 @@ function CreatePostModal({ onClose }) {
     'px-3 py-2 text-[0.9rem] text-[#f0eeff] placeholder:text-[#4b4870] outline-none ' +
     'focus:border-[rgba(139,92,246,0.5)] focus:shadow-[0_0_0_3px_rgba(139,92,246,0.08)] transition-all';
 
-  function handleSubmit(e) {
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState('');
+
+  async function handleSubmit(e) {
     e.preventDefault();
-    // TODO (backend): await POST /api/forum/threads
-    onClose();
+    setSubmitting(true);
+    setError('');
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) { setError('You must be logged in to post.'); return; }
+      const res = await fetch(`${API_URL}/api/v1/posts`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({ title, category, description: content }),
+      });
+      if (!res.ok) {
+        const msg = await res.text();
+        throw new Error(msg || 'Failed to create post');
+      }
+      onCreated?.();
+      onClose();
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   return (
@@ -367,9 +272,12 @@ function CreatePostModal({ onClose }) {
             />
           </div>
 
+          {error && (
+            <p className="text-red-400 text-sm m-0">{error}</p>
+          )}
+
           {/* Action buttons */}
           <div className="flex gap-3 justify-end pt-1">
-            {/* Cancel — secondary style, mirrors "View Stats" button in HomePage.jsx */}
             <button
               type="button"
               onClick={onClose}
@@ -377,12 +285,12 @@ function CreatePostModal({ onClose }) {
             >
               Cancel
             </button>
-            {/* Submit — primary gradient, mirrors "Lock In" button in HomePage.jsx */}
             <button
               type="submit"
-              className="px-5 py-2 bg-gradient-to-br from-[#7c3aed] to-[#4f46e5] text-white rounded-[10px] text-[0.88rem] font-extrabold cursor-pointer shadow-[0_4px_16px_rgba(124,58,237,0.35)] transition-all hover:-translate-y-0.5 hover:shadow-[0_6px_22px_rgba(124,58,237,0.5)] border-none"
+              disabled={submitting}
+              className="px-5 py-2 bg-gradient-to-br from-[#7c3aed] to-[#4f46e5] text-white rounded-[10px] text-[0.88rem] font-extrabold cursor-pointer shadow-[0_4px_16px_rgba(124,58,237,0.35)] transition-all hover:-translate-y-0.5 hover:shadow-[0_6px_22px_rgba(124,58,237,0.5)] border-none disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              Post it →
+              {submitting ? 'Posting...' : 'Post it →'}
             </button>
           </div>
         </form>
@@ -406,9 +314,41 @@ export default function CommunityPage() {
   const [activeCategory,  setActiveCategory]  = useState('All');
   const [search,          setSearch]          = useState('');
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [posts,           setPosts]           = useState([]);
+  const [loading,         setLoading]         = useState(true);
 
-  // TODO (backend): replace MOCK_THREADS with stateful fetch (see comment above)
-  const filtered = MOCK_THREADS.filter(t =>
+  async function fetchPosts() {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+      const res = await fetch(`${API_URL}/api/v1/posts`, {
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setPosts(data);
+      }
+    } catch { /* keep empty */ }
+    finally { setLoading(false); }
+  }
+
+  useEffect(() => { fetchPosts(); }, []);
+
+  // Map backend posts to thread-card shape
+  const threads = posts.map((p) => ({
+    id: p.postId,
+    title: p.title || '(Untitled)',
+    category: p.category || 'Off-Topic',
+    author: p.authorName || 'Member',
+    authorProfilePic: p.authorProfilePic || null,
+    timestamp: '',
+    replies: 0,
+    likes: p.upvote || 0,
+    isHot: (p.upvote || 0) >= 10,
+    preview: p.description || '',
+  }));
+
+  const filtered = threads.filter(t =>
     (activeCategory === 'All' || t.category === activeCategory) &&
     (search === '' || t.title.toLowerCase().includes(search.toLowerCase()))
   );
@@ -439,16 +379,10 @@ export default function CommunityPage() {
       </div>
 
       {/* ── Community Stats Bar ──────────────────────────────────────────────── */}
-      {/* Pill badges mirror the XP / rank / streak badges in HomePage.jsx profile card */}
       <div className="flex gap-3 mb-6 flex-wrap">
-        {STATS.map(s => (
-          <span
-            key={s.label}
-            className={`text-sm font-bold px-4 py-[0.35rem] rounded-[20px] border flex items-center gap-1 ${s.bg} ${s.color}`}
-          >
-            {s.value} <span className="font-medium text-[#5a5278]">{s.label}</span>
-          </span>
-        ))}
+        <span className={`text-sm font-bold px-4 py-[0.35rem] rounded-[20px] border flex items-center gap-1 ${STAT_STYLES.Threads.bg} ${STAT_STYLES.Threads.color}`}>
+          {posts.length} <span className="font-medium text-[#5a5278]">Threads</span>
+        </span>
       </div>
 
       {/* ── Search Input ─────────────────────────────────────────────────────── */}
@@ -484,7 +418,11 @@ export default function CommunityPage() {
       </div>
 
       {/* ── Thread List ──────────────────────────────────────────────────────── */}
-      {filtered.length > 0 ? (
+      {loading ? (
+        <div className="flex items-center justify-center py-20 text-[#6b6490]">
+          <p className="text-lg font-semibold animate-pulse">Loading posts...</p>
+        </div>
+      ) : filtered.length > 0 ? (
         <div className="flex flex-col gap-3">
 
           {/* Thread count label — mirrors "Last 12 days" label style in HomePage.jsx */}
@@ -494,13 +432,11 @@ export default function CommunityPage() {
             {search && ` matching "${search}"`}
           </p>
 
-          {/* Thread cards */}
-          {/* TODO (backend): onClick → navigate(`/home/community/thread/${thread.id}`) */}
           {filtered.map(thread => (
             <ThreadCard
               key={thread.id}
               thread={thread}
-              onClick={() => { /* TODO: navigate to thread detail */ }}
+              onClick={() => {}}
             />
           ))}
         </div>
@@ -519,7 +455,10 @@ export default function CommunityPage() {
 
       {/* ── Create Post Modal ────────────────────────────────────────────────── */}
       {showCreateModal && (
-        <CreatePostModal onClose={() => setShowCreateModal(false)} />
+        <CreatePostModal
+          onClose={() => setShowCreateModal(false)}
+          onCreated={fetchPosts}
+        />
       )}
     </div>
   );

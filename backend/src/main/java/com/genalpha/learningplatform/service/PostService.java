@@ -1,6 +1,8 @@
 package com.genalpha.learningplatform.service;
 
+import com.genalpha.learningplatform.dto.PostResponse;
 import com.genalpha.learningplatform.model.Post;
+import com.genalpha.learningplatform.model.User;
 import com.genalpha.learningplatform.repository.PostRepository;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -24,6 +26,30 @@ public class PostService {
         return postRepository.findAll();
     }
 
+    public List<PostResponse> getAllWithAuthor() {
+        return postRepository.findAll().stream().map(this::toResponse).toList();
+    }
+
+    private PostResponse toResponse(Post post) {
+        PostResponse r = new PostResponse();
+        r.setPostId(post.getPostId());
+        r.setUserId(post.getUserId());
+        r.setTitle(post.getTitle());
+        r.setCategory(post.getCategory());
+        r.setPicture(post.getPicture());
+        r.setDescription(post.getDescription());
+        r.setReportCount(post.getReportCount());
+        r.setUpvote(post.getUpvote());
+        try {
+            User author = userService.getById(post.getUserId());
+            r.setAuthorName(author.getName());
+            r.setAuthorProfilePic(author.getProfilePic());
+        } catch (ResponseStatusException ignored) {
+            r.setAuthorName("Unknown");
+        }
+        return r;
+    }
+
     public Post getById(UUID postId) {
         return postRepository.findById(postId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Post not found"));
@@ -34,9 +60,6 @@ public class PostService {
     }
 
     public Post create(Post post, UUID requesterId) {
-        if (!userService.isAdmin(requesterId) && !userService.isCollaborator(requesterId)) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only collaborators and admins can create posts");
-        }
         post.setPostId(null);
         post.setUserId(requesterId);
         post.setReportCount(0);
@@ -50,6 +73,8 @@ public class PostService {
         if (!isAdmin && !post.getUserId().equals(requesterId)) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Cannot edit another user's post");
         }
+        if (updates.getTitle() != null) post.setTitle(updates.getTitle());
+        if (updates.getCategory() != null) post.setCategory(updates.getCategory());
         if (updates.getPicture() != null) post.setPicture(updates.getPicture());
         if (updates.getDescription() != null) post.setDescription(updates.getDescription());
         return postRepository.save(post);
