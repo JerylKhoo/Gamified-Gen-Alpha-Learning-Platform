@@ -12,9 +12,9 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.UUID;
 
-@Tag(name = "Quiz", description = "Quiz CRUD endpoints (write operations: admin only)")
+@Tag(name = "Quizzes", description = "Quiz question management")
 @RestController
-@RequestMapping("/api/v1/quiz")
+@RequestMapping("/api/v1/quizzes")
 public class QuizController {
 
     private final QuizService quizService;
@@ -23,32 +23,26 @@ public class QuizController {
         this.quizService = quizService;
     }
 
-    @Operation(summary = "Get all quiz items")
-    @GetMapping
-    public ResponseEntity<List<Quiz>> getAll() {
-        return ResponseEntity.ok(quizService.getAll());
+    @Operation(summary = "List quizzes by course")
+    @GetMapping("/course/{courseId}")
+    public ResponseEntity<List<Quiz>> getByCourseId(@PathVariable String courseId) {
+        return ResponseEntity.ok(quizService.getByCourseId(courseId));
     }
 
-    @Operation(summary = "Get quiz item by ID")
+    @Operation(summary = "Get quiz by ID")
     @GetMapping("/{quizId}")
     public ResponseEntity<Quiz> getById(@PathVariable UUID quizId) {
         return ResponseEntity.ok(quizService.getById(quizId));
     }
 
-    @Operation(summary = "Get quiz items by lesson")
-    @GetMapping("/lesson/{lessonId}")
-    public ResponseEntity<List<Quiz>> getByLesson(@PathVariable String lessonId) {
-        return ResponseEntity.ok(quizService.getByLesson(lessonId));
-    }
-
-    @Operation(summary = "Create a quiz item (admin only)")
+    @Operation(summary = "Create a quiz question (admin)")
     @PostMapping
     public ResponseEntity<Quiz> create(@RequestBody Quiz quiz, Authentication authentication) {
         UUID requesterId = UUID.fromString(authentication.getName());
         return ResponseEntity.status(HttpStatus.CREATED).body(quizService.create(quiz, requesterId));
     }
 
-    @Operation(summary = "Update a quiz item (admin only)")
+    @Operation(summary = "Update a quiz question (admin)")
     @PutMapping("/{quizId}")
     public ResponseEntity<Quiz> update(@PathVariable UUID quizId,
                                        @RequestBody Quiz updates,
@@ -57,7 +51,7 @@ public class QuizController {
         return ResponseEntity.ok(quizService.update(quizId, updates, requesterId));
     }
 
-    @Operation(summary = "Delete a quiz item (admin only)")
+    @Operation(summary = "Delete a quiz question (admin)")
     @DeleteMapping("/{quizId}")
     public ResponseEntity<Void> delete(@PathVariable UUID quizId, Authentication authentication) {
         UUID requesterId = UUID.fromString(authentication.getName());

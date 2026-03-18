@@ -31,24 +31,24 @@ public class UserBadgeController {
     }
 
     @Operation(summary = "Get a specific user-badge record by ID")
-    @GetMapping("/{id}")
-    public ResponseEntity<UserBadge> getById(@PathVariable UUID id, Authentication authentication) {
+    @GetMapping("/{userBadgeId}")
+    public ResponseEntity<UserBadge> getById(@PathVariable UUID userBadgeId, Authentication authentication) {
         UUID userId = UUID.fromString(authentication.getName());
-        return ResponseEntity.ok(userBadgeService.getById(id, userId));
+        return ResponseEntity.ok(userBadgeService.getById(userBadgeId, userId));
     }
 
     @Operation(summary = "Award a badge to the logged-in user")
     @PostMapping("/{badgeId}")
-    public ResponseEntity<UserBadge> award(@PathVariable UUID badgeId, Authentication authentication) {
+    public ResponseEntity<UserBadge> award(@PathVariable String badgeId, Authentication authentication) {
         UUID userId = UUID.fromString(authentication.getName());
         return ResponseEntity.status(HttpStatus.CREATED).body(userBadgeService.award(badgeId, userId));
     }
 
     @Operation(summary = "Remove a badge from the logged-in user")
-    @DeleteMapping("/{id}")
-    public ResponseEntity<Void> delete(@PathVariable UUID id, Authentication authentication) {
+    @DeleteMapping("/{userBadgeId}")
+    public ResponseEntity<Void> delete(@PathVariable UUID userBadgeId, Authentication authentication) {
         UUID userId = UUID.fromString(authentication.getName());
-        userBadgeService.delete(id, userId);
+        userBadgeService.delete(userBadgeId, userId);
         return ResponseEntity.noContent().build();
     }
 }

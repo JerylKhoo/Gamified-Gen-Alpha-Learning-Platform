@@ -20,17 +20,13 @@ public class QuizService {
         this.userService = userService;
     }
 
-    public List<Quiz> getAll() {
-        return quizRepository.findAll();
+    public List<Quiz> getByCourseId(String courseId) {
+        return quizRepository.findByCourseId(courseId);
     }
 
     public Quiz getById(UUID quizId) {
         return quizRepository.findById(quizId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Quiz not found"));
-    }
-
-    public List<Quiz> getByLesson(String lessonId) {
-        return quizRepository.findByLessonId(lessonId);
     }
 
     public Quiz create(Quiz quiz, UUID requesterId) {
@@ -42,11 +38,14 @@ public class QuizService {
     public Quiz update(UUID quizId, Quiz updates, UUID requesterId) {
         requireAdmin(requesterId);
         Quiz quiz = getById(quizId);
-        if (updates.getLessonId() != null) quiz.setLessonId(updates.getLessonId());
-        if (updates.getQuestion() != null) quiz.setQuestion(updates.getQuestion());
-        if (updates.getType() != null) quiz.setType(updates.getType());
-        if (updates.getOptions() != null) quiz.setOptions(updates.getOptions());
-        if (updates.getAnswer() != null) quiz.setAnswer(updates.getAnswer());
+        if (updates.getCourseId() != null)      quiz.setCourseId(updates.getCourseId());
+        if (updates.getQuestion() != null)      quiz.setQuestion(updates.getQuestion());
+        if (updates.getType() != null)          quiz.setType(updates.getType());
+        if (updates.getOptions() != null)       quiz.setOptions(updates.getOptions());
+        if (updates.getAnswer() != null)        quiz.setAnswer(updates.getAnswer());
+        if (updates.getExplanation() != null)   quiz.setExplanation(updates.getExplanation());
+        if (updates.getScore() != null)         quiz.setScore(updates.getScore());
+        if (updates.getQuizMaterial() != null)  quiz.setQuizMaterial(updates.getQuizMaterial());
         return quizRepository.save(quiz);
     }
 

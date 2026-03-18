@@ -13,26 +13,32 @@ import java.util.UUID;
 public class BadgeService {
 
     private final BadgeRepository badgeRepository;
+    private final UserService userService;
 
-    public BadgeService(BadgeRepository badgeRepository) {
+    public BadgeService(BadgeRepository badgeRepository, UserService userService) {
         this.badgeRepository = badgeRepository;
+        this.userService = userService;
     }
 
     public List<Badge> getAll() {
         return badgeRepository.findAll();
     }
 
-    public Badge getById(UUID badgeId) {
+    public Badge getById(String badgeId) {
         return badgeRepository.findById(badgeId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Badge not found"));
     }
 
-    public Badge create(Badge badge) {
-        badge.setBadgeId(null);
+    public Badge create(Badge badge, UUID requesterId) {
+        requireAdmin(requesterId);
+        if (badge.getBadgeId() == null || badge.getBadgeId().isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Badge ID is required");
+        }
         return badgeRepository.save(badge);
     }
 
-    public Badge update(UUID badgeId, Badge updates) {
+    public Badge update(String badgeId, Badge updates, UUID requesterId) {
+        requireAdmin(requesterId);
         Badge badge = getById(badgeId);
         if (updates.getName() != null)        badge.setName(updates.getName());
         if (updates.getDescription() != null) badge.setDescription(updates.getDescription());
@@ -40,8 +46,14 @@ public class BadgeService {
         return badgeRepository.save(badge);
     }
 
-    public void delete(UUID badgeId) {
-        Badge badge = getById(badgeId);
-        badgeRepository.delete(badge);
+    public void delete(String badgeId, UUID requesterId) {
+        requireAdmin(requesterId);
+        badgeRepository.delete(getById(badgeId));
+    }
+
+    private void requireAdmin(UUID userId) {
+        if (!userService.isAdmin(userId)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Admin access required");
+        }
     }
 }

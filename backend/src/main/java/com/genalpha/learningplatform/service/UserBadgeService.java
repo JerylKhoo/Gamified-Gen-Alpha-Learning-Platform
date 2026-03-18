@@ -27,8 +27,8 @@ public class UserBadgeService {
         return userBadgeRepository.findByUserId(userId);
     }
 
-    public UserBadge getById(UUID id, UUID requesterId) {
-        UserBadge ub = userBadgeRepository.findById(id)
+    public UserBadge getById(UUID userBadgeId, UUID requesterId) {
+        UserBadge ub = userBadgeRepository.findById(userBadgeId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "UserBadge not found"));
         if (!ub.getUserId().equals(requesterId)) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Access denied");
@@ -37,7 +37,7 @@ public class UserBadgeService {
     }
 
     /** Award a badge to the logged-in user. Idempotent — silently returns existing record if already earned. */
-    public UserBadge award(UUID badgeId, UUID userId) {
+    public UserBadge award(String badgeId, UUID userId) {
         if (!badgeRepository.existsById(badgeId)) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Badge not found");
         }
@@ -54,8 +54,8 @@ public class UserBadgeService {
         return userBadgeRepository.save(ub);
     }
 
-    public void delete(UUID id, UUID requesterId) {
-        UserBadge ub = getById(id, requesterId);
+    public void delete(UUID userBadgeId, UUID requesterId) {
+        UserBadge ub = getById(userBadgeId, requesterId);
         userBadgeRepository.delete(ub);
     }
 }

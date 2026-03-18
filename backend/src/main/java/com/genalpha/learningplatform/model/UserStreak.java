@@ -13,7 +13,7 @@ public class UserStreak {
     @Column(name = "streak_id")
     private UUID streakId;
 
-    @Column(name = "user_id", nullable = false, unique = true)
+    @Column(name = "user_id", nullable = false)
     private UUID userId;
 
     @Column(name = "current_streak", nullable = false)
@@ -21,6 +21,9 @@ public class UserStreak {
 
     @Column(name = "longest_streak", nullable = false)
     private int longestStreak = 0;
+
+    @Column(name = "streak_start")
+    private LocalDate streakStart;
 
     @Column(name = "last_activity_date")
     private LocalDate lastActivityDate;
@@ -33,6 +36,8 @@ public class UserStreak {
     public void setCurrentStreak(int currentStreak) { this.currentStreak = currentStreak; }
     public int getLongestStreak() { return longestStreak; }
     public void setLongestStreak(int longestStreak) { this.longestStreak = longestStreak; }
+    public LocalDate getStreakStart() { return streakStart; }
+    public void setStreakStart(LocalDate streakStart) { this.streakStart = streakStart; }
     public LocalDate getLastActivityDate() { return lastActivityDate; }
     public void setLastActivityDate(LocalDate lastActivityDate) { this.lastActivityDate = lastActivityDate; }
 }
