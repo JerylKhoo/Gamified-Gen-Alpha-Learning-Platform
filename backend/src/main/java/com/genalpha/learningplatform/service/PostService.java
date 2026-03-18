@@ -50,8 +50,10 @@ public class PostService {
         if (!isAdmin && !post.getUserId().equals(requesterId)) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Cannot edit another user's post");
         }
-        if (updates.getPicture() != null) post.setPicture(updates.getPicture());
+        if (updates.getPicture() != null)     post.setPicture(updates.getPicture());
         if (updates.getDescription() != null) post.setDescription(updates.getDescription());
+        if (updates.getTitle() != null)       post.setTitle(updates.getTitle());
+        if (updates.getCategory() != null)    post.setCategory(updates.getCategory());
         return postRepository.save(post);
     }
 

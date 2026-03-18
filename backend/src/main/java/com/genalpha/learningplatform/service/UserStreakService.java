@@ -24,13 +24,6 @@ public class UserStreakService {
                 .orElseGet(() -> createStreak(userId));
     }
 
-    /**
-     * Records activity for today. Applies the same rules as the DB trigger:
-     * - If last_activity_date is today → no change (already counted).
-     * - If gap > 2 days → reset current_streak to 1.
-     * - Otherwise → increment current_streak by 1.
-     * - Promotes longest_streak if current_streak exceeds it.
-     */
     @Transactional
     public UserStreak recordActivity(UUID userId) {
         UserStreak streak = userStreakRepository.findByUserId(userId)
@@ -40,11 +33,12 @@ public class UserStreakService {
         LocalDate last  = streak.getLastActivityDate();
 
         if (last != null && last.isEqual(today)) {
-            return streak; // already recorded today
+            return streak;
         }
 
-        if (last == null || today.toEpochDay() - last.toEpochDay() > 2) {
+        if (last == null || today.toEpochDay() - last.toEpochDay() > 1) {
             streak.setCurrentStreak(1);
+            streak.setStreakStart(today);
         } else {
             streak.setCurrentStreak(streak.getCurrentStreak() + 1);
         }

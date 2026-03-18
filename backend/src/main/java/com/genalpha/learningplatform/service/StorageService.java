@@ -20,7 +20,7 @@ public class StorageService {
 
     private final RestTemplate restTemplate = new RestTemplate();
 
-    public List<String> listAvatarUrls() {
+    public List<String> listProfilePicUrls() {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
         headers.set("apikey", supabaseAnonKey);
@@ -34,7 +34,7 @@ public class StorageService {
         );
 
         ResponseEntity<List<Map<String, Object>>> response = restTemplate.exchange(
-                supabaseUrl + "/storage/v1/object/list/avatars",
+                supabaseUrl + "/storage/v1/object/list/profilepic",
                 HttpMethod.POST,
                 new HttpEntity<>(body, headers),
                 new ParameterizedTypeReference<>() {}
@@ -46,7 +46,7 @@ public class StorageService {
         return objects.stream()
                 .map(obj -> (String) obj.get("name"))
                 .filter(name -> name != null && !name.isBlank())
-                .map(name -> supabaseUrl + "/storage/v1/object/public/avatars/" + name)
+                .map(name -> supabaseUrl + "/storage/v1/object/public/profilepic/" + name)
                 .toList();
     }
 }
