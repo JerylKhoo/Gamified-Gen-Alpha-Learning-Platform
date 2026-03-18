@@ -4,6 +4,7 @@ import com.genalpha.learningplatform.security.JwtAuthConverter;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -40,14 +41,17 @@ public class SecurityConfig {
             .sessionManagement(session ->
                 session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
-                // Public endpoints
+                // Fully public endpoints
                 .requestMatchers(
                     "/api/v1/health",
-                    "/api/v1/auth/**",
                     "/swagger-ui/**",
                     "/swagger-ui.html",
                     "/api-docs/**"
                 ).permitAll()
+                // Posts are publicly readable
+                .requestMatchers(HttpMethod.GET, "/api/v1/posts/**").permitAll()
+                // Badges are publicly readable
+                .requestMatchers(HttpMethod.GET, "/api/v1/badges/**").permitAll()
                 // Everything else requires a valid Supabase JWT
                 .anyRequest().authenticated()
             )
@@ -65,8 +69,8 @@ public class SecurityConfig {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
         config.setAllowedOrigins(List.of(
-                "http://localhost:5173",   // Vite dev server
-                "http://localhost:3000"    // fallback if running on port 3000
+                "http://localhost:5173",
+                "http://localhost:3000"
         ));
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         config.setAllowedHeaders(List.of("*"));

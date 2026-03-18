@@ -4,14 +4,14 @@ import java.util.UUID;
 
 public class AdaptiveRequest {
 
-    private String  lessonId;    // lesson being studied
-    private UUID    questionId;  // UUID of the question just answered (null = first question in lesson)
-    private boolean correct;     // whether the previous answer was correct (ignored when questionId is null)
+    private String courseId;  // course being studied
+    private UUID   quizId;    // UUID of the quiz question just answered (null = first question in course)
+    private boolean correct;  // whether the previous answer was correct (ignored when quizId is null)
 
-    public String getLessonId() { return lessonId; }
-    public void setLessonId(String lessonId) { this.lessonId = lessonId; }
-    public UUID getQuestionId() { return questionId; }
-    public void setQuestionId(UUID questionId) { this.questionId = questionId; }
+    public String getCourseId() { return courseId; }
+    public void setCourseId(String courseId) { this.courseId = courseId; }
+    public UUID getQuizId() { return quizId; }
+    public void setQuizId(UUID quizId) { this.quizId = quizId; }
     public boolean isCorrect() { return correct; }
     public void setCorrect(boolean correct) { this.correct = correct; }
 }

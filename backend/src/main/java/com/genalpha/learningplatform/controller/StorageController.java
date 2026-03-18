@@ -10,7 +10,7 @@ import java.util.List;
 
 @Tag(name = "Storage", description = "Storage bucket endpoints")
 @RestController
-@RequestMapping("/api/v1/avatars")
+@RequestMapping("/api/v1/profilepics")
 public class StorageController {
 
     private final StorageService storageService;
@@ -19,9 +19,9 @@ public class StorageController {
         this.storageService = storageService;
     }
 
-    @Operation(summary = "List all avatar image URLs")
+    @Operation(summary = "List all profile picture URLs")
     @GetMapping
-    public ResponseEntity<List<String>> listAvatars() {
-        return ResponseEntity.ok(storageService.listAvatarUrls());
+    public ResponseEntity<List<String>> listProfilePics() {
+        return ResponseEntity.ok(storageService.listProfilePicUrls());
     }
 }
