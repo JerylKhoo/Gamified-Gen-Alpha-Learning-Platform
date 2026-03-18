@@ -1,68 +1,63 @@
+@import "tailwindcss";
+
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
 :root {
   font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
   line-height: 1.5;
   font-weight: 400;
-
-  color-scheme: light dark;
-  color: rgba(255, 255, 255, 0.87);
-  background-color: #242424;
-
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
-a {
-  font-weight: 500;
-  color: #646cff;
-  text-decoration: inherit;
-}
-a:hover {
-  color: #535bf2;
+html {
+  overflow-y: scroll;
+  scrollbar-width: none; /* Firefox */
 }
 
-body {
+html::-webkit-scrollbar {
+  display: none; /* Chrome, Safari, Edge */
+}
+
+html, body {
   margin: 0;
-  display: flex;
-  place-items: center;
-  min-width: 320px;
+  padding: 0;
+  background-color: #0d0d0d;
+  color: #f5f5f5;
   min-height: 100vh;
 }
 
-h1 {
-  font-size: 3.2em;
-  line-height: 1.1;
+#root {
+  min-height: 100vh;
 }
 
-button {
-  border-radius: 8px;
-  border: 1px solid transparent;
-  padding: 0.6em 1.2em;
-  font-size: 1em;
-  font-weight: 500;
-  font-family: inherit;
-  background-color: #1a1a1a;
-  cursor: pointer;
-  transition: border-color 0.25s;
-}
-button:hover {
-  border-color: #646cff;
-}
-button:focus,
-button:focus-visible {
-  outline: 4px auto -webkit-focus-ring-color;
+a {
+  text-decoration: none;
 }
 
-@media (prefers-color-scheme: light) {
-  :root {
-    color: #213547;
-    background-color: #ffffff;
-  }
-  a:hover {
-    color: #747bff;
-  }
-  button {
-    background-color: #f9f9f9;
-  }
+/* Themed scrollbar for in-card scrollable lists */
+.styled-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(139, 92, 246, 0.4) transparent;
+}
+
+.styled-scroll::-webkit-scrollbar {
+  width: 4px;
+}
+
+.styled-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.styled-scroll::-webkit-scrollbar-thumb {
+  background: rgba(139, 92, 246, 0.4);
+  border-radius: 999px;
+}
+
+.styled-scroll::-webkit-scrollbar-thumb:hover {
+  background: rgba(139, 92, 246, 0.7);
 }

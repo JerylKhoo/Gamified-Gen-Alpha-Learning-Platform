@@ -1,35 +1,45 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { AuthProvider } from './context/AuthContext';
+import { ProtectedRoute, GuestRoute } from './components/RouteGuards';
+import LandingPage from './pages/LandingPage';
+import AuthPage from './pages/AuthPage';
+import AuthCallback from './pages/AuthCallback';
+import HomeLayout from './pages/HomeLayout';
+import HomePage from './pages/HomePage';
+import LearnPage from './components/HomePage/LearnPage';
+import AdaptiveLearningPage from './pages/AdaptiveLearningPage';
+import CommunityPage from './components/HomePage/CommunityPage';
+import LeaderboardPage from './pages/LeaderboardPage';
 
-function App() {
-  const [count, setCount] = useState(0)
-
+function ComingSoon({ label }) {
   return (
-    <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.jsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
-  )
+    <div className="flex flex-col items-center justify-center min-h-screen text-[#6b6490]">
+      <span className="text-5xl mb-4">🚧</span>
+      <p className="text-lg font-semibold">{label} coming soon!</p>
+    </div>
+  );
 }
 
-export default App
+export default function App() {
+  return (
+    <AuthProvider>
+      <BrowserRouter>
+        <Routes>
+          <Route path="/" element={<LandingPage />} />
+          <Route path="/auth" element={<GuestRoute><AuthPage /></GuestRoute>} />
+          <Route path="/auth/callback" element={<AuthCallback />} />
+          <Route path="/home" element={<ProtectedRoute><HomeLayout /></ProtectedRoute>}>
+            <Route index element={<Navigate to="learn" replace />} />
+            <Route path="profile" element={<HomePage />} />
+            <Route path="learn" element={<LearnPage />} />
+            <Route path="learn/:lessonId" element={<AdaptiveLearningPage />} />
+            <Route path="community" element={<CommunityPage />} />
+            <Route path="dashboard" element={<ComingSoon label="Dashboard" />} />
+            <Route path="leaderboard" element={<LeaderboardPage />} />
+          </Route>
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </BrowserRouter>
+    </AuthProvider>
+  );
+}

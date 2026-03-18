@@ -1,12 +1,15 @@
 package com.genalpha.learningplatform.service;
 
-import com.genalpha.learningplatform.model.User;
-import com.genalpha.learningplatform.repository.UserRepository;
+import java.util.List;
+import java.util.UUID;
+
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
-import java.util.UUID;
+import com.genalpha.learningplatform.model.User;
+import com.genalpha.learningplatform.repository.UserRepository;
 
 @Service
 public class UserService {
@@ -22,28 +25,20 @@ public class UserService {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
     }
 
+    @Transactional
     public User update(UUID userId, User updates, UUID requesterId) {
         boolean isAdmin = isAdmin(requesterId);
 
         if (!isAdmin && !userId.equals(requesterId)) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Cannot update another user's profile");
         }
-
-        User user = getById(userId);
-
-        // Any user can update their own name and profilePic
-        if (!isAdmin) {
-            if (updates.getName() != null)       user.setName(updates.getName());
-            if (updates.getProfilePic() != null) user.setProfilePic(updates.getProfilePic());
-        } else {
-            // Admins can update everything
-            if (updates.getName() != null)       user.setName(updates.getName());
-            if (updates.getProfilePic() != null) user.setProfilePic(updates.getProfilePic());
-            if (updates.getPoints() != null)     user.setPoints(updates.getPoints());
-            if (updates.getRole() != null)       user.setRole(updates.getRole());
-        }
-
-        return userRepository.save(user);
+        // Use a direct JPQL update so Hibernate never touches the JSONB points column
+        userRepository.updateProfile(
+                userId,
+                updates.getName(),
+                updates.getProfilePic()
+        );
+        return getById(userId);
     }
 
     public boolean isAdmin(UUID userId) {
@@ -56,5 +51,15 @@ public class UserService {
         return userRepository.findById(userId)
                 .map(u -> "Collaborator".equals(u.getRole()))
                 .orElse(false);
+    }
+
+    public List<User> getLeaderboard() {
+        List<User> users = new java.util.ArrayList<>(userRepository.findAll());
+        users.sort((User a, User b) -> {
+            int pa = a.getPoints() != null ? a.getPoints() : 0;
+            int pb = b.getPoints() != null ? b.getPoints() : 0;
+            return Integer.compare(pb, pa);
+        });
+        return users;
     }
 }
