@@ -153,6 +153,14 @@ END;
 $$;
 
 
+DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
+
+CREATE TRIGGER on_auth_user_created
+    AFTER INSERT ON auth.users
+    FOR EACH ROW
+    EXECUTE FUNCTION public.handle_new_user();
+
+
 -- ============================================================
 -- TRIGGER: Update streak on Quiz_Progress insert / update
 -- ============================================================
@@ -222,6 +230,14 @@ END;
 $$;
 
 
+DROP TRIGGER IF EXISTS on_quiz_progress_change ON public.QUIZ_PROGRESS;
+
+CREATE TRIGGER on_quiz_progress_change
+    AFTER INSERT OR UPDATE ON public.QUIZ_PROGRESS
+    FOR EACH ROW
+    EXECUTE FUNCTION public.handle_quiz_progress_streak();
+
+
 -- ============================================================
 -- TRIGGER: Update streak on Course_Progress insert
 -- ============================================================
@@ -286,6 +302,14 @@ BEGIN
     RETURN NEW;
 END;
 $$;
+
+
+DROP TRIGGER IF EXISTS on_course_progress_insert ON public.COURSE_PROGRESS;
+
+CREATE TRIGGER on_course_progress_insert
+    AFTER INSERT ON public.COURSE_PROGRESS
+    FOR EACH ROW
+    EXECUTE FUNCTION public.handle_course_progress_streak();
 
 
 -- ============================================================
