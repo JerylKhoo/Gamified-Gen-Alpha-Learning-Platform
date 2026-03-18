@@ -10,24 +10,24 @@ public class UserBadge {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
-    @Column(name = "id")
-    private UUID id;
+    @Column(name = "user_badge_id")
+    private UUID userBadgeId;
 
     @Column(name = "user_id", nullable = false)
     private UUID userId;
 
     @Column(name = "badge_id", nullable = false)
-    private UUID badgeId;
+    private String badgeId;
 
     @Column(name = "earned_at")
     private Instant earnedAt;
 
-    public UUID getId() { return id; }
-    public void setId(UUID id) { this.id = id; }
+    public UUID getUserBadgeId() { return userBadgeId; }
+    public void setUserBadgeId(UUID userBadgeId) { this.userBadgeId = userBadgeId; }
     public UUID getUserId() { return userId; }
     public void setUserId(UUID userId) { this.userId = userId; }
-    public UUID getBadgeId() { return badgeId; }
-    public void setBadgeId(UUID badgeId) { this.badgeId = badgeId; }
+    public String getBadgeId() { return badgeId; }
+    public void setBadgeId(String badgeId) { this.badgeId = badgeId; }
     public Instant getEarnedAt() { return earnedAt; }
     public void setEarnedAt(Instant earnedAt) { this.earnedAt = earnedAt; }
 }

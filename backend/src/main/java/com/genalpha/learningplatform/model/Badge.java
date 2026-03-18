@@ -1,16 +1,14 @@
 package com.genalpha.learningplatform.model;
 
 import jakarta.persistence.*;
-import java.util.UUID;
 
 @Entity
 @Table(name = "badges")
 public class Badge {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
     @Column(name = "badge_id")
-    private UUID badgeId;
+    private String badgeId;
 
     @Column(nullable = false)
     private String name;
@@ -21,8 +19,8 @@ public class Badge {
     @Column(columnDefinition = "TEXT")
     private String icon;
 
-    public UUID getBadgeId() { return badgeId; }
-    public void setBadgeId(UUID badgeId) { this.badgeId = badgeId; }
+    public String getBadgeId() { return badgeId; }
+    public void setBadgeId(String badgeId) { this.badgeId = badgeId; }
     public String getName() { return name; }
     public void setName(String name) { this.name = name; }
     public String getDescription() { return description; }
