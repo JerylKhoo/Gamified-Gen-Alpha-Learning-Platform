@@ -142,7 +142,7 @@ export default function AdaptiveLearningPage() {
           Final Score: {Math.round(abilityScore)} / 100
         </p>
         <button
-          onClick={() => navigate('/home/learn')}
+          onClick={() => navigate('/learn')}
           className="px-8 py-3 bg-gradient-to-br from-[#8b5cf6] to-[#6d28d9] text-white font-bold rounded-xl shadow-[0_4px_18px_rgba(139,92,246,0.4)] hover:opacity-90 hover:-translate-y-px transition-all"
         >
           ← Back to Courses
@@ -156,7 +156,7 @@ export default function AdaptiveLearningPage() {
     return (
       <div className="w-full min-h-screen flex flex-col items-center justify-center gap-4 text-red-400">
         <p className="text-lg font-semibold">{error}</p>
-        <button onClick={() => navigate('/home/learn')} className="text-sm text-[#8b5cf6] underline">
+        <button onClick={() => navigate('/learn')} className="text-sm text-[#8b5cf6] underline">
           Back to Courses
         </button>
       </div>
@@ -170,7 +170,7 @@ export default function AdaptiveLearningPage() {
       {/* Header */}
       <div className="flex items-center gap-3 mb-6">
         <button
-          onClick={() => navigate('/home/learn')}
+          onClick={() => navigate('/learn')}
           className="flex items-center justify-center w-8 h-8 rounded-full bg-[rgba(255,255,255,0.05)] border border-[rgba(255,255,255,0.1)] text-[#9ca3af] hover:text-white hover:bg-[rgba(255,255,255,0.1)] transition-all"
         >
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
