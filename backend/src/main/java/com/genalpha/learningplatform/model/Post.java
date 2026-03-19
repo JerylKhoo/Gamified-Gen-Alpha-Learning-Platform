@@ -19,8 +19,6 @@ public class Post {
     private String category;
     private String picture;
     private String description;
-    private String title;
-    private String category;
 
     @Column(name = "report_count")
     private Integer reportCount = 0;
@@ -39,10 +37,6 @@ public class Post {
     public void setPicture(String picture) { this.picture = picture; }
     public String getDescription() { return description; }
     public void setDescription(String description) { this.description = description; }
-    public String getTitle() { return title; }
-    public void setTitle(String title) { this.title = title; }
-    public String getCategory() { return category; }
-    public void setCategory(String category) { this.category = category; }
     public Integer getReportCount() { return reportCount; }
     public void setReportCount(Integer reportCount) { this.reportCount = reportCount; }
     public Integer getUpvote() { return upvote; }
