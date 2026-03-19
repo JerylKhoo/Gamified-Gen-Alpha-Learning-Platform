@@ -1,9 +1,16 @@
 package com.genalpha.learningplatform.model;
 
 import jakarta.persistence.*;
+import lombok.Getter;
+import lombok.Setter;
 import java.time.Instant;
 import java.util.UUID;
 
+/**
+ * Represents the association between a user and an earned badge.
+ */
+@Getter
+@Setter
 @Entity
 @Table(name = "user_badges")
 public class UserBadge {
@@ -21,13 +28,4 @@ public class UserBadge {
 
     @Column(name = "earned_at")
     private Instant earnedAt;
-
-    public UUID getUserBadgeId() { return userBadgeId; }
-    public void setUserBadgeId(UUID userBadgeId) { this.userBadgeId = userBadgeId; }
-    public UUID getUserId() { return userId; }
-    public void setUserId(UUID userId) { this.userId = userId; }
-    public String getBadgeId() { return badgeId; }
-    public void setBadgeId(String badgeId) { this.badgeId = badgeId; }
-    public Instant getEarnedAt() { return earnedAt; }
-    public void setEarnedAt(Instant earnedAt) { this.earnedAt = earnedAt; }
 }

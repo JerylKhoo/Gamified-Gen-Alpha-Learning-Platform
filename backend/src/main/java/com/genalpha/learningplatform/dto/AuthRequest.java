@@ -1,11 +1,14 @@
 package com.genalpha.learningplatform.dto;
 
+import lombok.Getter;
+import lombok.Setter;
+
+/**
+ * Request body for authentication endpoints carrying user credentials.
+ */
+@Getter
+@Setter
 public class AuthRequest {
     private String email;
     private String password;
-
-    public String getEmail() { return email; }
-    public void setEmail(String email) { this.email = email; }
-    public String getPassword() { return password; }
-    public void setPassword(String password) { this.password = password; }
 }

@@ -1,9 +1,16 @@
 package com.genalpha.learningplatform.model;
 
 import jakarta.persistence.*;
+import lombok.Getter;
+import lombok.Setter;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
+/**
+ * Represents a module within a course, containing learning content stored as JSONB.
+ */
+@Getter
+@Setter
 @Entity
 @Table(name = "module")
 public class Module {
@@ -18,11 +25,4 @@ public class Module {
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(columnDefinition = "jsonb")
     private String content;
-
-    public String getModuleId() { return moduleId; }
-    public void setModuleId(String moduleId) { this.moduleId = moduleId; }
-    public String getCourseId() { return courseId; }
-    public void setCourseId(String courseId) { this.courseId = courseId; }
-    public String getContent() { return content; }
-    public void setContent(String content) { this.content = content; }
 }
