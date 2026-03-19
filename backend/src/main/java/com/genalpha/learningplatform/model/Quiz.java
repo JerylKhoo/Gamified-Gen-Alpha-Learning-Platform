@@ -1,10 +1,17 @@
 package com.genalpha.learningplatform.model;
 
 import jakarta.persistence.*;
+import lombok.Getter;
+import lombok.Setter;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 import java.util.UUID;
 
+/**
+ * Represents a quiz question belonging to a course, used in adaptive learning.
+ */
+@Getter
+@Setter
 @Entity
 @Table(name = "quiz")
 public class Quiz {
@@ -30,23 +37,4 @@ public class Quiz {
 
     @Column(name = "quiz_material")
     private String quizMaterial;
-
-    public UUID getQuizId() { return quizId; }
-    public void setQuizId(UUID quizId) { this.quizId = quizId; }
-    public String getCourseId() { return courseId; }
-    public void setCourseId(String courseId) { this.courseId = courseId; }
-    public String getQuestion() { return question; }
-    public void setQuestion(String question) { this.question = question; }
-    public String getType() { return type; }
-    public void setType(String type) { this.type = type; }
-    public String getOptions() { return options; }
-    public void setOptions(String options) { this.options = options; }
-    public String getAnswer() { return answer; }
-    public void setAnswer(String answer) { this.answer = answer; }
-    public String getExplanation() { return explanation; }
-    public void setExplanation(String explanation) { this.explanation = explanation; }
-    public Integer getScore() { return score; }
-    public void setScore(Integer score) { this.score = score; }
-    public String getQuizMaterial() { return quizMaterial; }
-    public void setQuizMaterial(String quizMaterial) { this.quizMaterial = quizMaterial; }
 }

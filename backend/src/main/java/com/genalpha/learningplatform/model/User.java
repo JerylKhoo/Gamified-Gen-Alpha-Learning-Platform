@@ -1,9 +1,17 @@
 package com.genalpha.learningplatform.model;
 
 import jakarta.persistence.*;
+import lombok.Getter;
+import lombok.Setter;
 
 import java.util.UUID;
 
+/**
+ * Represents a registered user in the learning platform.
+ * The user_id is the UUID from Supabase authentication.
+ */
+@Getter
+@Setter
 @Entity
 @Table(name = "\"USER\"")
 public class User {
@@ -23,15 +31,4 @@ public class User {
 
     @Column(nullable = false)
     private String role = "User";
-
-    public UUID getUserId() { return userId; }
-    public void setUserId(UUID userId) { this.userId = userId; }
-    public String getName() { return name; }
-    public void setName(String name) { this.name = name; }
-    public Integer getPoints() { return points; }
-    public void setPoints(Integer points) { this.points = points; }
-    public String getProfilePic() { return profilePic; }
-    public void setProfilePic(String profilePic) { this.profilePic = profilePic; }
-    public String getRole() { return role; }
-    public void setRole(String role) { this.role = role; }
 }

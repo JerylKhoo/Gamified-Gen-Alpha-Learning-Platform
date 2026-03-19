@@ -1,11 +1,18 @@
 package com.genalpha.learningplatform.model;
 
 import jakarta.persistence.*;
+import lombok.Getter;
+import lombok.Setter;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 import java.time.Instant;
 import java.util.UUID;
 
+/**
+ * Tracks a user's adaptive quiz progress for a specific course, including IRT state and spaced repetition data.
+ */
+@Getter
+@Setter
 @Entity
 @Table(name = "quiz_progress")
 public class QuizProgress {
@@ -39,20 +46,4 @@ public class QuizProgress {
 
     @Column(name = "last_update", insertable = false, updatable = false)
     private Instant lastUpdate;
-
-    public UUID getQuizProgressId() { return quizProgressId; }
-    public void setQuizProgressId(UUID quizProgressId) { this.quizProgressId = quizProgressId; }
-    public UUID getUserId() { return userId; }
-    public void setUserId(UUID userId) { this.userId = userId; }
-    public String getCourseId() { return courseId; }
-    public void setCourseId(String courseId) { this.courseId = courseId; }
-    public String getAdaptiveScore() { return adaptiveScore; }
-    public void setAdaptiveScore(String adaptiveScore) { this.adaptiveScore = adaptiveScore; }
-    public String getCorrectQuestions() { return correctQuestions; }
-    public void setCorrectQuestions(String correctQuestions) { this.correctQuestions = correctQuestions; }
-    public String getWrongQuestions() { return wrongQuestions; }
-    public void setWrongQuestions(String wrongQuestions) { this.wrongQuestions = wrongQuestions; }
-    public String getAdaptiveHistory() { return adaptiveHistory; }
-    public void setAdaptiveHistory(String adaptiveHistory) { this.adaptiveHistory = adaptiveHistory; }
-    public Instant getLastUpdate() { return lastUpdate; }
 }
