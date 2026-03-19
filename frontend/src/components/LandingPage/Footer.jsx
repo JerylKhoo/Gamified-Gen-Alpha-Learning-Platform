@@ -14,7 +14,7 @@ const FALLBACK = [
 
 const APP_LINKS = [
   { label: 'Home',        path: '/' },
-  { label: 'Learn',       path: '/home/learn' },
+  { label: 'Learn',       path: '/learn' },
   { label: 'Community',   path: '/home/community' },
   { label: 'Dashboard',   path: '/home/dashboard' },
   { label: 'Leaderboard', path: '/home/leaderboard' },
