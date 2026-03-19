@@ -95,15 +95,13 @@ function EditProfileModal({ userData, onClose, onSave }) {
 
   useEffect(() => {
     async function fetchChars() {
-      const { data } = await supabase.storage.from('avatars').list('', { limit: 200, sortBy: { column: 'name', order: 'asc' } });
-      if (data) {
-        const imgs = data
-          .filter(f => /\.(png|jpe?g|gif|webp|svg)$/i.test(f.name))
-          .map(f => ({
-            name: f.name,
-            url: supabase.storage.from('avatars').getPublicUrl(f.name).data.publicUrl,
-          }));
-        setCharacters(imgs);
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch(`${API_URL}/api/v1/profilepics`, {
+        headers: { Authorization: `Bearer ${session?.access_token}` },
+      });
+      if (res.ok) {
+        const urls = await res.json();
+        setCharacters(urls.map(url => ({ name: url.split('/').pop(), url })));
       }
       setLoadingChars(false);
     }

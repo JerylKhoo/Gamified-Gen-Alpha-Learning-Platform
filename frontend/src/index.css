@@ -19,6 +19,10 @@ html {
   scrollbar-width: none; /* Firefox */
 }
 
+html.snap-landing {
+  scroll-snap-type: y mandatory;
+}
+
 html::-webkit-scrollbar {
   display: none; /* Chrome, Safari, Edge */
 }
