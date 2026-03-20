@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import Navbar from '../components/LandingPage/Navbar';
 import Hero from '../components/LandingPage/Hero';
 import Features from '../components/LandingPage/Features';
+import HowItWorks from '../components/LandingPage/HowItWorks';
 import Footer from '../components/LandingPage/Footer';
 
 export default function LandingPage() {
@@ -22,6 +23,7 @@ export default function LandingPage() {
       <main>
         <Hero onSignup={() => navigate('/auth?mode=signup')} />
         <Features />
+        <HowItWorks />
       </main>
       <Footer />
     </>
