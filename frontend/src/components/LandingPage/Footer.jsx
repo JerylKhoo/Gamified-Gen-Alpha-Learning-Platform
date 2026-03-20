@@ -1,6 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import gsap from 'gsap';
+import { ScrollTrigger } from 'gsap/ScrollTrigger';
+
+gsap.registerPlugin(ScrollTrigger);
 
 const API_URL = import.meta.env.VITE_API_URL;
 
@@ -14,7 +18,7 @@ const FALLBACK = [
 
 const APP_LINKS = [
   { label: 'Home',        path: '/' },
-  { label: 'Learn',       path: '/home/learn' },
+  { label: 'Learn',       path: '/learn' },
   { label: 'Community',   path: '/home/community' },
   { label: 'Dashboard',   path: '/home/dashboard' },
   { label: 'Leaderboard', path: '/home/leaderboard' },
@@ -25,6 +29,7 @@ export default function Footer() {
   const navigate = useNavigate();
   const [card, setCard] = useState(FALLBACK[Math.floor(Math.random() * FALLBACK.length)]);
   const [flipped, setFlipped] = useState(false);
+  const footerRef = useRef(null);
 
   useEffect(() => {
     fetch(`${API_URL}/api/v1/questions`)
@@ -46,6 +51,24 @@ export default function Footer() {
       .catch(() => {});
   }, []);
 
+  useEffect(() => {
+    const ctx = gsap.context(() => {
+      gsap.set(footerRef.current, { opacity: 0, y: 40 });
+      gsap.fromTo(
+        footerRef.current,
+        { opacity: 0, y: 40 },
+        {
+          opacity: 1, y: 0, duration: 0.8, ease: 'power3.out',
+          scrollTrigger: {
+            trigger: footerRef.current,
+            start: 'top 90%',
+          },
+        }
+      );
+    }, footerRef);
+    return () => ctx.revert();
+  }, []);
+
   function goTo(path) {
     if (session) {
       navigate(path);
@@ -55,7 +78,7 @@ export default function Footer() {
   }
 
   return (
-    <footer className="bg-[#0d0d0d] border-t border-[rgba(139,92,246,0.2)]">
+    <footer ref={footerRef} className="bg-[#0d0d0d] border-t border-[rgba(139,92,246,0.2)]" style={{ scrollSnapAlign: 'start' }}>
       <div className="max-w-[1200px] mx-auto px-8 py-12 flex flex-wrap items-start justify-between gap-10">
 
         {/* Left: Brand + Flip Card */}

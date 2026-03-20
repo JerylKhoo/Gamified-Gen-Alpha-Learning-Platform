@@ -6,6 +6,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -30,26 +31,31 @@ public class BadgeController {
 
     @Operation(summary = "Get badge by ID")
     @GetMapping("/{badgeId}")
-    public ResponseEntity<Badge> getById(@PathVariable UUID badgeId) {
+    public ResponseEntity<Badge> getById(@PathVariable String badgeId) {
         return ResponseEntity.ok(badgeService.getById(badgeId));
     }
 
     @Operation(summary = "Create a badge (admin)")
     @PostMapping
-    public ResponseEntity<Badge> create(@RequestBody Badge badge) {
-        return ResponseEntity.status(HttpStatus.CREATED).body(badgeService.create(badge));
+    public ResponseEntity<Badge> create(@RequestBody Badge badge, Authentication authentication) {
+        UUID requesterId = UUID.fromString(authentication.getName());
+        return ResponseEntity.status(HttpStatus.CREATED).body(badgeService.create(badge, requesterId));
     }
 
     @Operation(summary = "Update a badge (admin)")
     @PutMapping("/{badgeId}")
-    public ResponseEntity<Badge> update(@PathVariable UUID badgeId, @RequestBody Badge updates) {
-        return ResponseEntity.ok(badgeService.update(badgeId, updates));
+    public ResponseEntity<Badge> update(@PathVariable String badgeId,
+                                        @RequestBody Badge updates,
+                                        Authentication authentication) {
+        UUID requesterId = UUID.fromString(authentication.getName());
+        return ResponseEntity.ok(badgeService.update(badgeId, updates, requesterId));
     }
 
     @Operation(summary = "Delete a badge (admin)")
     @DeleteMapping("/{badgeId}")
-    public ResponseEntity<Void> delete(@PathVariable UUID badgeId) {
-        badgeService.delete(badgeId);
+    public ResponseEntity<Void> delete(@PathVariable String badgeId, Authentication authentication) {
+        UUID requesterId = UUID.fromString(authentication.getName());
+        badgeService.delete(badgeId, requesterId);
         return ResponseEntity.noContent().build();
     }
 }

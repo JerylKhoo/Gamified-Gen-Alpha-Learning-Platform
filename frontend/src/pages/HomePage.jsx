@@ -95,15 +95,13 @@ function EditProfileModal({ userData, onClose, onSave }) {
 
   useEffect(() => {
     async function fetchChars() {
-      const { data } = await supabase.storage.from('avatars').list('', { limit: 200, sortBy: { column: 'name', order: 'asc' } });
-      if (data) {
-        const imgs = data
-          .filter(f => /\.(png|jpe?g|gif|webp|svg)$/i.test(f.name))
-          .map(f => ({
-            name: f.name,
-            url: supabase.storage.from('avatars').getPublicUrl(f.name).data.publicUrl,
-          }));
-        setCharacters(imgs);
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch(`${API_URL}/api/v1/profilepics`, {
+        headers: { Authorization: `Bearer ${session?.access_token}` },
+      });
+      if (res.ok) {
+        const urls = await res.json();
+        setCharacters(urls.map(url => ({ name: url.split('/').pop(), url })));
       }
       setLoadingChars(false);
     }
@@ -534,7 +532,7 @@ export default function HomePage() {
             <div className="flex flex-col gap-2 flex-1 justify-center items-start">
               <p className="text-[#5a5278] text-sm m-0">No courses started yet.</p>
               <button
-                onClick={() => navigate('/home/learn')}
+                onClick={() => navigate('/learn')}
                 className="text-[#a78bfa] text-sm font-semibold hover:underline cursor-pointer bg-transparent border-none p-0"
               >
                 Explore courses →
@@ -615,7 +613,7 @@ export default function HomePage() {
             <div className="flex flex-col justify-center items-center gap-3 border-l border-[rgba(139,92,246,0.15)] pl-[1.1rem] max-sm:border-l-0 max-sm:border-t max-sm:border-[rgba(139,92,246,0.15)] max-sm:pl-0 max-sm:pt-4">
               <p className="text-[#5a5278] text-sm text-center m-0">No active course yet.</p>
               <button
-                onClick={() => navigate('/home/learn')}
+                onClick={() => navigate('/learn')}
                 className="px-5 py-2 bg-gradient-to-br from-[#7c3aed] to-[#4f46e5] text-white rounded-xl text-sm font-bold border-none cursor-pointer shadow-[0_4px_20px_rgba(124,58,237,0.35)] transition-all hover:-translate-y-0.5 hover:shadow-[0_8px_28px_rgba(124,58,237,0.5)]"
               >
                 Start Learning →

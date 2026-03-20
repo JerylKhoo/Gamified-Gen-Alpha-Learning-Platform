@@ -3,7 +3,9 @@ server.port=8080
 
 # ── Supabase PostgreSQL ───────────────────────────────────────────────────────
 # Found at: Supabase Dashboard → Project Settings → Database → Connection string (JDBC)
-spring.datasource.url=jdbc:postgresql://<host>:5432/postgres
+# Use port 6543 for PgBouncer (Supabase pooler). The prepareThreshold=0 parameter disables
+# server-side prepared statements, which is required when using PgBouncer in transaction mode.
+spring.datasource.url=jdbc:postgresql://<host>:6543/postgres?prepareThreshold=0
 spring.datasource.driver-class-name=org.postgresql.Driver
 spring.datasource.username=postgres.<project-ref>
 spring.datasource.password=YOUR_DB_PASSWORD

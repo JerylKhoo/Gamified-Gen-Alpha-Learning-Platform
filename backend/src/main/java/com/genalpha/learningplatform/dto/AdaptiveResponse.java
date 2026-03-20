@@ -1,17 +1,21 @@
 package com.genalpha.learningplatform.dto;
 
-import com.genalpha.learningplatform.model.Question;
+import com.genalpha.learningplatform.model.Quiz;
+import lombok.Getter;
+import lombok.Setter;
 
+/**
+ * Response returned by the adaptive learning endpoint containing the ability score and the next question.
+ */
+@Getter
+@Setter
 public class AdaptiveResponse {
 
-    private double abilityScore;   // user's current calculated ability (0–100)
-    private Question nextQuestion; // null if no harder question exists
+    private double abilityScore;
+    private Quiz   nextQuestion;
 
-    public AdaptiveResponse(double abilityScore, Question nextQuestion) {
+    public AdaptiveResponse(double abilityScore, Quiz nextQuestion) {
         this.abilityScore = abilityScore;
         this.nextQuestion = nextQuestion;
     }
-
-    public double getAbilityScore() { return abilityScore; }
-    public Question getNextQuestion() { return nextQuestion; }
 }

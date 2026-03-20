@@ -1,6 +1,23 @@
+import { useEffect, useRef } from 'react';
+import gsap from 'gsap';
+
 export default function Navbar({ onLogin, onSignup, onLogoClick }) {
+  const navRef = useRef(null);
+
+  useEffect(() => {
+    gsap.fromTo(
+      navRef.current,
+      { y: -64, opacity: 0 },
+      { y: 0, opacity: 1, duration: 0.7, ease: 'power3.out', delay: 0.1 }
+    );
+  }, []);
+
   return (
-    <nav className="sticky top-0 z-[1000] w-full bg-[rgba(13,13,13,0.92)] backdrop-blur-md border-b border-[rgba(139,92,246,0.2)]">
+    <nav
+      ref={navRef}
+      className="sticky top-0 z-[1000] w-full bg-[rgba(13,13,13,0.92)] backdrop-blur-md border-b border-[rgba(139,92,246,0.2)]"
+      style={{ opacity: 0 }}
+    >
       <div className="max-w-[1200px] mx-auto px-8 h-16 flex items-center justify-between sm:px-4">
         {/* Logo */}
         <a

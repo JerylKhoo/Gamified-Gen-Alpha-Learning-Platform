@@ -1,9 +1,15 @@
 package com.genalpha.learningplatform.model;
 
 import jakarta.persistence.*;
-
+import lombok.Getter;
+import lombok.Setter;
 import java.util.UUID;
 
+/**
+ * Represents a community post created by a user on the platform.
+ */
+@Getter
+@Setter
 @Entity
 @Table(name = "posts")
 public class Post {
@@ -25,21 +31,4 @@ public class Post {
     private Integer reportCount = 0;
 
     private Integer upvote = 0;
-
-    public UUID getPostId() { return postId; }
-    public void setPostId(UUID postId) { this.postId = postId; }
-    public UUID getUserId() { return userId; }
-    public void setUserId(UUID userId) { this.userId = userId; }
-    public String getTitle() { return title; }
-    public void setTitle(String title) { this.title = title; }
-    public String getCategory() { return category; }
-    public void setCategory(String category) { this.category = category; }
-    public String getPicture() { return picture; }
-    public void setPicture(String picture) { this.picture = picture; }
-    public String getDescription() { return description; }
-    public void setDescription(String description) { this.description = description; }
-    public Integer getReportCount() { return reportCount; }
-    public void setReportCount(Integer reportCount) { this.reportCount = reportCount; }
-    public Integer getUpvote() { return upvote; }
-    public void setUpvote(Integer upvote) { this.upvote = upvote; }
 }

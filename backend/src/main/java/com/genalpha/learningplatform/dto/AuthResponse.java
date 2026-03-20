@@ -1,7 +1,14 @@
 package com.genalpha.learningplatform.dto;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import lombok.Getter;
+import lombok.Setter;
 
+/**
+ * Response returned by the authentication endpoints containing token information from Supabase.
+ */
+@Getter
+@Setter
 public class AuthResponse {
 
     @JsonProperty("access_token")
@@ -17,15 +24,4 @@ public class AuthResponse {
     private Integer expiresIn;
 
     private Object user;
-
-    public String getAccessToken() { return accessToken; }
-    public void setAccessToken(String accessToken) { this.accessToken = accessToken; }
-    public String getRefreshToken() { return refreshToken; }
-    public void setRefreshToken(String refreshToken) { this.refreshToken = refreshToken; }
-    public String getTokenType() { return tokenType; }
-    public void setTokenType(String tokenType) { this.tokenType = tokenType; }
-    public Integer getExpiresIn() { return expiresIn; }
-    public void setExpiresIn(Integer expiresIn) { this.expiresIn = expiresIn; }
-    public Object getUser() { return user; }
-    public void setUser(Object user) { this.user = user; }
 }

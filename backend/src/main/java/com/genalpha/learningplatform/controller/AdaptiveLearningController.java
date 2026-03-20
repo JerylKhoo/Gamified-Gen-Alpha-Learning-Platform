@@ -11,7 +11,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
 
-@Tag(name = "Adaptive Learning", description = "Calculates the next adaptive question based on answer history")
+@Tag(name = "Adaptive Learning", description = "Calculates the next adaptive quiz question based on answer history")
 @RestController
 @RequestMapping("/api/v1/adaptive")
 public class AdaptiveLearningController {
@@ -23,22 +23,14 @@ public class AdaptiveLearningController {
     }
 
     @Operation(
-        summary = "Submit answer result and get next question",
+        summary = "Submit answer result and get next quiz question",
         description = """
-            Accepts the user's current adaptive score, whether their last answer was correct,
-            the lesson ID, and the category.
+            Accepts the course ID and whether the last answer was correct.
 
-            Score update formula (learningRate = 0.2):
-              correct → newScore = value + (100 - value) × 0.2
-              wrong   → newScore = value - value × 0.2
+            Uses IRT (1PL Rasch) + SM-2 Spaced Repetition to update the user's
+            ability estimate (theta) and select the optimal next quiz question.
 
-            The newScore is appended to adaptive_score in PROGRESS:
-              adaptive_score: [score1, score2, ..., newScore]
-
-            Returns the question with the lowest difficulty score strictly above
-            newScore that the user has not yet answered correctly.
-            Falls back to other lessons in the same category if needed.
-            Returns nextQuestion: null when fully mastered.
+            Returns nextQuestion: null when the course is fully mastered.
             """
     )
     @PostMapping("/next")

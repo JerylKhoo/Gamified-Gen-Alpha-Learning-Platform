@@ -1,0 +1,82 @@
+package com.genalpha.learningplatform.service;
+
+import com.genalpha.learningplatform.model.UserStreak;
+import com.genalpha.learningplatform.repository.UserStreakRepository;
+import org.springframework.http.HttpStatus;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
+
+import java.time.LocalDate;
+import java.util.UUID;
+
+/**
+ * Concrete implementation of UserStreakService backed by JPA.
+ */
+@Service
+public class UserStreakServiceImpl implements UserStreakService {
+
+    private final UserStreakRepository userStreakRepository;
+
+    public UserStreakServiceImpl(UserStreakRepository userStreakRepository) {
+        this.userStreakRepository = userStreakRepository;
+    }
+
+    @Override
+    public UserStreak getMyStreak(UUID userId) {
+        return userStreakRepository.findByUserId(userId)
+                .orElseGet(() -> createStreak(userId));
+    }
+
+    @Override
+    @Transactional
+    public UserStreak recordActivity(UUID userId) {
+        UserStreak streak = userStreakRepository.findByUserId(userId)
+                .orElseGet(() -> createStreak(userId));
+
+        LocalDate today = LocalDate.now();
+        LocalDate last  = streak.getLastActivityDate();
+
+        if (last != null && last.isEqual(today)) {
+            return streak;
+        }
+
+        if (last == null || today.toEpochDay() - last.toEpochDay() > 1) {
+            streak.setCurrentStreak(1);
+            streak.setStreakStart(today);
+        } else {
+            streak.setCurrentStreak(streak.getCurrentStreak() + 1);
+        }
+
+        if (streak.getCurrentStreak() > streak.getLongestStreak()) {
+            streak.setLongestStreak(streak.getCurrentStreak());
+        }
+
+        streak.setLastActivityDate(today);
+        return userStreakRepository.save(streak);
+    }
+
+    private UserStreak createStreak(UUID userId) {
+        UserStreak s = new UserStreak();
+        s.setUserId(userId);
+        s.setCurrentStreak(0);
+        s.setLongestStreak(0);
+        return userStreakRepository.save(s);
+    }
+
+    @Override
+    public UserStreak getById(UUID streakId, UUID requesterId) {
+        UserStreak streak = userStreakRepository.findById(streakId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Streak not found"));
+        if (!streak.getUserId().equals(requesterId)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Access denied");
+        }
+        return streak;
+    }
+
+    @Override
+    public void delete(UUID streakId, UUID requesterId) {
+        UserStreak streak = getById(streakId, requesterId);
+        userStreakRepository.delete(streak);
+    }
+}
