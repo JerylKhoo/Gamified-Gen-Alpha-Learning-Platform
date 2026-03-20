@@ -59,6 +59,25 @@ CREATE TABLE POSTS (
 );
 
 -- =====================
+-- POST_UPVOTES TABLE
+-- =====================
+CREATE TABLE POST_UPVOTES (
+    ID UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    POST_ID UUID NOT NULL REFERENCES POSTS(POST_ID) ON DELETE CASCADE,
+    USER_ID UUID NOT NULL REFERENCES "USER"(USER_ID) ON DELETE CASCADE,
+    UNIQUE(POST_ID, USER_ID)
+);
+
+ALTER TABLE POST_UPVOTES ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Anyone can view upvotes"
+ON POST_UPVOTES FOR SELECT TO public USING (true);
+
+CREATE POLICY "Authenticated users can upvote"
+ON POST_UPVOTES FOR INSERT TO authenticated
+WITH CHECK (auth.uid() = USER_ID);
+
+-- =====================
 -- LESSONS TABLE
 -- =====================
 CREATE TABLE LESSONS (

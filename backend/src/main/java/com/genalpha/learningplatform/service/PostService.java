@@ -2,8 +2,10 @@ package com.genalpha.learningplatform.service;
 
 import com.genalpha.learningplatform.dto.PostResponse;
 import com.genalpha.learningplatform.model.Post;
+import com.genalpha.learningplatform.model.PostUpvote;
 import com.genalpha.learningplatform.model.User;
 import com.genalpha.learningplatform.repository.PostRepository;
+import com.genalpha.learningplatform.repository.PostUpvoteRepository;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
@@ -15,10 +17,12 @@ import java.util.UUID;
 public class PostService {
 
     private final PostRepository postRepository;
+    private final PostUpvoteRepository postUpvoteRepository;
     private final UserService userService;
 
-    public PostService(PostRepository postRepository, UserService userService) {
+    public PostService(PostRepository postRepository, PostUpvoteRepository postUpvoteRepository, UserService userService) {
         this.postRepository = postRepository;
+        this.postUpvoteRepository = postUpvoteRepository;
         this.userService = userService;
     }
 
@@ -77,6 +81,19 @@ public class PostService {
         if (updates.getCategory() != null) post.setCategory(updates.getCategory());
         if (updates.getPicture() != null) post.setPicture(updates.getPicture());
         if (updates.getDescription() != null) post.setDescription(updates.getDescription());
+        return postRepository.save(post);
+    }
+
+    public Post upvote(UUID postId, UUID requesterId) {
+        if (postUpvoteRepository.existsByPostIdAndUserId(postId, requesterId)) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Already upvoted this post");
+        }
+        Post post = getById(postId);
+        PostUpvote upvoteRecord = new PostUpvote();
+        upvoteRecord.setPostId(postId);
+        upvoteRecord.setUserId(requesterId);
+        postUpvoteRepository.save(upvoteRecord);
+        post.setUpvote(post.getUpvote() + 1);
         return postRepository.save(post);
     }
 

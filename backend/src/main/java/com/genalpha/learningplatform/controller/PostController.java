@@ -49,6 +49,13 @@ public class PostController {
         return ResponseEntity.status(HttpStatus.CREATED).body(postService.create(post, requesterId));
     }
 
+    @Operation(summary = "Upvote a post (one per user, returns 409 if already upvoted)")
+    @PostMapping("/{postId}/upvote")
+    public ResponseEntity<Post> upvote(@PathVariable UUID postId, Authentication authentication) {
+        UUID requesterId = UUID.fromString(authentication.getName());
+        return ResponseEntity.ok(postService.upvote(postId, requesterId));
+    }
+
     @Operation(summary = "Update own post")
     @PutMapping("/{postId}")
     public ResponseEntity<Post> update(@PathVariable UUID postId,
