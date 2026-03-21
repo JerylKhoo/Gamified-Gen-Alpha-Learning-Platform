@@ -51,8 +51,13 @@ const IconReply = () => (
     <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
   </svg>
 );
-const IconHeart = () => (
-  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+const IconHeartOutline = () => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+  </svg>
+);
+const IconHeartFilled = () => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
   </svg>
 );
@@ -81,7 +86,7 @@ function CategoryPill({ category, small = false }) {
 // ─── ThreadCard ───────────────────────────────────────────────────────────────
 // Layout mirrors CourseCard from LearnPage.jsx:
 //   dark bg, subtle border, hover lift + purple glow, transition-all duration-300
-function ThreadCard({ thread, onClick }) {
+function ThreadCard({ thread, onClick, onUpvote, upvoted, upvoting }) {
   return (
     <div
       onClick={onClick}
@@ -107,7 +112,6 @@ function ThreadCard({ thread, onClick }) {
         <div className="flex items-center gap-[0.4rem] flex-wrap">
           <CategoryPill category={thread.category} small />
           {thread.isHot && (
-            // Hot badge — mirrors the orange "Day 5" streak pill in HomePage.jsx
             <span className="inline-flex items-center gap-[0.22rem] text-[0.63rem] font-bold text-[#fb923c] bg-[rgba(251,146,60,0.1)] border border-[rgba(251,146,60,0.2)] rounded-md px-[0.38rem] py-[0.1rem]">
               🔥 Hot
             </span>
@@ -124,7 +128,7 @@ function ThreadCard({ thread, onClick }) {
           {thread.preview}
         </p>
 
-        {/* Row 4: author · timestamp — mirrors course category label in LearnPage.jsx */}
+        {/* Row 4: author · timestamp */}
         <div className="flex items-center gap-[0.4rem] text-[0.75rem] text-[#5a5278] mt-[0.05rem]">
           <span className="font-semibold text-[#7c6ea8]">{thread.author}</span>
           <span className="opacity-40">·</span>
@@ -133,16 +137,23 @@ function ThreadCard({ thread, onClick }) {
       </div>
 
       {/* ── Stats Column ── */}
-      {/* Right-aligned reply/like counts — mirrors the lesson/time badges in HomePage.jsx */}
       <div className="flex-shrink-0 flex flex-col items-end gap-[0.45rem] text-[0.78rem] text-[#5a5278] mt-[0.1rem]">
         <span className="flex items-center gap-[0.3rem]">
           <IconReply />
           {thread.replies}
         </span>
-        <span className="flex items-center gap-[0.3rem]">
-          <IconHeart />
+        <button
+          onClick={e => { e.stopPropagation(); if (!upvoting && !upvoted) onUpvote(thread.id); }}
+          disabled={upvoting || upvoted}
+          className={`flex items-center gap-[0.3rem] bg-transparent border-none p-0 cursor-pointer transition-all duration-200 ${
+            upvoted
+              ? 'text-[#f87171]'
+              : 'text-[#5a5278] hover:text-[#f87171]'
+          } ${upvoting ? 'opacity-50 cursor-not-allowed' : ''}`}
+        >
+          {upvoted ? <IconHeartFilled /> : <IconHeartOutline />}
           {thread.likes}
-        </span>
+        </button>
       </div>
     </div>
   );
@@ -316,6 +327,8 @@ export default function CommunityPage() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [posts,           setPosts]           = useState([]);
   const [loading,         setLoading]         = useState(true);
+  const [upvotedIds,      setUpvotedIds]      = useState(new Set());
+  const [upvotingId,      setUpvotingId]      = useState(null);
 
   async function fetchPosts() {
     try {
@@ -333,6 +346,39 @@ export default function CommunityPage() {
   }
 
   useEffect(() => { fetchPosts(); }, []);
+
+  async function handleUpvote(postId) {
+    setUpvotingId(postId);
+    // Optimistic: bump count and mark as upvoted immediately
+    setPosts(prev => prev.map(p =>
+      p.postId === postId ? { ...p, upvote: (p.upvote || 0) + 1 } : p
+    ));
+    setUpvotedIds(prev => new Set(prev).add(postId));
+
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+      const res = await fetch(`${API_URL}/api/v1/posts/${postId}/upvote`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      });
+      if (!res.ok) {
+        // Revert on error
+        setPosts(prev => prev.map(p =>
+          p.postId === postId ? { ...p, upvote: (p.upvote || 1) - 1 } : p
+        ));
+        setUpvotedIds(prev => { const next = new Set(prev); next.delete(postId); return next; });
+      }
+    } catch {
+      // Revert on network error
+      setPosts(prev => prev.map(p =>
+        p.postId === postId ? { ...p, upvote: (p.upvote || 1) - 1 } : p
+      ));
+      setUpvotedIds(prev => { const next = new Set(prev); next.delete(postId); return next; });
+    } finally {
+      setUpvotingId(null);
+    }
+  }
 
   // Map backend posts to thread-card shape
   const threads = posts.map((p) => ({
@@ -437,6 +483,9 @@ export default function CommunityPage() {
               key={thread.id}
               thread={thread}
               onClick={() => {}}
+              onUpvote={handleUpvote}
+              upvoted={upvotedIds.has(thread.id)}
+              upvoting={upvotingId === thread.id}
             />
           ))}
         </div>
