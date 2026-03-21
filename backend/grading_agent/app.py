@@ -4,6 +4,8 @@ import redis
 import logging
 import json
 import re
+import io
+import wave
 
 from fastapi import FastAPI, Request, HTTPException, Depends
 from fastapi.responses import StreamingResponse
@@ -14,6 +16,8 @@ from slowapi.errors import RateLimitExceeded
 
 from pydantic import BaseModel, field_validator
 from groq import Groq
+from google import genai
+from google.genai import types
 
 # Setup logging
 logging.basicConfig(level=logging.DEBUG)
@@ -69,40 +73,13 @@ def safe_redis_set(key, value, ex=None):
         logging.warning("Redis write failed")
 
 #message building
-def build_messages(system_prompt, summary, recent, user_input):
+def build_messages(system_prompt, recent, user_input):
     messages = [{"role": "system", "content": system_prompt}]
-
-    if summary:
-        messages.append({
-            "role": "system",
-            "content": f"Conversation so far: {summary}"
-        })
 
     messages.extend(recent)
     messages.append({"role": "user", "content": user_input})
 
     return messages
-
-def summarize_messages(summary, recent):
-    prompt = [
-        {"role": "system", "content": "Summarize this conversation briefly."},
-        {"role": "user", "content": f"""
-        Previous summary:
-        {summary}
-
-        New messages:
-        {recent}
-        """}
-        ]
-
-    completion = client.chat.completions.create(
-        model="qwen/qwen3-32b",
-        messages=prompt,
-        temperature=0.3,
-        max_tokens=200
-    )
-
-    return completion.choices[0].message.content
 
 #chat history management
 def save_recent(session_id, recent):
@@ -115,31 +92,17 @@ def save_recent(session_id, recent):
 def load_memory(session_id):
     try:
         recent_key = f"chat:{session_id}:recent"
-        summary_key = f"chat:{session_id}:summary"
-
         recent_json = redis_client.get(recent_key)
-        summary = redis_client.get(summary_key)
 
         recent = json.loads(recent_json) if recent_json else []
-        summary = summary if summary else ""
 
     except redis.RedisError:
         logging.warning("Redis unavailable, running without memory")
         return "", []
 
-    return summary, recent
+    return recent
 
-def update_memory(session_id, summary, recent, new_user_msg, new_assistant_msg):
-    # Summarize BEFORE appending if already at limit
-    if len(recent) >= MAX_RECENT - 1:
-        new_summary = summarize_messages(summary, recent)
-        safe_redis_set(
-            f"chat:{session_id}:summary",
-            new_summary,
-            ex=86400
-        )
-        recent = []  # clear after summarizing
-    
+def update_memory(session_id, recent, new_user_msg, new_assistant_msg):    
     recent.append({"role": "user", "content": new_user_msg})
     recent.append({"role": "assistant", "content": new_assistant_msg})
 
@@ -152,29 +115,16 @@ def strip_markdown(text: str) -> str:
 
     return text
 
-def prep_message(text: str) -> str:
-    try:
-        cleaned = re.sub(r"<think>.*?</think>", "", text, flags=re.DOTALL)
-        cleaned = strip_markdown(cleaned)
-        cleaned = re.sub(r"\s+", " ", cleaned).strip()
-
-        return cleaned
-
-    except Exception as e:
-        logging.warning(f"TTS prep failed: {e}")
-        return ""
-
-
 @app.post("/chat")
 @limiter.limit("20/minute")
 # session_id: str = Depends(get_session_id)
 def chat(request: Request, req: ChatRequest):
     # request.state.user_id = session_id
-    summary, recent = load_memory(req.session_id)
-    messages = build_messages(SYSTEM_PROMPT, summary, recent, req.message)
+    recent = load_memory(req.session_id)
+    messages = build_messages(SYSTEM_PROMPT, recent, req.message)
 
     stream = client.chat.completions.create(
-        model="qwen/qwen3-32b",
+        model="llama-3.3-70b-versatile",
         messages=messages,
         temperature=0.7,
         max_tokens=500,
@@ -189,9 +139,9 @@ def chat(request: Request, req: ChatRequest):
             full_response += content
             yield content
         
-        update_memory(req.session_id, summary, recent, req.message, full_response)
+        update_memory(req.session_id, recent, req.message, full_response)
 
-        voice_msg = prep_message(full_response)
+        voice_msg = strip_markdown(full_response)
         safe_redis_set(
             f"chat:{req.session_id}:voice",
             voice_msg,
@@ -207,24 +157,66 @@ class TTSRequest(BaseModel):
 def load_voice_message(session_id):
     try:
         voice_msg = redis_client.get(f"chat:{session_id}:voice")
-        return voice_msg or ""
+        return voice_msg
     except redis.RedisError:
         logging.warning("Redis unavailable for voice")
         return ""
 
+def pcm_to_wav(pcm_data: bytes, sample_rate: int = 24000, channels: int = 1, sample_width: int = 2) -> bytes:
+    buffer = io.BytesIO()
+    with wave.open(buffer, 'wb') as wav_file:
+        wav_file.setnchannels(channels)
+        wav_file.setsampwidth(sample_width)
+        wav_file.setframerate(sample_rate)
+        wav_file.writeframes(pcm_data)
+    return buffer.getvalue()
+
+google_client = genai.Client(api_key=os.getenv("GOOGLE_API_KEY"))
+
 @app.post("/tts")
+@limiter.limit("10/minute")
 def tts(request: Request, req: TTSRequest):
     voice_msg = load_voice_message(req.session_id)
     logging.debug(f"TTS input: '{voice_msg}'")
 
     if not voice_msg:
-        raise HTTPException(status_code=404, detail="No voice message found")
+        raise HTTPException(status_code=404, detail="No voice messages found")
+    
+    # contents = [
+    #     types.Content(
+    #         role="user",
+    #         parts=[
+    #             types.Part.from_text(text="""Read aloud in a warm and friendly tone: 
+    #             """),
+    #         ],
+    #     ),
+    # ]
 
-    audio = client.audio.speech.create(
-        model="canopylabs/orpheus-v1-english",
-        voice="autumn",
-        response_format="wav",
-        input=voice_msg
-    )
+    try:
+        response = google_client.models.generate_content(
+            model="gemini-2.5-flash-preview-tts",
+            contents=voice_msg,
+            config=types.GenerateContentConfig(
+                response_modalities=["AUDIO"],
+                speech_config=types.SpeechConfig(
+                    voice_config=types.VoiceConfig(
+                        prebuilt_voice_config=types.PrebuiltVoiceConfig(
+                            voice_name="Leda"
+                        )
+                    )
+                )
+            )
+        )
 
-    return StreamingResponse(iter([audio.read()]),  media_type="audio/wav")
+        pcm_data = response.candidates[0].content.parts[0].inline_data.data
+        wav_data = pcm_to_wav(pcm_data)
+
+        return StreamingResponse(
+            io.BytesIO(wav_data),
+            media_type="audio/wav"
+        )
+
+
+    except Exception as e:
+        logging.error(f"TTS failed: {e}")
+        raise HTTPException(status_code=500, detail="TTS generation failed")
