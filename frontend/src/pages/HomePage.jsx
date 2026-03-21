@@ -276,6 +276,7 @@ export default function HomePage() {
   const [questionCount, setQuestionCount] = useState(null);
   const [loading,       setLoading]       = useState(true);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [streakData,    setStreakData]    = useState(null);
 
   useEffect(() => {
     async function fetchAll() {
@@ -285,16 +286,19 @@ export default function HomePage() {
         const headers = { Authorization: `Bearer ${session.access_token}` };
         const userId  = session.user.id;
 
-        // Fetch user profile, all lessons, and user's progress in parallel
-        const [userRes, lessonsRes, progressRes] = await Promise.all([
+        // Fetch user profile, all lessons, user's progress, and streak in parallel
+        const [userRes, lessonsRes, progressRes, streakRes] = await Promise.all([
           fetch(`${API_URL}/api/v1/users/${userId}`, { headers }),
           fetch(`${API_URL}/api/v1/lessons`,          { headers }),
           fetch(`${API_URL}/api/v1/progress/me`,      { headers }),
+          fetch(`${API_URL}/api/v1/streaks/me`,        { headers }),
         ]);
 
         const user     = userRes.ok     ? await userRes.json()     : null;
         const lessons  = lessonsRes.ok  ? await lessonsRes.json()  : [];
         const progress = progressRes.ok ? await progressRes.json() : [];
+        const streak   = streakRes.ok   ? await streakRes.json()   : null;
+        setStreakData(streak);
 
         setUserData(user);
 
@@ -412,8 +416,9 @@ export default function HomePage() {
               {/* View Stats button */}
               <div className="sk w-28 h-9 rounded-[10px]" />
             </div>
-            {/* XP + Rank badges */}
+            {/* XP + Rank + Streak badges */}
             <div className="flex flex-col gap-2 flex-shrink-0 ml-auto max-sm:hidden">
+              <div className="sk w-24 h-9 rounded-[20px]" />
               <div className="sk w-24 h-9 rounded-[20px]" />
               <div className="sk w-24 h-9 rounded-[20px]" />
             </div>
@@ -521,6 +526,13 @@ export default function HomePage() {
             {/* Rank Badge */}
             <span className="text-sm font-bold px-4 py-2 rounded-[20px] bg-[rgba(139,92,246,0.15)] text-[#a78bfa] border border-[rgba(139,92,246,0.3)] text-center">
               {rank}
+            </span>
+            {/* Streak Badge */}
+            <span
+              title={`Longest streak: ${streakData?.longestStreak ?? 0} days`}
+              className="text-sm font-bold px-4 py-2 rounded-[20px] bg-[rgba(251,146,60,0.15)] text-[#fb923c] border border-[rgba(251,146,60,0.35)] flex items-center justify-center gap-1"
+            >
+              🔥 {streakData?.currentStreak ?? 0} day{(streakData?.currentStreak ?? 0) !== 1 ? 's' : ''}
             </span>
           </div>
         </div>
