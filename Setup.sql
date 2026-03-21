@@ -28,7 +28,6 @@ CREATE TABLE IF NOT EXISTS public."USER" (
 -- BADGES
 CREATE TABLE IF NOT EXISTS public.BADGES (
     Badge_ID    TEXT        PRIMARY KEY,
-    Name        TEXT        NOT NULL,
     Description TEXT,
     Icon        TEXT
 );
@@ -74,7 +73,8 @@ CREATE TABLE IF NOT EXISTS public.COURSE (
 CREATE TABLE IF NOT EXISTS public.MODULE (
     Module_ID   TEXT    PRIMARY KEY,
     Course_ID   TEXT    NOT NULL REFERENCES public.COURSE(Course_ID) ON DELETE CASCADE,
-    Content     JSONB
+    Content     TEXT,
+    "Order"     INTEGER
 );
 
 -- QUIZ
@@ -236,6 +236,54 @@ CREATE TRIGGER on_quiz_progress_change
     AFTER INSERT OR UPDATE ON public.QUIZ_PROGRESS
     FOR EACH ROW
     EXECUTE FUNCTION public.handle_quiz_progress_streak();
+
+
+-- ============================================================
+-- TRIGGER: Award badge when adaptive score >= 80
+-- ============================================================
+CREATE OR REPLACE FUNCTION public.handle_quiz_progress_badge()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+    v_theta         DOUBLE PRECISION;
+    v_display_score DOUBLE PRECISION;
+BEGIN
+    -- Extract theta from adaptive_score JSONB; skip if missing
+    v_theta := (NEW.Adaptive_Score ->> 'theta')::DOUBLE PRECISION;
+
+    IF v_theta IS NULL THEN
+        RETURN NEW;
+    END IF;
+
+    -- Convert IRT theta [-3, 3] to display score [0, 100]
+    v_display_score := (v_theta + 3.0) / 6.0 * 100.0;
+
+    IF v_display_score >= 80 THEN
+        -- Only award if a badge exists for this course and user doesn't already have it
+        INSERT INTO public.USER_BADGES (User_ID, Badge_ID)
+        SELECT NEW.User_ID, NEW.Course_ID
+        WHERE EXISTS (
+            SELECT 1 FROM public.BADGES WHERE Badge_ID = NEW.Course_ID
+        )
+        AND NOT EXISTS (
+            SELECT 1 FROM public.USER_BADGES
+            WHERE User_ID = NEW.User_ID AND Badge_ID = NEW.Course_ID
+        );
+    END IF;
+
+    RETURN NEW;
+END;
+$$;
+
+
+DROP TRIGGER IF EXISTS on_quiz_progress_badge ON public.QUIZ_PROGRESS;
+
+CREATE TRIGGER on_quiz_progress_badge
+    AFTER INSERT OR UPDATE ON public.QUIZ_PROGRESS
+    FOR EACH ROW
+    EXECUTE FUNCTION public.handle_quiz_progress_badge();
 
 
 -- ============================================================

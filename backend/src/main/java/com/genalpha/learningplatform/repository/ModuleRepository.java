@@ -6,5 +6,5 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import java.util.List;
 
 public interface ModuleRepository extends JpaRepository<Module, String> {
-    List<Module> findByCourseId(String courseId);
+    List<Module> findByCourseIdOrderByOrderAsc(String courseId);
 }

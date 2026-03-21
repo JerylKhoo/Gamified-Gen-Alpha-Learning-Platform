@@ -40,7 +40,6 @@ class BadgeServiceImplTest {
         adminId = UUID.randomUUID();
         badge = new Badge();
         badge.setBadgeId("first-login");
-        badge.setName("First Login");
         badge.setDescription("Logged in for the first time");
     }
 
@@ -59,7 +58,7 @@ class BadgeServiceImplTest {
 
         Badge result = badgeService.getById("first-login");
 
-        assertThat(result.getName()).isEqualTo("First Login");
+        assertThat(result.getBadgeId()).isEqualTo("first-login");
     }
 
     @Test
