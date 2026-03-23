@@ -334,12 +334,17 @@ export default function CommunityPage() {
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) return;
-      const res = await fetch(`${API_URL}/api/v1/posts`, {
-        headers: { Authorization: `Bearer ${session.access_token}` },
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setPosts(data);
+      const headers = { Authorization: `Bearer ${session.access_token}` };
+      const [postsRes, upvotesRes] = await Promise.all([
+        fetch(`${API_URL}/api/v1/posts`, { headers }),
+        fetch(`${API_URL}/api/v1/posts/upvotes/me`, { headers }),
+      ]);
+      if (postsRes.ok) {
+        setPosts(await postsRes.json());
+      }
+      if (upvotesRes.ok) {
+        const ids = await upvotesRes.json();
+        setUpvotedIds(new Set(ids));
       }
     } catch { /* keep empty */ }
     finally { setLoading(false); }

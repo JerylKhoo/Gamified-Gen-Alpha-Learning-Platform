@@ -113,6 +113,12 @@ public class PostServiceImpl implements PostService {
     }
 
     @Override
+    public List<UUID> getUpvotedPostIds(UUID userId) {
+        return postUpvoteRepository.findByUserId(userId)
+                .stream().map(PostUpvote::getPostId).toList();
+    }
+
+    @Override
     public void delete(UUID postId, UUID requesterId) {
         Post post = getById(postId);
         boolean isAdmin = userService.isAdmin(requesterId);

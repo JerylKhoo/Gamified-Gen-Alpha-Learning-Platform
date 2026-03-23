@@ -56,6 +56,13 @@ public class PostController {
         return ResponseEntity.ok(postService.upvote(postId, requesterId));
     }
 
+    @Operation(summary = "Get list of post IDs the current user has upvoted")
+    @GetMapping("/upvotes/me")
+    public ResponseEntity<List<UUID>> getMyUpvotes(Authentication authentication) {
+        UUID requesterId = UUID.fromString(authentication.getName());
+        return ResponseEntity.ok(postService.getUpvotedPostIds(requesterId));
+    }
+
     @Operation(summary = "Update own post")
     @PutMapping("/{postId}")
     public ResponseEntity<Post> update(@PathVariable UUID postId,
