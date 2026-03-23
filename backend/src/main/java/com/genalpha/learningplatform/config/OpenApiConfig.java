@@ -30,6 +30,7 @@ public class OpenApiConfig {
                                 .name("MIT")
                                 .url("https://opensource.org/licenses/MIT")))
                 .servers(List.of(
+                        new Server().url("https://gamified-gen-alpha-learning-platform.onrender.com").description("Production"),
                         new Server().url("http://localhost:8080").description("Local development")
                 ))
                 .addSecurityItem(new SecurityRequirement().addList("bearerAuth"))
