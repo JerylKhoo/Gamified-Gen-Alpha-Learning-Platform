@@ -31,7 +31,7 @@ export default function App() {
           <Route element={<ProtectedRoute><HomeLayout /></ProtectedRoute>}>
             <Route path="/home" element={<HomePage />} />
             <Route path="/learn" element={<LearnPage />} />
-            <Route path="/learn/:lessonId" element={<AdaptiveLearningPage />} />
+            <Route path="/learn/:courseId" element={<AdaptiveLearningPage />} />
             <Route path="/community" element={<CommunityPage />} />
             <Route path="/dashboard" element={<ComingSoon label="Dashboard" />} />
             <Route path="/leaderboard" element={<LeaderboardPage />} />
