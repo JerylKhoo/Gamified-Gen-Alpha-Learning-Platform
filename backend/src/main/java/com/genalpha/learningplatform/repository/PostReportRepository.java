@@ -9,4 +9,5 @@ import java.util.UUID;
 public interface PostReportRepository extends JpaRepository<PostReport, UUID> {
     boolean existsByPostIdAndUserId(UUID postId, UUID userId);
     List<PostReport> findByUserId(UUID userId);
+    long countByPostId(UUID postId);
 }
