@@ -23,6 +23,6 @@ public class Module {
     @Column(columnDefinition = "text")
     private String content;
 
-    @Column(name = "\"order\"")
+    @Column(name = "\"Order\"")
     private Integer order;
 }
