@@ -1,8 +1,8 @@
-FROM eclipse-temurin:24-jdk-alpine AS build
+FROM maven:3.9-eclipse-temurin-24 AS build
 WORKDIR /app
 COPY pom.xml .
 COPY src ./src
-RUN ./mvnw -q -DskipTests package 2>/dev/null || (apt-get install -y maven 2>/dev/null; mvn -q -DskipTests package)
+RUN mvn -q -DskipTests package
 
 FROM eclipse-temurin:24-jdk-alpine
 WORKDIR /app
