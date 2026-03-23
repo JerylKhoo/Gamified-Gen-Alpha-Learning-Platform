@@ -4,8 +4,8 @@ import { supabase } from '../lib/supabaseClient';
 
 const API_URL = import.meta.env.VITE_API_URL;
 
-function formatLessonId(lessonId) {
-  return lessonId
+function formatLessonId(courseId) {
+  return courseId
     .replace(/[-_.]/g, ' ')
     .replace(/\b\w/g, c => c.toUpperCase());
 }
@@ -23,7 +23,7 @@ function parseJsonArray(jsonStr) {
 }
 
 export default function AdaptiveLearningPage() {
-  const { lessonId } = useParams();
+  const { courseId } = useParams();
   const navigate     = useNavigate();
 
   const [question, setQuestion]    = useState(null);
@@ -48,7 +48,7 @@ export default function AdaptiveLearningPage() {
         // 1. Fetch prior progress to determine starting question number
         let priorCount = 0;
         const progressRes = await fetch(
-          `${API_URL}/api/v1/progress/lesson/${lessonId}`,
+          `${API_URL}/api/v1/progress/lesson/${courseId}`,
           { headers }
         );
         if (progressRes.ok) {
@@ -63,7 +63,7 @@ export default function AdaptiveLearningPage() {
         const res = await fetch(`${API_URL}/api/v1/adaptive/next`, {
           method: 'POST',
           headers: { ...headers, 'Content-Type': 'application/json' },
-          body: JSON.stringify({ lessonId, questionId: null, correct: false }),
+          body: JSON.stringify({ courseId, quizId: null, correct: false }),
         });
         if (!res.ok) throw new Error('Failed to fetch question');
         const data = await res.json();
@@ -87,7 +87,7 @@ export default function AdaptiveLearningPage() {
 
     initPage();
     return () => { cancelled = true; };
-  }, [lessonId]);
+  }, [courseId]);
 
   // ── Advance to next question (user-triggered, not in useEffect) ───────────
   async function advanceQuestion(questionId, wasCorrect) {
@@ -100,7 +100,7 @@ export default function AdaptiveLearningPage() {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${session.access_token}`,
         },
-        body: JSON.stringify({ lessonId, questionId, correct: wasCorrect }),
+        body: JSON.stringify({ courseId, quizId: questionId, correct: wasCorrect }),
       });
       if (!res.ok) throw new Error('Failed to fetch question');
       const data = await res.json();
@@ -121,7 +121,7 @@ export default function AdaptiveLearningPage() {
     }
   }
 
-  const title         = formatLessonId(lessonId);
+  const title         = formatLessonId(courseId);
   const options       = question ? parseOptions(question.options) : [];
   const correctOption = question ? options[parseInt(question.answer, 10)] : null;
 
