@@ -6,12 +6,9 @@ on:
   pull_request:
     branches: [main]
 
-permissions:
-  contents: write
-
 jobs:
-  build-and-deploy:
-    name: Build, Test & Deploy
+  test:
+    name: Build & Test
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -37,31 +34,14 @@ jobs:
           SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
           SUPABASE_JWKS_URI: ${{ secrets.SUPABASE_JWKS_URI }}
 
-      - name: Build JAR
-        run: mvn -q -DskipTests package
-        env:
-          DB_URL: ${{ secrets.DB_URL }}
-          DB_USERNAME: ${{ secrets.DB_USERNAME }}
-          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
-          SUPABASE_JWKS_URI: ${{ secrets.SUPABASE_JWKS_URI }}
-
-      - name: Commit JAR and trigger Render deploy
+      - name: Trigger Render deploy
         if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-        working-directory: .
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add backend/target/*.jar
-          git commit -m "ci: update built JAR [skip ci]" || echo "No changes to commit"
-          git push
-          curl -s "${{ secrets.RENDER_DEPLOY_HOOK }}"
+        run: curl -s "${{ secrets.RENDER_DEPLOY_HOOK }}"
 
   smoke-test:
     name: Smoke Test
     runs-on: ubuntu-latest
-    needs: build-and-deploy
+    needs: test
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
 
     steps:
