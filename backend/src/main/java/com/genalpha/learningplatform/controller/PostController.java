@@ -30,10 +30,10 @@ public class PostController {
         return ResponseEntity.ok(postService.getAllWithAuthor());
     }
 
-    @Operation(summary = "Get post by ID")
+    @Operation(summary = "Get post by ID (includes author info)")
     @GetMapping("/{postId}")
-    public ResponseEntity<Post> getById(@PathVariable UUID postId) {
-        return ResponseEntity.ok(postService.getById(postId));
+    public ResponseEntity<PostResponse> getById(@PathVariable UUID postId) {
+        return ResponseEntity.ok(postService.getByIdWithAuthor(postId));
     }
 
     @Operation(summary = "Get posts by user")

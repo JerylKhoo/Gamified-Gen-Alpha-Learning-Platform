@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabaseClient';
 
 const API_URL = import.meta.env.VITE_API_URL;
@@ -322,6 +323,7 @@ function CreatePostModal({ onClose, onCreated }) {
 // Mounts at /home/community via App.jsx
 // Outer wrapper mirrors LearnPage.jsx: full-width, min-h-screen, px-8 py-8
 export default function CommunityPage() {
+  const navigate = useNavigate();
   const [activeCategory,  setActiveCategory]  = useState('All');
   const [search,          setSearch]          = useState('');
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -508,7 +510,7 @@ export default function CommunityPage() {
             <ThreadCard
               key={thread.id}
               thread={thread}
-              onClick={() => {}}
+              onClick={() => navigate(`/community/${thread.id}`)}
               onUpvote={handleUpvote}
               upvoted={upvotedIds.has(thread.id)}
               upvoting={upvotingId === thread.id}

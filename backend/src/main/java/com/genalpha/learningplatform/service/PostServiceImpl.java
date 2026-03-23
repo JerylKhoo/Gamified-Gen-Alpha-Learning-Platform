@@ -66,6 +66,11 @@ public class PostServiceImpl implements PostService {
     }
 
     @Override
+    public PostResponse getByIdWithAuthor(UUID postId) {
+        return toResponse(getById(postId));
+    }
+
+    @Override
     public List<Post> getByUser(UUID userId) {
         return postRepository.findByUserId(userId);
     }

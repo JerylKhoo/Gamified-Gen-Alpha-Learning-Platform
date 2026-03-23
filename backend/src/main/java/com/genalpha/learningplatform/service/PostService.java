@@ -12,6 +12,7 @@ public interface PostService {
     List<Post> getAll();
     List<PostResponse> getAllWithAuthor();
     Post getById(UUID postId);
+    PostResponse getByIdWithAuthor(UUID postId);
     List<Post> getByUser(UUID userId);
     Post create(Post post, UUID requesterId);
     Post update(UUID postId, Post updates, UUID requesterId);
