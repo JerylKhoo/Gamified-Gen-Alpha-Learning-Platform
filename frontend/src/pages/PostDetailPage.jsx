@@ -12,6 +12,16 @@ const CATEGORY_STYLE = {
   'Off-Topic':     'bg-[rgba(248,113,113,0.1)]  border-[rgba(248,113,113,0.2)]  text-[#f87171]',
 };
 
+const REPORT_REASONS = [
+  'Spam or misleading',
+  'Harassment or bullying',
+  'Hate speech',
+  'Inappropriate content',
+  'Misinformation',
+  'Impersonation',
+  'Other',
+];
+
 const IconHeartOutline = () => (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
@@ -20,6 +30,12 @@ const IconHeartOutline = () => (
 const IconHeartFilled = () => (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+  </svg>
+);
+const IconFlag = () => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/>
+    <line x1="4" y1="22" x2="4" y2="15"/>
   </svg>
 );
 
@@ -32,9 +48,14 @@ export default function PostDetailPage() {
   const [error, setError]     = useState('');
   const [upvoted, setUpvoted] = useState(false);
   const [upvoting, setUpvoting] = useState(false);
-  const [showReportConfirm, setShowReportConfirm] = useState(false);
-  const [reported, setReported] = useState(false);
+
+  // Report state
+  const [showReportModal, setShowReportModal] = useState(false);
+  const [reported, setReported]   = useState(false);
   const [reporting, setReporting] = useState(false);
+  const [reportReason, setReportReason]     = useState('');
+  const [reportDescription, setReportDescription] = useState('');
+  const [reportError, setReportError] = useState('');
 
   useEffect(() => {
     async function fetchPost() {
@@ -43,18 +64,22 @@ export default function PostDetailPage() {
         if (!session) return;
         const headers = { Authorization: `Bearer ${session.access_token}` };
 
-        const [postRes, upvotesRes] = await Promise.all([
+        const [postRes, upvotesRes, reportsRes] = await Promise.all([
           fetch(`${API_URL}/api/v1/posts/${postId}`, { headers }),
           fetch(`${API_URL}/api/v1/posts/upvotes/me`, { headers }),
+          fetch(`${API_URL}/api/v1/posts/reports/me`, { headers }),
         ]);
 
         if (!postRes.ok) throw new Error('Post not found');
-        const postData = await postRes.json();
-        setPost(postData);
+        setPost(await postRes.json());
 
         if (upvotesRes.ok) {
           const ids = await upvotesRes.json();
           setUpvoted(ids.includes(postId));
+        }
+        if (reportsRes.ok) {
+          const ids = await reportsRes.json();
+          setReported(ids.includes(postId));
         }
       } catch (err) {
         setError(err.message);
@@ -70,8 +95,6 @@ export default function PostDetailPage() {
     const wasUpvoted = upvoted;
     const delta = wasUpvoted ? -1 : 1;
     setUpvoting(true);
-
-    // Optimistic
     setUpvoted(!wasUpvoted);
     setPost(prev => prev ? { ...prev, upvote: Math.max(0, (prev.upvote || 0) + delta) } : prev);
 
@@ -86,7 +109,6 @@ export default function PostDetailPage() {
         const updated = await res.json();
         setPost(prev => prev ? { ...prev, upvote: updated.upvote } : prev);
       } else {
-        // Revert
         setUpvoted(wasUpvoted);
         setPost(prev => prev ? { ...prev, upvote: Math.max(0, (prev.upvote || 0) - delta) } : prev);
       }
@@ -99,23 +121,40 @@ export default function PostDetailPage() {
   }
 
   async function handleReport() {
+    if (!reportReason) {
+      setReportError('Please select a reason.');
+      return;
+    }
     setReporting(true);
+    setReportError('');
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) return;
       const res = await fetch(`${API_URL}/api/v1/posts/${postId}/report`, {
         method: 'POST',
-        headers: { Authorization: `Bearer ${session.access_token}` },
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ reason: reportReason, description: reportDescription }),
       });
       if (res.ok) {
         const updated = await res.json();
         setPost(prev => prev ? { ...prev, reportCount: updated.reportCount } : prev);
         setReported(true);
+        setShowReportModal(false);
+        setReportReason('');
+        setReportDescription('');
+      } else if (res.status === 409) {
+        setReported(true);
+        setShowReportModal(false);
+      } else {
+        setReportError('Failed to submit report. Please try again.');
       }
-    } catch { /* silent */ }
-    finally {
+    } catch {
+      setReportError('Network error. Please try again.');
+    } finally {
       setReporting(false);
-      setShowReportConfirm(false);
     }
   }
 
@@ -143,6 +182,11 @@ export default function PostDetailPage() {
 
   const categoryCls = CATEGORY_STYLE[post.category]
     ?? 'bg-[rgba(255,255,255,0.05)] border-[rgba(255,255,255,0.1)] text-[#9090b0]';
+
+  const inputCls =
+    'w-full bg-[rgba(255,255,255,0.04)] border border-[rgba(139,92,246,0.18)] rounded-[10px] ' +
+    'px-3 py-2 text-[0.9rem] text-[#f0eeff] placeholder:text-[#4b4870] outline-none ' +
+    'focus:border-[rgba(139,92,246,0.5)] focus:shadow-[0_0_0_3px_rgba(139,92,246,0.08)] transition-all';
 
   return (
     <div className="w-full min-h-screen px-8 py-8 overflow-auto sm:px-4 sm:py-6">
@@ -235,63 +279,115 @@ export default function PostDetailPage() {
               {(post.upvote || 0) === 1 ? '1 like' : `${post.upvote || 0} likes`}
             </span>
 
-            {/* Report button — pushed to the right */}
+            {/* Report button */}
             <button
-              onClick={() => !reported && setShowReportConfirm(true)}
-              disabled={reported || reporting}
+              onClick={() => !reported && setShowReportModal(true)}
+              disabled={reported}
               className={`ml-auto flex items-center gap-[0.35rem] px-3 py-[0.4rem] rounded-lg border text-[0.8rem] font-semibold cursor-pointer transition-all duration-200 ${
                 reported
                   ? 'bg-[rgba(248,113,113,0.08)] border-[rgba(248,113,113,0.2)] text-[#f87171] cursor-not-allowed'
                   : 'bg-[rgba(255,255,255,0.03)] border-[rgba(255,255,255,0.08)] text-[#5a5278] hover:border-[rgba(248,113,113,0.3)] hover:text-[#f87171]'
               }`}
             >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/>
-                <line x1="4" y1="22" x2="4" y2="15"/>
-              </svg>
+              <IconFlag />
               {reported ? 'Reported' : 'Report'}
             </button>
           </div>
         </div>
       </div>
 
-      {/* Report confirmation dialog */}
-      {showReportConfirm && (
+      {/* ── Report Modal ── */}
+      {showReportModal && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm"
-          onClick={() => setShowReportConfirm(false)}
+          onClick={() => setShowReportModal(false)}
         >
           <div
-            className="w-full max-w-[380px] bg-[#0d0f18] border border-[rgba(248,113,113,0.25)] rounded-2xl p-6 shadow-[0_32px_80px_rgba(0,0,0,0.8)] flex flex-col gap-4"
+            className="w-full max-w-[460px] bg-[#0d0f18] border border-[rgba(248,113,113,0.25)] rounded-2xl overflow-hidden shadow-[0_32px_80px_rgba(0,0,0,0.8)]"
             onClick={e => e.stopPropagation()}
             style={{ animation: 'modalIn 0.18s cubic-bezier(0.2,0,0.2,1)' }}
           >
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-[rgba(248,113,113,0.12)] flex items-center justify-center text-[#f87171]">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            {/* Header */}
+            <div className="flex items-center gap-3 px-6 py-4 border-b border-[rgba(248,113,113,0.12)]">
+              <div className="w-9 h-9 rounded-full bg-[rgba(248,113,113,0.12)] flex items-center justify-center text-[#f87171]">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/>
                   <line x1="4" y1="22" x2="4" y2="15"/>
                 </svg>
               </div>
-              <h3 className="text-[1.05rem] font-extrabold text-[#f0eeff] m-0">Report this post?</h3>
+              <h3 className="text-[1.05rem] font-extrabold text-[#f0eeff] m-0">Report Post</h3>
+              <button
+                onClick={() => setShowReportModal(false)}
+                className="ml-auto flex items-center justify-center w-8 h-8 rounded-full bg-transparent text-[#9090b0] border border-[rgba(255,255,255,0.08)] cursor-pointer transition-all hover:bg-[rgba(139,92,246,0.1)] hover:text-[#f0eeff]"
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M18 6 6 18M6 6l12 12"/>
+                </svg>
+              </button>
             </div>
-            <p className="text-[0.88rem] text-[#9090b0] m-0 leading-relaxed">
-              This will flag the post for review by moderators. Are you sure you want to report it?
-            </p>
-            <div className="flex gap-3 justify-end pt-1">
-              <button
-                onClick={() => setShowReportConfirm(false)}
-                className="px-4 py-2 bg-transparent border border-[rgba(139,92,246,0.2)] text-[#9090b0] rounded-[10px] text-[0.88rem] font-semibold cursor-pointer transition-all hover:border-[rgba(139,92,246,0.4)] hover:text-[#f0eeff]"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleReport}
-                disabled={reporting}
-                className="px-5 py-2 bg-[rgba(248,113,113,0.15)] border border-[rgba(248,113,113,0.35)] text-[#f87171] rounded-[10px] text-[0.88rem] font-extrabold cursor-pointer transition-all hover:bg-[rgba(248,113,113,0.25)] disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {reporting ? 'Reporting...' : 'Report'}
-              </button>
+
+            {/* Body */}
+            <div className="p-6 flex flex-col gap-4">
+              <p className="text-[0.85rem] text-[#9090b0] m-0 leading-relaxed">
+                Select the reason for reporting this post. Your report will be reviewed by moderators.
+              </p>
+
+              {/* Reason selection */}
+              <div className="flex flex-col gap-[0.4rem]">
+                <label className="text-[0.75rem] font-bold text-[#7c6ea8] uppercase tracking-[0.1em]">
+                  Violation Type
+                </label>
+                <div className="flex flex-col gap-[0.35rem]">
+                  {REPORT_REASONS.map(reason => (
+                    <button
+                      key={reason}
+                      onClick={() => { setReportReason(reason); setReportError(''); }}
+                      className={`w-full text-left px-3 py-[0.55rem] rounded-[10px] border text-[0.88rem] font-medium cursor-pointer transition-all duration-150 ${
+                        reportReason === reason
+                          ? 'bg-[rgba(248,113,113,0.1)] border-[rgba(248,113,113,0.35)] text-[#f87171]'
+                          : 'bg-[rgba(255,255,255,0.03)] border-[rgba(255,255,255,0.07)] text-[#c4c0d8] hover:border-[rgba(248,113,113,0.2)] hover:text-[#e0d9ff]'
+                      }`}
+                    >
+                      {reason}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Description */}
+              <div className="flex flex-col gap-[0.4rem]">
+                <label className="text-[0.75rem] font-bold text-[#7c6ea8] uppercase tracking-[0.1em]">
+                  Additional Details <span className="font-normal text-[#5a5278]">(optional)</span>
+                </label>
+                <textarea
+                  className={inputCls + ' resize-none h-[80px] leading-relaxed'}
+                  placeholder="Provide more context about the violation..."
+                  value={reportDescription}
+                  onChange={e => setReportDescription(e.target.value)}
+                  maxLength={500}
+                />
+              </div>
+
+              {reportError && (
+                <p className="text-red-400 text-[0.82rem] m-0">{reportError}</p>
+              )}
+
+              {/* Actions */}
+              <div className="flex gap-3 justify-end pt-1">
+                <button
+                  onClick={() => setShowReportModal(false)}
+                  className="px-4 py-2 bg-transparent border border-[rgba(139,92,246,0.2)] text-[#9090b0] rounded-[10px] text-[0.88rem] font-semibold cursor-pointer transition-all hover:border-[rgba(139,92,246,0.4)] hover:text-[#f0eeff]"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleReport}
+                  disabled={reporting}
+                  className="px-5 py-2 bg-[rgba(248,113,113,0.15)] border border-[rgba(248,113,113,0.35)] text-[#f87171] rounded-[10px] text-[0.88rem] font-extrabold cursor-pointer transition-all hover:bg-[rgba(248,113,113,0.25)] disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {reporting ? 'Submitting...' : 'Submit Report'}
+                </button>
+              </div>
             </div>
           </div>
 

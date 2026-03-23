@@ -2,8 +2,10 @@ package com.genalpha.learningplatform.service;
 
 import com.genalpha.learningplatform.dto.PostResponse;
 import com.genalpha.learningplatform.model.Post;
+import com.genalpha.learningplatform.model.PostReport;
 import com.genalpha.learningplatform.model.PostUpvote;
 import com.genalpha.learningplatform.model.User;
+import com.genalpha.learningplatform.repository.PostReportRepository;
 import com.genalpha.learningplatform.repository.PostRepository;
 import com.genalpha.learningplatform.repository.PostUpvoteRepository;
 import org.springframework.http.HttpStatus;
@@ -21,11 +23,13 @@ public class PostServiceImpl implements PostService {
 
     private final PostRepository postRepository;
     private final PostUpvoteRepository postUpvoteRepository;
+    private final PostReportRepository postReportRepository;
     private final UserService userService;
 
-    public PostServiceImpl(PostRepository postRepository, PostUpvoteRepository postUpvoteRepository, UserService userService) {
+    public PostServiceImpl(PostRepository postRepository, PostUpvoteRepository postUpvoteRepository, PostReportRepository postReportRepository, UserService userService) {
         this.postRepository = postRepository;
         this.postUpvoteRepository = postUpvoteRepository;
+        this.postReportRepository = postReportRepository;
         this.userService = userService;
     }
 
@@ -118,10 +122,26 @@ public class PostServiceImpl implements PostService {
     }
 
     @Override
-    public Post report(UUID postId) {
+    public Post report(UUID postId, UUID requesterId, String reason, String description) {
+        if (postReportRepository.existsByPostIdAndUserId(postId, requesterId)) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "You have already reported this post");
+        }
+        PostReport report = new PostReport();
+        report.setPostId(postId);
+        report.setUserId(requesterId);
+        report.setReason(reason);
+        report.setDescription(description);
+        postReportRepository.save(report);
+
         Post post = getById(postId);
         post.setReportCount((post.getReportCount() == null ? 0 : post.getReportCount()) + 1);
         return postRepository.save(post);
+    }
+
+    @Override
+    public List<UUID> getReportedPostIds(UUID userId) {
+        return postReportRepository.findByUserId(userId)
+                .stream().map(PostReport::getPostId).toList();
     }
 
     @Override

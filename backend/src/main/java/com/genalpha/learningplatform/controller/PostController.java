@@ -1,6 +1,7 @@
 package com.genalpha.learningplatform.controller;
 
 import com.genalpha.learningplatform.dto.PostResponse;
+import com.genalpha.learningplatform.dto.ReportRequest;
 import com.genalpha.learningplatform.model.Post;
 import com.genalpha.learningplatform.service.PostService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -63,12 +64,20 @@ public class PostController {
         return ResponseEntity.ok(postService.getUpvotedPostIds(requesterId));
     }
 
-    @Operation(summary = "Report a post (increments report count)")
+    @Operation(summary = "Report a post with reason and description (one per user, 409 if already reported)")
     @PostMapping("/{postId}/report")
-    public ResponseEntity<Post> report(@PathVariable UUID postId, Authentication authentication) {
-        // auth required so only logged-in users can report
-        UUID.fromString(authentication.getName());
-        return ResponseEntity.ok(postService.report(postId));
+    public ResponseEntity<Post> report(@PathVariable UUID postId,
+                                       @RequestBody ReportRequest request,
+                                       Authentication authentication) {
+        UUID requesterId = UUID.fromString(authentication.getName());
+        return ResponseEntity.ok(postService.report(postId, requesterId, request.getReason(), request.getDescription()));
+    }
+
+    @Operation(summary = "Get list of post IDs the current user has reported")
+    @GetMapping("/reports/me")
+    public ResponseEntity<List<UUID>> getMyReports(Authentication authentication) {
+        UUID requesterId = UUID.fromString(authentication.getName());
+        return ResponseEntity.ok(postService.getReportedPostIds(requesterId));
     }
 
     @Operation(summary = "Update own post")
