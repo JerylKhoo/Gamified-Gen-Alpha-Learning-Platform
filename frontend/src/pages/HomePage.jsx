@@ -11,9 +11,9 @@ function thetaToPercent(theta) {
   return Math.round(Math.max(0, Math.min(100, ((theta + 3) / 6) * 100)));
 }
 
-// Format lessonId → readable title (mirrors LearnPage.jsx)
-function formatLessonId(lessonId) {
-  return lessonId
+// Format courseId → readable title (mirrors LearnPage.jsx)
+function formatCourseId(courseId) {
+  return courseId
     .replace(/[-_.]/g, ' ')
     .replace(/\b\w/g, c => c.toUpperCase());
 }
@@ -285,59 +285,57 @@ export default function HomePage() {
         const headers = { Authorization: `Bearer ${session.access_token}` };
         const userId  = session.user.id;
 
-        // Fetch user profile, all lessons, and user's progress in parallel
-        const [userRes, lessonsRes, progressRes] = await Promise.all([
+        // Fetch user profile, all courses, and user's quiz progress in parallel
+        const [userRes, coursesRes, progressRes] = await Promise.all([
           fetch(`${API_URL}/api/v1/users/${userId}`, { headers }),
-          fetch(`${API_URL}/api/v1/lessons`,          { headers }),
-          fetch(`${API_URL}/api/v1/progress/me`,      { headers }),
+          fetch(`${API_URL}/api/v1/courses`,              { headers }),
+          fetch(`${API_URL}/api/v1/quiz-progress/me`,     { headers }),
         ]);
 
         const user     = userRes.ok     ? await userRes.json()     : null;
-        const lessons  = lessonsRes.ok  ? await lessonsRes.json()  : [];
+        const courses  = coursesRes.ok  ? await coursesRes.json()  : [];
         const progress = progressRes.ok ? await progressRes.json() : [];
 
         setUserData(user);
 
-        // lessonId → lesson lookup
-        const lessonMap = Object.fromEntries(lessons.map(l => [l.lessonId, l]));
+        // courseId → course lookup
+        const courseMap = Object.fromEntries(courses.map(c => [c.courseId, c]));
 
-        // lessonId → theta from progress records
+        // courseId → theta from progress records
         const thetaMap = {};
         for (const p of progress) {
           try {
             const state = JSON.parse(p.adaptiveScore || '{}');
-            thetaMap[p.lessonId] = typeof state.theta === 'number' ? state.theta : -3;
+            thetaMap[p.courseId] = typeof state.theta === 'number' ? state.theta : -3;
           } catch {
-            thetaMap[p.lessonId] = -3;
+            thetaMap[p.courseId] = -3;
           }
         }
 
-        // Courses list: started lessons sorted by progress descending
-        const startedIds = progress.map(p => p.lessonId).filter(id => lessonMap[id]);
+        // Courses list: started courses sorted by progress descending
+        const startedIds = progress.map(p => p.courseId).filter(id => courseMap[id]);
         let courseList;
         if (startedIds.length > 0) {
-          courseList = startedIds.map(lid => ({
-            lessonId: lid,
-            name:     formatLessonId(lid),
-            category: lessonMap[lid].category,
-            progress: thetaToPercent(thetaMap[lid]),
+          courseList = startedIds.map(cid => ({
+            courseId:  cid,
+            name:     formatCourseId(cid),
+            progress: thetaToPercent(thetaMap[cid]),
           })).sort((a, b) => b.progress - a.progress);
         } else {
-          // No progress yet — show all available lessons at 0%
-          courseList = lessons.slice(0, 7).map(l => ({
-            lessonId: l.lessonId,
-            name:     formatLessonId(l.lessonId),
-            category: l.category,
+          // No progress yet — show all available courses at 0%
+          courseList = courses.slice(0, 7).map(c => ({
+            courseId:  c.courseId,
+            name:     formatCourseId(c.courseId),
             progress: 0,
           }));
         }
         setCourses(courseList);
 
-        // Last touched course: most recent updatedAt, fallback to last in array
+        // Last touched course: most recent lastUpdate, fallback to last in array
         const lastTouchedRecord = progress.length > 0
           ? [...progress].sort((a, b) => {
-              const tA = new Date(a.lastUpdated || 0).getTime();
-              const tB = new Date(b.lastUpdated || 0).getTime();
+              const tA = new Date(a.lastUpdate || 0).getTime();
+              const tB = new Date(b.lastUpdate || 0).getTime();
               return tB - tA;
             })[0]
           : null;
@@ -350,19 +348,19 @@ export default function HomePage() {
 
         // Current course: last touched (so chart and panel always match)
         const active = lastTouchedRecord
-          ? courseList.find(c => c.lessonId === lastTouchedRecord.lessonId) ?? courseList[0] ?? null
+          ? courseList.find(c => c.courseId === lastTouchedRecord.courseId) ?? courseList[0] ?? null
           : courseList[0] ?? null;
         setCurrentCourse(active);
 
-        // Fetch question count for the current course
+        // Fetch quiz count for the current course
         if (active) {
           const qRes = await fetch(
-            `${API_URL}/api/v1/questions/lesson/${active.lessonId}`,
+            `${API_URL}/api/v1/quizzes/course/${active.courseId}`,
             { headers }
           );
           if (qRes.ok) {
-            const questions = await qRes.json();
-            setQuestionCount(questions.length);
+            const quizzes = await qRes.json();
+            setQuestionCount(quizzes.length);
           }
         }
       } catch (err) {
@@ -543,13 +541,13 @@ export default function HomePage() {
               {courses.map((c, i) => (
                 <li
                   key={i}
-                  onClick={() => navigate(`/home/learn/${c.lessonId}`)}
+                  onClick={() => navigate(`/home/learn/${c.courseId}`)}
                   className="flex flex-col gap-[0.4rem] px-[0.9rem] py-[0.6rem] bg-[rgba(255,255,255,0.03)] border border-[rgba(139,92,246,0.12)] rounded-[10px] cursor-pointer transition-all hover:border-[rgba(139,92,246,0.3)] hover:bg-[rgba(139,92,246,0.06)]"
                 >
                   <div className="flex items-center justify-between">
                     <div className="flex flex-col gap-[0.1rem]">
                       <span className="text-[0.87rem] font-bold text-[#e0d9ff] leading-tight">{c.name}</span>
-                      <span className="text-[0.7rem] text-[#6b6490] font-medium">{c.category}</span>
+                      <span className="text-[0.7rem] text-[#6b6490] font-medium">{c.progress}% complete</span>
                     </div>
                     <span className="text-[0.75rem] font-extrabold text-[#a78bfa] flex-shrink-0 ml-3">{c.progress}%</span>
                   </div>
@@ -601,7 +599,7 @@ export default function HomePage() {
               </div>
               <div className="flex gap-3 flex-wrap">
                 <span className="text-[0.78rem] text-[#6b6490] font-semibold bg-[rgba(255,255,255,0.03)] border border-[rgba(139,92,246,0.1)] px-[0.7rem] py-[0.3rem] rounded-lg">
-                  {currentCourse.category}
+                  {questionCount != null ? `${questionCount} questions` : 'Loading...'}
                 </span>
               </div>
               <button className="px-6 py-3 bg-gradient-to-br from-[#7c3aed] to-[#4f46e5] text-white border-none rounded-xl text-[0.9rem] font-extrabold cursor-pointer tracking-[0.03em] shadow-[0_4px_20px_rgba(124,58,237,0.35)] transition-all hover:-translate-y-0.5 hover:shadow-[0_8px_28px_rgba(124,58,237,0.5)] active:translate-y-0 flex items-center justify-center gap-2">
