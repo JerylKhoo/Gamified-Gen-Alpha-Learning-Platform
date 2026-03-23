@@ -95,15 +95,20 @@ public class PostServiceImpl implements PostService {
 
     @Override
     public Post upvote(UUID postId, UUID requesterId) {
-        if (postUpvoteRepository.existsByPostIdAndUserId(postId, requesterId)) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "Already upvoted this post");
-        }
         Post post = getById(postId);
-        PostUpvote upvoteRecord = new PostUpvote();
-        upvoteRecord.setPostId(postId);
-        upvoteRecord.setUserId(requesterId);
-        postUpvoteRepository.save(upvoteRecord);
-        post.setUpvote(post.getUpvote() + 1);
+        var existing = postUpvoteRepository.findByPostIdAndUserId(postId, requesterId);
+        if (existing.isPresent()) {
+            // Already upvoted — remove upvote (toggle off)
+            postUpvoteRepository.delete(existing.get());
+            post.setUpvote(Math.max(0, post.getUpvote() - 1));
+        } else {
+            // Not upvoted — add upvote (toggle on)
+            PostUpvote upvoteRecord = new PostUpvote();
+            upvoteRecord.setPostId(postId);
+            upvoteRecord.setUserId(requesterId);
+            postUpvoteRepository.save(upvoteRecord);
+            post.setUpvote(post.getUpvote() + 1);
+        }
         return postRepository.save(post);
     }
 

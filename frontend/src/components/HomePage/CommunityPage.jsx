@@ -143,8 +143,8 @@ function ThreadCard({ thread, onClick, onUpvote, upvoted, upvoting }) {
           {thread.replies}
         </span>
         <button
-          onClick={e => { e.stopPropagation(); if (!upvoting && !upvoted) onUpvote(thread.id); }}
-          disabled={upvoting || upvoted}
+          onClick={e => { e.stopPropagation(); if (!upvoting) onUpvote(thread.id); }}
+          disabled={upvoting}
           className={`flex items-center gap-[0.3rem] bg-transparent border-none p-0 cursor-pointer transition-all duration-200 ${
             upvoted
               ? 'text-[#f87171]'
@@ -348,12 +348,19 @@ export default function CommunityPage() {
   useEffect(() => { fetchPosts(); }, []);
 
   async function handleUpvote(postId) {
+    const wasUpvoted = upvotedIds.has(postId);
+    const delta = wasUpvoted ? -1 : 1;
     setUpvotingId(postId);
-    // Optimistic: bump count and mark as upvoted immediately
+
+    // Optimistic update
     setPosts(prev => prev.map(p =>
-      p.postId === postId ? { ...p, upvote: (p.upvote || 0) + 1 } : p
+      p.postId === postId ? { ...p, upvote: Math.max(0, (p.upvote || 0) + delta) } : p
     ));
-    setUpvotedIds(prev => new Set(prev).add(postId));
+    setUpvotedIds(prev => {
+      const next = new Set(prev);
+      wasUpvoted ? next.delete(postId) : next.add(postId);
+      return next;
+    });
 
     try {
       const { data: { session } } = await supabase.auth.getSession();
@@ -362,19 +369,33 @@ export default function CommunityPage() {
         method: 'POST',
         headers: { Authorization: `Bearer ${session.access_token}` },
       });
-      if (!res.ok) {
+      if (res.ok) {
+        // Sync with server's actual count
+        const updated = await res.json();
+        setPosts(prev => prev.map(p =>
+          p.postId === postId ? { ...p, upvote: updated.upvote } : p
+        ));
+      } else {
         // Revert on error
         setPosts(prev => prev.map(p =>
-          p.postId === postId ? { ...p, upvote: (p.upvote || 1) - 1 } : p
+          p.postId === postId ? { ...p, upvote: Math.max(0, (p.upvote || 0) - delta) } : p
         ));
-        setUpvotedIds(prev => { const next = new Set(prev); next.delete(postId); return next; });
+        setUpvotedIds(prev => {
+          const next = new Set(prev);
+          wasUpvoted ? next.add(postId) : next.delete(postId);
+          return next;
+        });
       }
     } catch {
       // Revert on network error
       setPosts(prev => prev.map(p =>
-        p.postId === postId ? { ...p, upvote: (p.upvote || 1) - 1 } : p
+        p.postId === postId ? { ...p, upvote: Math.max(0, (p.upvote || 0) - delta) } : p
       ));
-      setUpvotedIds(prev => { const next = new Set(prev); next.delete(postId); return next; });
+      setUpvotedIds(prev => {
+        const next = new Set(prev);
+        wasUpvoted ? next.add(postId) : next.delete(postId);
+        return next;
+      });
     } finally {
       setUpvotingId(null);
     }
