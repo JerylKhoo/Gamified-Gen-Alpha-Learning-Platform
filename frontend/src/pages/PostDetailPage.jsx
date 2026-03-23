@@ -32,6 +32,9 @@ export default function PostDetailPage() {
   const [error, setError]     = useState('');
   const [upvoted, setUpvoted] = useState(false);
   const [upvoting, setUpvoting] = useState(false);
+  const [showReportConfirm, setShowReportConfirm] = useState(false);
+  const [reported, setReported] = useState(false);
+  const [reporting, setReporting] = useState(false);
 
   useEffect(() => {
     async function fetchPost() {
@@ -92,6 +95,27 @@ export default function PostDetailPage() {
       setPost(prev => prev ? { ...prev, upvote: Math.max(0, (prev.upvote || 0) - delta) } : prev);
     } finally {
       setUpvoting(false);
+    }
+  }
+
+  async function handleReport() {
+    setReporting(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+      const res = await fetch(`${API_URL}/api/v1/posts/${postId}/report`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      });
+      if (res.ok) {
+        const updated = await res.json();
+        setPost(prev => prev ? { ...prev, reportCount: updated.reportCount } : prev);
+        setReported(true);
+      }
+    } catch { /* silent */ }
+    finally {
+      setReporting(false);
+      setShowReportConfirm(false);
     }
   }
 
@@ -193,7 +217,7 @@ export default function PostDetailPage() {
           {/* Divider */}
           <div className="h-px bg-[rgba(139,92,246,0.12)]" />
 
-          {/* Upvote bar */}
+          {/* Upvote bar + Report */}
           <div className="flex items-center gap-4">
             <button
               onClick={handleUpvote}
@@ -210,9 +234,75 @@ export default function PostDetailPage() {
             <span className="text-[0.78rem] text-[#5a5278]">
               {(post.upvote || 0) === 1 ? '1 like' : `${post.upvote || 0} likes`}
             </span>
+
+            {/* Report button — pushed to the right */}
+            <button
+              onClick={() => !reported && setShowReportConfirm(true)}
+              disabled={reported || reporting}
+              className={`ml-auto flex items-center gap-[0.35rem] px-3 py-[0.4rem] rounded-lg border text-[0.8rem] font-semibold cursor-pointer transition-all duration-200 ${
+                reported
+                  ? 'bg-[rgba(248,113,113,0.08)] border-[rgba(248,113,113,0.2)] text-[#f87171] cursor-not-allowed'
+                  : 'bg-[rgba(255,255,255,0.03)] border-[rgba(255,255,255,0.08)] text-[#5a5278] hover:border-[rgba(248,113,113,0.3)] hover:text-[#f87171]'
+              }`}
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/>
+                <line x1="4" y1="22" x2="4" y2="15"/>
+              </svg>
+              {reported ? 'Reported' : 'Report'}
+            </button>
           </div>
         </div>
       </div>
+
+      {/* Report confirmation dialog */}
+      {showReportConfirm && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm"
+          onClick={() => setShowReportConfirm(false)}
+        >
+          <div
+            className="w-full max-w-[380px] bg-[#0d0f18] border border-[rgba(248,113,113,0.25)] rounded-2xl p-6 shadow-[0_32px_80px_rgba(0,0,0,0.8)] flex flex-col gap-4"
+            onClick={e => e.stopPropagation()}
+            style={{ animation: 'modalIn 0.18s cubic-bezier(0.2,0,0.2,1)' }}
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-[rgba(248,113,113,0.12)] flex items-center justify-center text-[#f87171]">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/>
+                  <line x1="4" y1="22" x2="4" y2="15"/>
+                </svg>
+              </div>
+              <h3 className="text-[1.05rem] font-extrabold text-[#f0eeff] m-0">Report this post?</h3>
+            </div>
+            <p className="text-[0.88rem] text-[#9090b0] m-0 leading-relaxed">
+              This will flag the post for review by moderators. Are you sure you want to report it?
+            </p>
+            <div className="flex gap-3 justify-end pt-1">
+              <button
+                onClick={() => setShowReportConfirm(false)}
+                className="px-4 py-2 bg-transparent border border-[rgba(139,92,246,0.2)] text-[#9090b0] rounded-[10px] text-[0.88rem] font-semibold cursor-pointer transition-all hover:border-[rgba(139,92,246,0.4)] hover:text-[#f0eeff]"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleReport}
+                disabled={reporting}
+                className="px-5 py-2 bg-[rgba(248,113,113,0.15)] border border-[rgba(248,113,113,0.35)] text-[#f87171] rounded-[10px] text-[0.88rem] font-extrabold cursor-pointer transition-all hover:bg-[rgba(248,113,113,0.25)] disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {reporting ? 'Reporting...' : 'Report'}
+              </button>
+            </div>
+          </div>
+
+          <style>{`
+            @keyframes modalIn {
+              from { opacity: 0; transform: scale(0.94) translateY(8px); }
+              to   { opacity: 1; transform: scale(1)    translateY(0);   }
+            }
+          `}</style>
+        </div>
+      )}
     </div>
   );
 }

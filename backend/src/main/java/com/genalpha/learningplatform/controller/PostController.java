@@ -63,6 +63,14 @@ public class PostController {
         return ResponseEntity.ok(postService.getUpvotedPostIds(requesterId));
     }
 
+    @Operation(summary = "Report a post (increments report count)")
+    @PostMapping("/{postId}/report")
+    public ResponseEntity<Post> report(@PathVariable UUID postId, Authentication authentication) {
+        // auth required so only logged-in users can report
+        UUID.fromString(authentication.getName());
+        return ResponseEntity.ok(postService.report(postId));
+    }
+
     @Operation(summary = "Update own post")
     @PutMapping("/{postId}")
     public ResponseEntity<Post> update(@PathVariable UUID postId,

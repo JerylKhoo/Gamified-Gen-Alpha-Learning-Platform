@@ -18,5 +18,6 @@ public interface PostService {
     Post update(UUID postId, Post updates, UUID requesterId);
     Post upvote(UUID postId, UUID requesterId);
     List<UUID> getUpvotedPostIds(UUID userId);
+    Post report(UUID postId);
     void delete(UUID postId, UUID requesterId);
 }

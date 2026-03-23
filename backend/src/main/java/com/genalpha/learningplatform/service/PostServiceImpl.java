@@ -118,6 +118,13 @@ public class PostServiceImpl implements PostService {
     }
 
     @Override
+    public Post report(UUID postId) {
+        Post post = getById(postId);
+        post.setReportCount((post.getReportCount() == null ? 0 : post.getReportCount()) + 1);
+        return postRepository.save(post);
+    }
+
+    @Override
     public List<UUID> getUpvotedPostIds(UUID userId) {
         return postUpvoteRepository.findByUserId(userId)
                 .stream().map(PostUpvote::getPostId).toList();
