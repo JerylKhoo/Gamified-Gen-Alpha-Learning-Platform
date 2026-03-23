@@ -10,9 +10,10 @@ if [ ! -f .env ]; then
 fi
 
 echo "Loading environment variables..."
-set -a
-source .env
-set +a
+while IFS='=' read -r key value; do
+    [[ -z "$key" || "$key" == \#* ]] && continue
+    export "$key=$value"
+done < .env
 
 echo "Building project..."
 mvn clean package -DskipTests -q
