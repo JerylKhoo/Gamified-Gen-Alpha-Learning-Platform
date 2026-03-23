@@ -1,15 +1,15 @@
 # Java / Spring Boot Backend
 *.class
 *.log
-*.jar
 *.war
 *.ear
 *.zip
 *.tar.gz
 *.rar
 
-# Maven
-target/
+# Maven — allow the built JAR for deployment
+target/*
+!target/*.jar
 pom.xml.tag
 pom.xml.releaseBackup
 pom.xml.versionsBackup
