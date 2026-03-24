@@ -251,10 +251,12 @@ function BadgesSection() {
         const userBadges = await earnedRes.json();
         if (userBadges.length === 0) return;
 
+        const uniqueIds = [...new Set(userBadges.map(ub => ub.badgeId))];
+
         // Step 2: fetch full badge details (icon, name) for each earned badge
         const results = await Promise.allSettled(
-          userBadges.map(ub =>
-            fetch(`${API_URL}/api/v1/badges/${encodeURIComponent(ub.badgeId)}`, { headers })
+          uniqueIds.map(badgeId =>
+            fetch(`${API_URL}/api/v1/badges/${encodeURIComponent(badgeId)}`, { headers })
               .then(r => r.ok ? r.json() : null)
           )
         );
@@ -340,7 +342,7 @@ function CourseProgressSection({ courses, earnedBadges, navigate }) {
           return (
             <div
               key={c.courseId}
-              onClick={() => navigate(`/learn/${c.courseId}`)}
+              onClick={() => window.open(`/course/${encodeURIComponent(c.courseId)}`, '_blank')}
               className="flex items-center gap-4 px-5 py-4 bg-[rgba(255,255,255,0.03)] border border-[rgba(139,92,246,0.15)] rounded-[14px] cursor-pointer transition-all hover:border-[rgba(139,92,246,0.35)] hover:bg-[rgba(139,92,246,0.06)]"
             >
               {/* Thumbnail */}
@@ -421,7 +423,7 @@ function JumpBackIn({ course, navigate }) {
         {course.started ? 'Jump back in' : 'Start learning'}
       </h2>
       <div className={`relative rounded-[20px] overflow-hidden h-[200px] bg-gradient-to-br ${bg} cursor-pointer group`}
-        onClick={() => navigate(`/learn/${course.courseId}`)}>
+        onClick={() => window.open(`/course/${encodeURIComponent(course.courseId)}`, '_blank')}>
 
         {/* Background image or pattern */}
         {imgOk ? (
@@ -455,7 +457,7 @@ function JumpBackIn({ course, navigate }) {
             </div>
             <div className="flex items-center gap-3">
               <button
-                onClick={e => { e.stopPropagation(); navigate(`/learn/${course.courseId}`); }}
+                onClick={e => { e.stopPropagation(); window.open(`/course/${encodeURIComponent(course.courseId)}`, '_blank'); }}
                 className="px-5 py-2 bg-[#8b5cf6] hover:bg-[#7c3aed] text-white text-sm font-bold rounded-xl border-none cursor-pointer transition-all shadow-[0_4px_18px_rgba(139,92,246,0.5)]"
               >
                 {course.started ? 'Continue Learning' : 'Start Course'}
