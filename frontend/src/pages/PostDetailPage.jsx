@@ -49,6 +49,11 @@ export default function PostDetailPage() {
   const [upvoted, setUpvoted] = useState(false);
   const [upvoting, setUpvoting] = useState(false);
 
+  // Comment state
+  const [comments, setComments]       = useState([]);
+  const [commentBody, setCommentBody] = useState('');
+  const [submitting, setSubmitting]   = useState(false);
+
   // Report state
   const [showReportModal, setShowReportModal] = useState(false);
   const [reported, setReported]   = useState(false);
@@ -64,10 +69,11 @@ export default function PostDetailPage() {
         if (!session) return;
         const headers = { Authorization: `Bearer ${session.access_token}` };
 
-        const [postRes, upvotesRes, reportsRes] = await Promise.all([
+        const [postRes, upvotesRes, reportsRes, commentsRes] = await Promise.all([
           fetch(`${API_URL}/api/v1/posts/${postId}`, { headers }),
           fetch(`${API_URL}/api/v1/posts/upvotes/me`, { headers }),
           fetch(`${API_URL}/api/v1/posts/reports/me`, { headers }),
+          fetch(`${API_URL}/api/v1/posts/${postId}/comments`, { headers }),
         ]);
 
         if (!postRes.ok) throw new Error('Post not found');
@@ -80,6 +86,9 @@ export default function PostDetailPage() {
         if (reportsRes.ok) {
           const ids = await reportsRes.json();
           setReported(ids.includes(postId));
+        }
+        if (commentsRes.ok) {
+          setComments(await commentsRes.json());
         }
       } catch (err) {
         setError(err.message);
@@ -155,6 +164,33 @@ export default function PostDetailPage() {
       setReportError('Network error. Please try again.');
     } finally {
       setReporting(false);
+    }
+  }
+
+  async function handleAddComment() {
+    if (!commentBody.trim() || submitting) return;
+    setSubmitting(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+      const res = await fetch(`${API_URL}/api/v1/posts/${postId}/comments`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ body: commentBody.trim() }),
+      });
+      if (res.ok) {
+        setCommentBody('');
+        // Refetch comments to get author info
+        const commentsRes = await fetch(`${API_URL}/api/v1/posts/${postId}/comments`, {
+          headers: { Authorization: `Bearer ${session.access_token}` },
+        });
+        if (commentsRes.ok) setComments(await commentsRes.json());
+      }
+    } catch { /* silent */ } finally {
+      setSubmitting(false);
     }
   }
 
@@ -294,6 +330,65 @@ export default function PostDetailPage() {
             </button>
           </div>
         </div>
+      </div>
+
+      {/* ── Comments Section ── */}
+      <div className="max-w-2xl mx-auto mt-6">
+        <h2 className="text-[1.1rem] font-extrabold text-[#e0d9ff] mb-4">
+          Comments {comments.length > 0 && <span className="text-[#5a5278] font-semibold text-[0.9rem]">({comments.length})</span>}
+        </h2>
+
+        {/* Add comment */}
+        <div className="flex gap-3 mb-6">
+          <textarea
+            className={inputCls + ' resize-none h-[70px] leading-relaxed flex-1'}
+            placeholder="Write a comment..."
+            value={commentBody}
+            onChange={e => setCommentBody(e.target.value)}
+            maxLength={2000}
+          />
+          <button
+            onClick={handleAddComment}
+            disabled={submitting || !commentBody.trim()}
+            className="self-end px-4 py-2 bg-[rgba(139,92,246,0.15)] border border-[rgba(139,92,246,0.35)] text-[#a78bfa] rounded-[10px] text-[0.85rem] font-bold cursor-pointer transition-all hover:bg-[rgba(139,92,246,0.25)] disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            {submitting ? 'Posting...' : 'Post'}
+          </button>
+        </div>
+
+        {/* Comment list */}
+        {comments.length === 0 ? (
+          <p className="text-[0.88rem] text-[#5a5278]">No comments yet. Be the first to comment!</p>
+        ) : (
+          <div className="flex flex-col gap-4">
+            {comments.map(c => (
+              <div key={c.commentId} className="bg-[#0d0f18] border border-[rgba(255,255,255,0.07)] rounded-xl p-4 flex gap-3">
+                {c.authorProfilePic ? (
+                  <img
+                    src={c.authorProfilePic}
+                    alt={c.authorName}
+                    className="w-9 h-9 rounded-full object-cover shadow-[0_2px_6px_rgba(0,0,0,0.4)] flex-shrink-0"
+                  />
+                ) : (
+                  <div className="w-9 h-9 rounded-full bg-gradient-to-br from-[#7c3aed] to-[#4f46e5] flex items-center justify-center text-[1rem] font-bold text-white select-none shadow-[0_2px_6px_rgba(0,0,0,0.4)] flex-shrink-0">
+                    {c.authorName?.charAt(0)?.toUpperCase() || '?'}
+                  </div>
+                )}
+                <div className="flex flex-col gap-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className="text-[0.85rem] font-bold text-[#e0d9ff]">{c.authorName || 'Member'}</span>
+                    <span className="text-[0.72rem] text-[#4b4870]">
+                      {c.createdAt ? new Date(c.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : ''}
+                    </span>
+                  </div>
+                  <p className="text-[0.88rem] text-[#c4c0d8] leading-relaxed m-0 whitespace-pre-wrap break-words">
+                    {c.body}
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* ── Report Modal ── */}

@@ -1,7 +1,9 @@
 package com.genalpha.learningplatform.controller;
 
+import com.genalpha.learningplatform.dto.CommentResponse;
 import com.genalpha.learningplatform.dto.PostResponse;
 import com.genalpha.learningplatform.dto.ReportRequest;
+import com.genalpha.learningplatform.model.Comment;
 import com.genalpha.learningplatform.model.Post;
 import com.genalpha.learningplatform.service.PostService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -78,6 +80,22 @@ public class PostController {
     public ResponseEntity<List<UUID>> getMyReports(Authentication authentication) {
         UUID requesterId = UUID.fromString(authentication.getName());
         return ResponseEntity.ok(postService.getReportedPostIds(requesterId));
+    }
+
+    @Operation(summary = "Get comments for a post")
+    @GetMapping("/{postId}/comments")
+    public ResponseEntity<List<CommentResponse>> getComments(@PathVariable UUID postId) {
+        return ResponseEntity.ok(postService.getComments(postId));
+    }
+
+    @Operation(summary = "Add a comment to a post")
+    @PostMapping("/{postId}/comments")
+    public ResponseEntity<Comment> addComment(@PathVariable UUID postId,
+                                               @RequestBody Comment comment,
+                                               Authentication authentication) {
+        UUID requesterId = UUID.fromString(authentication.getName());
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(postService.addComment(postId, requesterId, comment.getBody()));
     }
 
     @Operation(summary = "Update own post")
