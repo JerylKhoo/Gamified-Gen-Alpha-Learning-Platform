@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabaseClient';
 
 const API_URL = import.meta.env.VITE_API_URL;
@@ -80,7 +79,6 @@ function CourseCard({ course, onClick, started }) {
 function CourseModal({ course, onClose }) {
   const { emoji, bg, pattern } = getVisuals(course.courseId);
   const title = formatCourseId(course.courseId);
-  const navigate = useNavigate();
   const [imgOk, setImgOk] = useState(!!course.image);
 
   useEffect(() => {
@@ -135,7 +133,7 @@ function CourseModal({ course, onClose }) {
           )}
 
           <button
-            onClick={() => navigate(`/learn/${course.courseId}`)}
+            onClick={() => { window.open(`/course/${encodeURIComponent(course.courseId)}`, '_blank'); onClose(); }}
             className="w-full py-3 bg-gradient-to-br from-[#8b5cf6] to-[#6d28d9] text-white font-bold text-[0.95rem] rounded-xl border-none cursor-pointer shadow-[0_4px_18px_rgba(139,92,246,0.4)] transition-all hover:opacity-90 hover:shadow-[0_6px_24px_rgba(139,92,246,0.55)] hover:-translate-y-px active:translate-y-0"
           >
             Start Course →
