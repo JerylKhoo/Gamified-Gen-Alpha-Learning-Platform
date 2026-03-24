@@ -18,29 +18,24 @@ export default function CoursePage() {
   const [loading, setLoading]   = useState(true);
   const [error, setError]       = useState('');
 
+  // Fetch course info + modules once on mount
   useEffect(() => {
-    async function fetchData() {
+    async function fetchCourseAndModules() {
       try {
         const { data: { session } } = await supabase.auth.getSession();
         const headers = { Authorization: `Bearer ${session.access_token}` };
 
-        const [courseRes, modulesRes, progressRes] = await Promise.all([
+        const [courseRes, modulesRes] = await Promise.all([
           fetch(`${API_URL}/api/v1/courses/${encodeURIComponent(courseId)}`, { headers }),
           fetch(`${API_URL}/api/v1/modules/course/${encodeURIComponent(courseId)}`, { headers }),
-          fetch(`${API_URL}/api/v1/course-progress/me/${encodeURIComponent(courseId)}`, { headers }),
         ]);
 
         if (!courseRes.ok) throw new Error(`Failed to load course (${courseRes.status})`);
         if (!modulesRes.ok) throw new Error(`Failed to load modules (${modulesRes.status})`);
 
-        const courseData   = await courseRes.json();
-        const modulesData  = await modulesRes.json();
-        const progressData = progressRes.ok ? await progressRes.json() : [];
-
-        setCourse(courseData);
-        // Backend already returns modules ordered by `order` asc; sort client-side as safety net
+        setCourse(await courseRes.json());
+        const modulesData = await modulesRes.json();
         setModules(modulesData.sort((a, b) => (a.order ?? 0) - (b.order ?? 0)));
-        setCompleted(new Set(progressData.map(p => p.moduleId)));
       } catch (err) {
         setError(err.message);
       } finally {
@@ -48,7 +43,31 @@ export default function CoursePage() {
       }
     }
 
-    fetchData();
+    fetchCourseAndModules();
+  }, [courseId]);
+
+  // Fetch progress separately — and re-fetch whenever this tab becomes visible again
+  // so returning from a module tab reflects the latest completion status
+  useEffect(() => {
+    async function fetchProgress() {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        const headers = { Authorization: `Bearer ${session.access_token}` };
+        const res = await fetch(`${API_URL}/api/v1/course-progress/me/${encodeURIComponent(courseId)}`, { headers });
+        if (res.ok) {
+          const data = await res.json();
+          setCompleted(new Set(data.map(p => p.moduleId)));
+        }
+      } catch { /* non-critical — silently ignore */ }
+    }
+
+    fetchProgress();
+
+    function onVisible() {
+      if (document.visibilityState === 'visible') fetchProgress();
+    }
+    document.addEventListener('visibilitychange', onVisible);
+    return () => document.removeEventListener('visibilitychange', onVisible);
   }, [courseId]);
 
   function openModule(moduleId) {
@@ -57,6 +76,7 @@ export default function CoursePage() {
 
   const title = formatId(courseId);
   const completedCount = modules.filter(m => completed.has(m.moduleId)).length;
+  const allDone = modules.length > 0 && completedCount === modules.length;
 
   return (
     <div className="w-full min-h-screen overflow-auto">
@@ -118,39 +138,62 @@ export default function CoursePage() {
                 <p className="text-lg font-semibold">No modules available yet.</p>
               </div>
             ) : (
-              <div className="flex flex-col">
-                {modules.map((mod, idx) => {
-                  const isDone = completed.has(mod.moduleId);
-                  return (
-                    <button
-                      key={mod.moduleId}
-                      onClick={() => openModule(mod.moduleId)}
-                      className={`group flex items-center gap-4 w-full text-left py-4 cursor-pointer transition-all duration-200 hover:pl-2 ${idx !== modules.length - 1 ? 'border-b border-[rgba(255,255,255,0.06)]' : ''}`}
-                    >
-                      <span className="flex-shrink-0 text-[0.75rem] text-[#4b5563] font-semibold w-5 text-right group-hover:text-[#8b5cf6] transition-colors">
-                        {idx + 1}.
-                      </span>
-                      <p className={`flex-1 min-w-0 text-[0.95rem] m-0 underline underline-offset-2 transition-colors ${isDone ? 'text-[#6b6490] decoration-[rgba(107,100,144,0.3)] group-hover:text-[#9ca3af]' : 'text-[#c4b5fd] decoration-[rgba(139,92,246,0.3)] group-hover:text-white group-hover:decoration-[rgba(139,92,246,0.7)]'}`}>
-                        {formatId(mod.moduleId)}
-                      </p>
-                      {/* Completion indicator */}
-                      {isDone ? (
-                        <div className="flex-shrink-0 w-5 h-5 rounded-full bg-green-500/20 border-2 border-green-500/60 flex items-center justify-center">
-                          <svg width="9" height="9" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-green-400">
-                            <path d="M2 6l3 3 5-5"/>
-                          </svg>
-                        </div>
-                      ) : (
-                        <div className="flex-shrink-0 w-5 h-5 rounded-full border-2 border-[rgba(255,255,255,0.12)] flex items-center justify-center group-hover:border-[rgba(139,92,246,0.5)] transition-colors">
-                          <svg width="9" height="9" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-transparent group-hover:text-[rgba(139,92,246,0.5)] transition-colors">
-                            <path d="M2 6l3 3 5-5"/>
-                          </svg>
-                        </div>
-                      )}
-                    </button>
-                  );
-                })}
-              </div>
+              <>
+                <div className="flex flex-col gap-3">
+                  {modules.map((mod, idx) => {
+                    const isDone = completed.has(mod.moduleId);
+                    return (
+                      <button
+                        key={mod.moduleId}
+                        onClick={() => openModule(mod.moduleId)}
+                        className="group flex items-center gap-4 w-full text-left px-5 py-4 bg-[#0d0f18] border border-[rgba(255,255,255,0.07)] rounded-xl cursor-pointer transition-all duration-200 hover:border-[rgba(139,92,246,0.45)] hover:bg-[rgba(139,92,246,0.06)]"
+                      >
+                        {/* Order number */}
+                        <span className="flex-shrink-0 w-7 h-7 rounded-full bg-[rgba(255,255,255,0.05)] flex items-center justify-center text-[0.72rem] text-[#4b5563] font-bold group-hover:text-[#8b5cf6] transition-colors">
+                          {idx + 1}
+                        </span>
+
+                        {/* Title */}
+                        <p className={`flex-1 min-w-0 text-[0.95rem] font-semibold m-0 transition-colors ${isDone ? 'text-[#6b6490]' : 'text-[#c4b5fd] group-hover:text-white'}`}>
+                          {formatId(mod.moduleId)}
+                        </p>
+
+                        {/* Completion status */}
+                        {isDone ? (
+                          <div className="flex-shrink-0 flex items-center gap-1.5">
+                            <div className="w-5 h-5 rounded-full bg-green-500/20 border-2 border-green-500/60 flex items-center justify-center">
+                              <svg width="9" height="9" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-green-400">
+                                <path d="M2 6l3 3 5-5"/>
+                              </svg>
+                            </div>
+                            <span className="text-[0.7rem] text-green-400 font-semibold">Done</span>
+                          </div>
+                        ) : (
+                          <div className="flex-shrink-0 w-5 h-5 rounded-full border-2 border-[rgba(255,255,255,0.12)] group-hover:border-[rgba(139,92,246,0.5)] transition-colors" />
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* Start Quiz */}
+                <div className="mt-8 pt-6 border-t border-[rgba(255,255,255,0.06)]">
+                  {!allDone && (
+                    <p className="text-[0.78rem] text-[#4b5563] text-center mb-3">
+                      Complete all modules to unlock the quiz
+                    </p>
+                  )}
+                  <button
+                    disabled={!allDone}
+                    onClick={() => navigate(`/learn/${encodeURIComponent(courseId)}`)}
+                    className="w-full py-3 font-bold text-[0.95rem] rounded-xl border-none transition-all
+                      disabled:bg-[rgba(255,255,255,0.05)] disabled:text-[#4b5563] disabled:cursor-not-allowed
+                      enabled:bg-gradient-to-br enabled:from-[#8b5cf6] enabled:to-[#6d28d9] enabled:text-white enabled:cursor-pointer enabled:shadow-[0_4px_18px_rgba(139,92,246,0.4)] enabled:hover:opacity-90 enabled:hover:-translate-y-px"
+                  >
+                    {allDone ? 'Start Quiz →' : `Start Quiz (${completedCount}/${modules.length} modules done)`}
+                  </button>
+                </div>
+              </>
             )}
           </div>
         </>

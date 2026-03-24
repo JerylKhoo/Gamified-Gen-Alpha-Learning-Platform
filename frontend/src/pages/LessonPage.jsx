@@ -12,10 +12,12 @@ function formatId(id) {
 export default function LessonPage() {
   const { courseId, moduleId } = useParams();
   const navigate = useNavigate();
-  const [mod, setMod] = useState(null);
+  const [mod, setMod]               = useState(null);
   const [allModules, setAllModules] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const [completed, setCompleted]   = useState(false);
+  const [marking, setMarking]       = useState(false);
+  const [loading, setLoading]       = useState(true);
+  const [error, setError]           = useState('');
 
   useEffect(() => {
     async function fetchData() {
@@ -23,20 +25,23 @@ export default function LessonPage() {
         const { data: { session } } = await supabase.auth.getSession();
         const headers = { Authorization: `Bearer ${session.access_token}` };
 
-        const [moduleRes, allModulesRes] = await Promise.all([
+        const [moduleRes, allModulesRes, progressRes] = await Promise.all([
           fetch(`${API_URL}/api/v1/modules/${encodeURIComponent(moduleId)}`, { headers }),
           fetch(`${API_URL}/api/v1/modules/course/${encodeURIComponent(courseId)}`, { headers }),
+          fetch(`${API_URL}/api/v1/course-progress/me/${encodeURIComponent(courseId)}`, { headers }),
         ]);
 
         if (!moduleRes.ok) throw new Error('Failed to load lesson');
 
-        const [moduleData, allModulesData] = await Promise.all([
+        const [moduleData, allModulesData, progressData] = await Promise.all([
           moduleRes.json(),
           allModulesRes.ok ? allModulesRes.json() : Promise.resolve([]),
+          progressRes.ok  ? progressRes.json()   : Promise.resolve([]),
         ]);
 
         setMod(moduleData);
         setAllModules(allModulesData.sort((a, b) => (a.order ?? 0) - (b.order ?? 0)));
+        setCompleted(progressData.some(p => p.moduleId === moduleId));
       } catch (err) {
         setError(err.message);
       } finally {
@@ -47,18 +52,28 @@ export default function LessonPage() {
     fetchData();
   }, [moduleId, courseId]);
 
-  const currentIndex = allModules.findIndex(m => m.moduleId === moduleId);
-  const nextModule = currentIndex >= 0 && currentIndex < allModules.length - 1
-    ? allModules[currentIndex + 1]
-    : null;
-
-  function goToNext() {
-    if (nextModule) {
-      navigate(`/course/${encodeURIComponent(courseId)}/module/${encodeURIComponent(nextModule.moduleId)}`);
-    } else {
-      navigate(`/course/${encodeURIComponent(courseId)}`);
+  async function markComplete() {
+    if (completed || marking) return;
+    setMarking(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      await fetch(`${API_URL}/api/v1/course-progress`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({ courseId, moduleId }),
+      });
+    } catch { /* non-critical */ } finally {
+      setMarking(false);
     }
+    navigate(`/course/${encodeURIComponent(courseId)}`);
   }
+
+  const currentIndex = allModules.findIndex(m => m.moduleId === moduleId);
+  const lessonNumber = currentIndex >= 0 ? currentIndex + 1 : null;
+  const totalModules = allModules.length;
 
   if (loading) {
     return (
@@ -78,9 +93,6 @@ export default function LessonPage() {
       </div>
     );
   }
-
-  const totalModules = allModules.length;
-  const lessonNumber = currentIndex >= 0 ? currentIndex + 1 : null;
 
   return (
     <div className="w-full min-h-screen overflow-auto">
@@ -114,40 +126,40 @@ export default function LessonPage() {
         </div>
       )}
 
-      {/* Document area */}
+      {/* Content */}
       <div className="max-w-2xl mx-auto px-6 py-12">
 
-        {/* Title */}
         <h1 className="text-center text-[1.6rem] font-bold text-[#f0eeff] m-0 mb-6 leading-snug">
           {formatId(moduleId)}
         </h1>
 
-        {/* Divider */}
         <div className="w-full h-px bg-[rgba(255,255,255,0.1)] mb-10" />
 
-        {/* Content */}
         <div
           className="lesson-content"
           dangerouslySetInnerHTML={{ __html: mod?.content || '<p>No content available.</p>' }}
         />
 
-        {/* Divider */}
         <div className="w-full h-px bg-[rgba(255,255,255,0.06)] mt-12 mb-8" />
 
-        {/* Navigation */}
-        <div className="flex items-center justify-between">
-          <button
-            onClick={() => navigate(`/course/${encodeURIComponent(courseId)}`)}
-            className="text-[#6b6490] text-sm hover:text-[#9ca3af] transition-colors"
-          >
-            ← Back to modules
-          </button>
-          <button
-            onClick={goToNext}
-            className="px-6 py-2.5 bg-gradient-to-br from-[#8b5cf6] to-[#6d28d9] text-white font-bold text-[0.88rem] rounded-xl border-none cursor-pointer shadow-[0_4px_14px_rgba(139,92,246,0.35)] hover:opacity-90 hover:-translate-y-px active:translate-y-0 transition-all"
-          >
-            {nextModule ? 'Next →' : 'Finish Course →'}
-          </button>
+        {/* Mark as Complete */}
+        <div className="flex justify-end">
+          {completed ? (
+            <div className="flex items-center gap-2 px-6 py-2.5 bg-green-500/10 border border-green-500/30 rounded-xl">
+              <svg width="14" height="14" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-green-400">
+                <path d="M2 6l3 3 5-5"/>
+              </svg>
+              <span className="text-green-400 font-bold text-[0.88rem]">Completed</span>
+            </div>
+          ) : (
+            <button
+              onClick={markComplete}
+              disabled={marking}
+              className="px-6 py-2.5 bg-gradient-to-br from-[#8b5cf6] to-[#6d28d9] text-white font-bold text-[0.88rem] rounded-xl border-none cursor-pointer shadow-[0_4px_14px_rgba(139,92,246,0.35)] hover:opacity-90 hover:-translate-y-px active:translate-y-0 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {marking ? 'Saving...' : 'Mark as Complete →'}
+            </button>
+          )}
         </div>
       </div>
     </div>
