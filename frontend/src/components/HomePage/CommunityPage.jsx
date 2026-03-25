@@ -124,6 +124,13 @@ function ThreadCard({ thread, onClick, onUpvote, upvoted, upvoting }) {
           {thread.title}
         </h3>
 
+        {/* Image thumbnail */}
+        {thread.picture && (
+          <div className="w-full max-h-[140px] overflow-hidden rounded-lg mt-1">
+            <img src={thread.picture} alt="" className="w-full h-full object-cover" />
+          </div>
+        )}
+
         {/* Row 3: preview snippet */}
         <p className="m-0 text-[0.82rem] text-[#6b7280] leading-relaxed line-clamp-1">
           {thread.preview}
@@ -487,6 +494,7 @@ export default function CommunityPage() {
     likes: p.upvote || 0,
     isHot: (p.upvote || 0) >= 10,
     preview: p.description || '',
+    picture: p.picture || null,
   }));
 
   const filtered = threads.filter(t =>
