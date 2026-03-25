@@ -48,6 +48,10 @@ export default function PostDetailPage() {
   const [error, setError]     = useState('');
   const [upvoted, setUpvoted] = useState(false);
   const [upvoting, setUpvoting] = useState(false);
+  const [currentUserId, setCurrentUserId] = useState(null);
+  const [editing, setEditing] = useState(false);
+  const [editTitle, setEditTitle] = useState('');
+  const [editDescription, setEditDescription] = useState('');
 
   // Comment state
   const [comments, setComments]       = useState([]);
@@ -67,6 +71,7 @@ export default function PostDetailPage() {
       try {
         const { data: { session } } = await supabase.auth.getSession();
         if (!session) return;
+        setCurrentUserId(session.user.id);
         const headers = { Authorization: `Bearer ${session.access_token}` };
 
         const [postRes, upvotesRes, reportsRes, commentsRes] = await Promise.all([
@@ -194,6 +199,47 @@ export default function PostDetailPage() {
     }
   }
 
+  const isOwner = currentUserId && post?.userId === currentUserId;
+
+  function startEditing() {
+    setEditTitle(post.title || '');
+    setEditDescription(post.description || '');
+    setEditing(true);
+  }
+
+  async function handleSaveEdit() {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+      const res = await fetch(`${API_URL}/api/v1/posts/${postId}`, {
+        method: 'PUT',
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ title: editTitle, description: editDescription }),
+      });
+      if (res.ok) {
+        const updated = await res.json();
+        setPost(prev => ({ ...prev, title: updated.title, description: updated.description }));
+        setEditing(false);
+      }
+    } catch { /* silent */ }
+  }
+
+  async function handleDelete() {
+    if (!window.confirm('Are you sure you want to delete this post?')) return;
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+      const res = await fetch(`${API_URL}/api/v1/posts/${postId}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      });
+      if (res.ok) navigate('/community');
+    } catch { /* silent */ }
+  }
+
   if (loading) {
     return (
       <div className="w-full min-h-screen flex items-center justify-center">
@@ -268,6 +314,33 @@ export default function PostDetailPage() {
               <span className="text-[0.92rem] font-bold text-[#e0d9ff]">{post.authorName || 'Member'}</span>
               <span className="text-[0.75rem] text-[#5a5278]">Community Member</span>
             </div>
+
+            {/* Edit / Delete — owner only */}
+            {isOwner && !editing && (
+              <div className="ml-auto flex items-center gap-2">
+                <button
+                  onClick={startEditing}
+                  title="Edit post"
+                  className="flex items-center justify-center w-8 h-8 rounded-lg bg-transparent border border-[rgba(255,255,255,0.08)] text-[#7c6ea8] cursor-pointer transition-all hover:border-[rgba(139,92,246,0.4)] hover:text-[#a78bfa]"
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                  </svg>
+                </button>
+                <button
+                  onClick={handleDelete}
+                  title="Delete post"
+                  className="flex items-center justify-center w-8 h-8 rounded-lg bg-transparent border border-[rgba(255,255,255,0.08)] text-[#5a5278] cursor-pointer transition-all hover:border-[rgba(248,113,113,0.4)] hover:text-[#f87171]"
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="3 6 5 6 21 6"/>
+                    <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+                    <path d="M10 11v6M14 11v6M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
+                  </svg>
+                </button>
+              </div>
+            )}
           </div>
 
           {/* Category pill */}
@@ -283,15 +356,47 @@ export default function PostDetailPage() {
           </div>
 
           {/* Title */}
-          <h1 className="text-[1.4rem] font-extrabold text-[#f0eeff] m-0 leading-snug sm:text-[1.15rem]">
-            {post.title || '(Untitled)'}
-          </h1>
+          {editing ? (
+            <input
+              className={inputCls + ' text-[1.2rem] font-bold'}
+              value={editTitle}
+              onChange={e => setEditTitle(e.target.value)}
+            />
+          ) : (
+            <h1 className="text-[1.4rem] font-extrabold text-[#f0eeff] m-0 leading-snug sm:text-[1.15rem]">
+              {post.title || '(Untitled)'}
+            </h1>
+          )}
 
           {/* Body */}
-          {post.description && (
-            <p className="text-[#c4c0d8] text-[0.95rem] leading-[1.75] m-0 whitespace-pre-wrap">
-              {post.description}
-            </p>
+          {editing ? (
+            <div className="flex flex-col gap-2">
+              <textarea
+                className={inputCls + ' resize-none h-[120px] leading-relaxed'}
+                value={editDescription}
+                onChange={e => setEditDescription(e.target.value)}
+              />
+              <div className="flex gap-2 justify-end">
+                <button
+                  onClick={() => setEditing(false)}
+                  className="px-3 py-[0.4rem] bg-transparent border border-[rgba(139,92,246,0.2)] text-[#9090b0] rounded-lg text-[0.82rem] font-semibold cursor-pointer transition-all hover:border-[rgba(139,92,246,0.4)] hover:text-[#f0eeff]"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleSaveEdit}
+                  className="px-4 py-[0.4rem] bg-[rgba(139,92,246,0.15)] border border-[rgba(139,92,246,0.35)] text-[#a78bfa] rounded-lg text-[0.82rem] font-bold cursor-pointer transition-all hover:bg-[rgba(139,92,246,0.25)]"
+                >
+                  Save
+                </button>
+              </div>
+            </div>
+          ) : (
+            post.description && (
+              <p className="text-[#c4c0d8] text-[0.95rem] leading-[1.75] m-0 whitespace-pre-wrap">
+                {post.description}
+              </p>
+            )
           )}
 
           {/* Divider */}
