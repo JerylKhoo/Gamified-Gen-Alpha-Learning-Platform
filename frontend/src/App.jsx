@@ -11,6 +11,8 @@ import AdaptiveLearningPage from './pages/AdaptiveLearningPage';
 import CommunityPage from './components/HomePage/CommunityPage';
 import PostDetailPage from './pages/PostDetailPage';
 import LeaderboardPage from './pages/LeaderboardPage';
+import CoursePage from './pages/CoursePage';
+import LessonPage from './pages/LessonPage';
 
 function ComingSoon({ label }) {
   return (
@@ -37,6 +39,8 @@ export default function App() {
             <Route path="/community/:postId" element={<PostDetailPage />} />
             <Route path="/dashboard" element={<ComingSoon label="Dashboard" />} />
             <Route path="/leaderboard" element={<LeaderboardPage />} />
+            <Route path="/course/:courseId" element={<CoursePage />} />
+            <Route path="/course/:courseId/module/:moduleId" element={<LessonPage />} />
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

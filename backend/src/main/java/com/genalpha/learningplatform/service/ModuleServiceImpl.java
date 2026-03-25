@@ -25,7 +25,7 @@ public class ModuleServiceImpl implements ModuleService {
 
     @Override
     public List<Module> getByCourseId(String courseId) {
-        return moduleRepository.findByCourseId(courseId);
+        return moduleRepository.findByCourseIdOrderByOrderAsc(courseId);
     }
 
     @Override

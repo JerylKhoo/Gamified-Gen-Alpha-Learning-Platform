@@ -1,7 +1,6 @@
 # Java / Spring Boot Backend
 *.class
 *.log
-*.jar
 *.war
 *.ear
 *.zip
@@ -36,7 +35,6 @@ application-*.properties
 application-*.yml
 !application.properties.example
 !application.yml.example
-application.properties
 
 # IDE - IntelliJ IDEA
 .idea/

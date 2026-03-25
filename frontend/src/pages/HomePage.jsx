@@ -5,15 +5,9 @@ import characterImg from '../assets/trippiTroppi.png';
 
 const API_URL = import.meta.env.VITE_API_URL;
 
-// Convert adaptive theta (-3 to 3, where 3.0 = fully mastered) → 0-100%
-function thetaToPercent(theta) {
-  if (theta == null || typeof theta !== 'number') return 0;
-  return Math.round(Math.max(0, Math.min(100, ((theta + 3) / 6) * 100)));
-}
-
-// Format courseId → readable title (mirrors LearnPage.jsx)
-function formatCourseId(courseId) {
-  return courseId
+// Format lessonId → readable title (mirrors LearnPage.jsx)
+function formatLessonId(lessonId) {
+  return lessonId
     .replace(/[-_.]/g, ' ')
     .replace(/\b\w/g, c => c.toUpperCase());
 }
@@ -39,49 +33,6 @@ function levelToRank(level) {
   if (level >= 7)  return '⭐ Pro';
   if (level >= 4)  return '🌟 Rising Star';
   return '🎮 Rookie';
-}
-
-// ActivityChart — one data point per started course, sorted ascending to show growth
-function ActivityChart({ data }) {
-  const w = 340, h = 130, px = 12, py = 16;
-  const pts = !data || data.length === 0 ? [0, 0]
-            : data.length === 1           ? [0, data[0]]
-            : data;
-  const minV  = Math.min(...pts);
-  const maxV  = Math.max(...pts);
-  const range = maxV - minV || 1;
-  const xs = pts.map((_, i) => px + (i / (pts.length - 1)) * (w - px * 2));
-  const ys = pts.map(v => py + (1 - (v - minV) / range) * (h - py * 2));
-  const line = xs.map((x, i) => `${i === 0 ? 'M' : 'L'}${x},${ys[i]}`).join(' ');
-  const area = `${line} L${xs.at(-1)},${h} L${xs[0]},${h} Z`;
-
-  // End-point position as % so the overlay circle is always a true circle
-  const endXPct = (xs.at(-1) / w) * 100;
-  const endYPct = (ys.at(-1) / h) * 100;
-
-  return (
-    <div className="relative w-full h-full">
-      <svg viewBox={`0 0 ${w} ${h}`} className="w-full h-full" preserveAspectRatio="none">
-        <defs>
-          <linearGradient id="areaGrad" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#8b5cf6" stopOpacity="0.35" />
-            <stop offset="100%" stopColor="#8b5cf6" stopOpacity="0" />
-          </linearGradient>
-          <filter id="glow">
-            <feGaussianBlur stdDeviation="2.5" result="blur" />
-            <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
-          </filter>
-        </defs>
-        <path d={area} fill="url(#areaGrad)" />
-        <path d={line} fill="none" stroke="#8b5cf6" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" filter="url(#glow)" />
-      </svg>
-      {/* End-point indicator rendered as an HTML element so it stays a perfect circle at any zoom/aspect ratio */}
-      <div
-        className="absolute w-2.5 h-2.5 rounded-full bg-[#a78bfa] border-2 border-white shadow-[0_0_6px_rgba(167,139,250,0.8)] -translate-x-1/2 -translate-y-1/2 pointer-events-none"
-        style={{ left: `${endXPct}%`, top: `${endYPct}%` }}
-      />
-    </div>
-  );
 }
 
 // ── Edit Profile Modal ──────────────────────────────────────────────────────
@@ -263,19 +214,277 @@ function EditProfileModal({ userData, onClose, onSave }) {
 const cardCls =
   "bg-[rgba(255,255,255,0.03)] border border-[rgba(139,92,246,0.18)] rounded-[20px] p-[1.6rem] backdrop-blur-md relative overflow-hidden transition-all duration-300 hover:border-[rgba(139,92,246,0.35)] hover:shadow-[0_0_32px_rgba(139,92,246,0.1)] before:content-[''] before:absolute before:inset-0 before:rounded-[20px] before:bg-[radial-gradient(ellipse_at_top_left,rgba(139,92,246,0.06)_0%,transparent_65%)] before:pointer-events-none";
 
-const cardTitleCls = "text-[0.8rem] font-bold text-[#7c6ea8] uppercase tracking-[0.1em] m-0 mb-4";
+const VISUALS = [
+  { bg: 'from-[#0c1a2e] via-[#1e3a5f] to-[#1e40af]',   pattern: 'radial-gradient(circle at 30% 70%, rgba(59,130,246,0.35) 0%, transparent 55%)' },
+  { bg: 'from-[#1e1b4b] via-[#312e81] to-[#4c1d95]',   pattern: 'radial-gradient(circle at 70% 30%, rgba(139,92,246,0.3) 0%, transparent 60%)' },
+  { bg: 'from-[#0f1a2a] via-[#1e3a5f] to-[#0e7490]',   pattern: 'radial-gradient(circle at 35% 65%, rgba(34,211,238,0.25) 0%, transparent 55%)' },
+  { bg: 'from-[#1a1200] via-[#78350f] to-[#d97706]',   pattern: 'radial-gradient(circle at 60% 50%, rgba(251,191,36,0.3) 0%, transparent 50%)' },
+  { bg: 'from-[#1a0a0a] via-[#7f1d1d] to-[#dc2626]',   pattern: 'radial-gradient(circle at 70% 20%, rgba(239,68,68,0.3) 0%, transparent 55%)' },
+  { bg: 'from-[#1a0a1a] via-[#4a044e] to-[#a21caf]',   pattern: 'radial-gradient(circle at 40% 30%, rgba(217,70,239,0.3) 0%, transparent 55%)' },
+];
 
-const stripePositions = [15, 28, 41, 54, 67, 80];
+function getVisual(courseId) {
+  const hash = courseId ? [...courseId].reduce((acc, c) => acc + c.charCodeAt(0), 0) : 0;
+  return VISUALS[hash % VISUALS.length];
+}
+
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
+
+function resolveBadgeIcon(icon) {
+  if (!icon) return null;
+  if (icon.startsWith('http')) return icon;
+  return `${SUPABASE_URL}/storage/v1/object/public/badges/${icon}`;
+}
+
+function BadgesSection() {
+  const [badges, setBadges] = useState([]);
+
+  useEffect(() => {
+    async function fetchBadges() {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        const headers = { Authorization: `Bearer ${session.access_token}` };
+
+        // Step 1: get earned badge IDs for the user
+        const earnedRes = await fetch(`${API_URL}/api/v1/user-badges/me`, { headers });
+        if (!earnedRes.ok) return;
+        const userBadges = await earnedRes.json();
+        if (userBadges.length === 0) return;
+
+        const uniqueIds = [...new Set(userBadges.map(ub => ub.badgeId))];
+
+        // Step 2: fetch full badge details (icon, name) for each earned badge
+        const results = await Promise.allSettled(
+          uniqueIds.map(badgeId =>
+            fetch(`${API_URL}/api/v1/badges/${encodeURIComponent(badgeId)}`, { headers })
+              .then(r => r.ok ? r.json() : null)
+          )
+        );
+
+        const earned = results
+          .filter(r => r.status === 'fulfilled' && r.value)
+          .map(r => r.value);
+
+        setBadges(earned);
+      } catch (err) {
+        console.error('BadgesSection fetch error:', err);
+      }
+    }
+    fetchBadges();
+  }, []);
+
+  return (
+    <div className="w-full flex-1 flex flex-col">
+      <h2 className="text-[1.1rem] font-extrabold text-[#f0eeff] mb-3">Badges Earned</h2>
+      {badges.length === 0 ? (
+        <div className="flex-1 flex flex-col items-center justify-center gap-3 py-8 bg-[rgba(255,255,255,0.02)] border border-[rgba(139,92,246,0.12)] rounded-[16px]">
+          <span className="text-3xl">🏅</span>
+          <p className="text-[#6b6490] text-sm m-0">Complete courses to earn badges.</p>
+        </div>
+      ) : (
+        <div className="flex-1 flex flex-wrap gap-4 p-5 content-center bg-[rgba(255,255,255,0.02)] border border-[rgba(139,92,246,0.12)] rounded-[16px]">
+          {badges.map(b => (
+            <div key={b.badgeId} className="flex flex-col items-center gap-2 w-[72px]" title={b.name}>
+              {b.icon ? (
+                <img src={resolveBadgeIcon(b.icon)} alt={b.name} className="w-14 h-14 object-contain drop-shadow-md" />
+              ) : (
+                <div className="w-14 h-14 rounded-full bg-gradient-to-br from-[#7c3aed] to-[#a78bfa] flex items-center justify-center text-2xl">
+                  🏅
+                </div>
+              )}
+              <span className="text-[0.65rem] text-[#a78bfa] font-semibold text-center leading-tight line-clamp-2">{b.name}</span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function CourseProgressSection({ courses, earnedBadges, navigate }) {
+  if (courses.length === 0) return null;
+
+  const hasStarted = courses.some(c => c.started);
+
+  if (!hasStarted) {
+    return (
+      <div className="w-full flex-1 flex flex-col">
+        <h2 className="text-[1.1rem] font-extrabold text-[#f0eeff] mb-3">My Courses</h2>
+        <div className="flex-1 flex flex-col items-center justify-center gap-4 py-10 bg-[rgba(255,255,255,0.02)] border border-[rgba(139,92,246,0.12)] rounded-[16px]">
+          <span className="text-4xl">📚</span>
+          <p className="text-[#6b6490] text-sm m-0">You haven't started any courses yet.</p>
+          <button
+            onClick={() => navigate('/learn')}
+            className="px-6 py-2 bg-gradient-to-br from-[#8b5cf6] to-[#6d28d9] text-white text-sm font-bold rounded-xl border-none cursor-pointer shadow-[0_4px_18px_rgba(139,92,246,0.4)] transition-all hover:opacity-90 hover:-translate-y-px active:translate-y-0"
+          >
+            Browse Courses →
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // Associate badges with courses: badge is linked if its badgeId contains the courseId (or vice versa)
+  function getBadgesForCourse(courseId) {
+    return Object.values(earnedBadges).filter(b =>
+      b.badgeId.toLowerCase().includes(courseId.toLowerCase()) ||
+      courseId.toLowerCase().includes(b.badgeId.toLowerCase())
+    );
+  }
+
+  return (
+    <div className="w-full flex-1 flex flex-col">
+      <h2 className="text-[1.1rem] font-extrabold text-[#f0eeff] mb-3">My Courses</h2>
+      <div className="grid grid-cols-1 gap-3">
+        {courses.filter(c => c.started).map(c => {
+          const badges = getBadgesForCourse(c.courseId);
+          const { bg, pattern } = getVisual(c.courseId);
+          return (
+            <div
+              key={c.courseId}
+              onClick={() => window.open(`/course/${encodeURIComponent(c.courseId)}`, '_blank')}
+              className="flex items-center gap-4 px-5 py-4 bg-[rgba(255,255,255,0.03)] border border-[rgba(139,92,246,0.15)] rounded-[14px] cursor-pointer transition-all hover:border-[rgba(139,92,246,0.35)] hover:bg-[rgba(139,92,246,0.06)]"
+            >
+              {/* Thumbnail */}
+              <CourseThumb courseId={c.courseId} image={c.image} bg={bg} pattern={pattern} />
+
+              {/* Info */}
+              <div className="flex-1 min-w-0 flex flex-col gap-2">
+                <div className="flex items-center justify-between gap-3">
+                  <span className="text-[0.92rem] font-bold text-[#e0d9ff] truncate">{c.name}</span>
+                  <span className="text-[0.75rem] font-extrabold text-[#a78bfa] flex-shrink-0">{c.progress}%</span>
+                </div>
+                <div className="h-[6px] bg-[rgba(139,92,246,0.12)] rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-gradient-to-r from-[#7c3aed] to-[#a78bfa] rounded-full transition-all"
+                    style={{ width: `${c.progress}%` }}
+                  />
+                </div>
+                {!c.started && (
+                  <span className="text-[0.7rem] text-[#5a5278] font-medium">Not started</span>
+                )}
+              </div>
+
+              {/* Badges */}
+              <div className="flex items-center gap-2 flex-shrink-0">
+                {badges.length > 0 ? (
+                  badges.map(b => (
+                    <div key={b.badgeId} title={b.name} className="flex flex-col items-center gap-1">
+                      {b.icon ? (
+                        <img src={b.icon} alt={b.name} className="w-9 h-9 object-contain drop-shadow-md" />
+                      ) : (
+                        <div className="w-9 h-9 rounded-full bg-gradient-to-br from-[#7c3aed] to-[#a78bfa] flex items-center justify-center text-white text-base">
+                          🏅
+                        </div>
+                      )}
+                      <span className="text-[0.6rem] text-[#a78bfa] font-semibold text-center max-w-[56px] truncate">{b.name}</span>
+                    </div>
+                  ))
+                ) : c.progress >= 100 ? (
+                  <div className="w-9 h-9 rounded-full bg-[rgba(139,92,246,0.12)] border border-[rgba(139,92,246,0.2)] flex items-center justify-center text-base" title="Completed">
+                    ✅
+                  </div>
+                ) : (
+                  <div className="w-9 h-9 rounded-full bg-[rgba(255,255,255,0.04)] border border-[rgba(255,255,255,0.07)] flex items-center justify-center" title="Badge locked">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#4b4870" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                    </svg>
+                  </div>
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function CourseThumb({ courseId, image, bg, pattern }) {
+  const [imgOk, setImgOk] = useState(!!image);
+  return (
+    <div className={`w-12 h-12 rounded-[10px] flex-shrink-0 bg-gradient-to-br ${bg} overflow-hidden relative`}>
+      {imgOk ? (
+        <img src={image} alt={courseId} onError={() => setImgOk(false)} className="absolute inset-0 w-full h-full object-cover" />
+      ) : (
+        <div className="absolute inset-0" style={{ background: pattern }} />
+      )}
+    </div>
+  );
+}
+
+function JumpBackIn({ course, navigate }) {
+  const { bg, pattern } = getVisual(course.courseId);
+  const [imgOk, setImgOk] = useState(!!course.image);
+
+  return (
+    <div className="w-full">
+      <h2 className="text-[1.1rem] font-extrabold text-[#f0eeff] mb-3">
+        {course.started ? 'Jump back in' : 'Start learning'}
+      </h2>
+      <div className={`relative rounded-[20px] overflow-hidden h-[200px] bg-gradient-to-br ${bg} cursor-pointer group`}
+        onClick={() => window.open(`/course/${encodeURIComponent(course.courseId)}`, '_blank')}>
+
+        {/* Background image or pattern */}
+        {imgOk ? (
+          <img src={course.image} alt={course.name} onError={() => setImgOk(false)}
+            className="absolute inset-0 w-full h-full object-cover" />
+        ) : (
+          <div className="absolute inset-0" style={{ background: pattern }} />
+        )}
+
+        {/* Dark overlay */}
+        <div className="absolute inset-0 bg-gradient-to-r from-[rgba(0,0,0,0.75)] via-[rgba(0,0,0,0.4)] to-transparent" />
+
+        {/* Content */}
+        <div className="absolute inset-0 flex flex-col justify-between p-6">
+          {/* Progress bar */}
+          <div className="flex items-center gap-3 w-full max-w-[280px]">
+            <div className="flex-1 h-[6px] bg-white/20 rounded-full overflow-hidden">
+              <div className="h-full bg-gradient-to-r from-[#8b5cf6] to-[#a78bfa] rounded-full transition-all"
+                style={{ width: `${course.progress}%` }} />
+            </div>
+            <span className="text-white text-[0.75rem] font-bold">{course.progress}%</span>
+          </div>
+
+          {/* Course info */}
+          <div className="flex flex-col gap-3">
+            <div>
+              <span className="text-white/50 text-[0.68rem] font-semibold tracking-[0.12em] uppercase">Course</span>
+              <h3 className="text-white text-[1.5rem] font-extrabold m-0 leading-tight drop-shadow-lg">
+                {course.name}
+              </h3>
+            </div>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={e => { e.stopPropagation(); window.open(`/course/${encodeURIComponent(course.courseId)}`, '_blank'); }}
+                className="px-5 py-2 bg-[#8b5cf6] hover:bg-[#7c3aed] text-white text-sm font-bold rounded-xl border-none cursor-pointer transition-all shadow-[0_4px_18px_rgba(139,92,246,0.5)]"
+              >
+                {course.started ? 'Continue Learning' : 'Start Course'}
+              </button>
+              <button
+                onClick={e => { e.stopPropagation(); navigate(`/learn`); }}
+                className="text-white/70 hover:text-white text-sm font-semibold bg-transparent border-none cursor-pointer transition-all"
+              >
+                View course
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export default function HomePage() {
   const navigate = useNavigate();
   const [userData,      setUserData]      = useState(null);
   const [courses,       setCourses]       = useState([]);
-  const [chartData,     setChartData]     = useState([]);
   const [currentCourse, setCurrentCourse] = useState(null);
-  const [questionCount, setQuestionCount] = useState(null);
+  const [earnedBadges,  setEarnedBadges]  = useState({});   // badgeId → Badge
   const [loading,       setLoading]       = useState(true);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [streakData,    setStreakData]     = useState(null);
 
   useEffect(() => {
     async function fetchAll() {
@@ -285,83 +494,76 @@ export default function HomePage() {
         const headers = { Authorization: `Bearer ${session.access_token}` };
         const userId  = session.user.id;
 
-        // Fetch user profile, all courses, and user's quiz progress in parallel
-        const [userRes, coursesRes, progressRes] = await Promise.all([
-          fetch(`${API_URL}/api/v1/users/${userId}`, { headers }),
+        // Fetch everything in parallel
+        const [userRes, coursesRes, progressRes, streakRes, badgesRes, userBadgesRes] = await Promise.all([
+          fetch(`${API_URL}/api/v1/users/${userId}`,      { headers }),
           fetch(`${API_URL}/api/v1/courses`,              { headers }),
           fetch(`${API_URL}/api/v1/quiz-progress/me`,     { headers }),
+          fetch(`${API_URL}/api/v1/streaks/me`,           { headers }),
+          fetch(`${API_URL}/api/v1/badges`,               { headers }),
+          fetch(`${API_URL}/api/v1/user-badges/me`,       { headers }),
         ]);
 
-        const user     = userRes.ok     ? await userRes.json()     : null;
-        const courses  = coursesRes.ok  ? await coursesRes.json()  : [];
-        const progress = progressRes.ok ? await progressRes.json() : [];
+        const user       = userRes.ok       ? await userRes.json()       : null;
+        const allCourses = coursesRes.ok    ? await coursesRes.json()    : [];
+        const progress   = progressRes.ok   ? await progressRes.json()   : [];
+        const streak     = streakRes.ok     ? await streakRes.json()     : null;
+        const allBadges  = badgesRes.ok     ? await badgesRes.json()     : [];
+        const userBadges = userBadgesRes.ok ? await userBadgesRes.json() : [];
+
+        // badgeId → full badge details, filtered to only earned ones
+        const badgeDetailsMap = Object.fromEntries(allBadges.map(b => [b.badgeId, b]));
+        const earned = {};
+        for (const ub of userBadges) {
+          if (badgeDetailsMap[ub.badgeId]) earned[ub.badgeId] = badgeDetailsMap[ub.badgeId];
+        }
+        setEarnedBadges(earned);
+        setStreakData(streak);
 
         setUserData(user);
 
         // courseId → course lookup
-        const courseMap = Object.fromEntries(courses.map(c => [c.courseId, c]));
+        const courseMap = Object.fromEntries(allCourses.map(c => [c.courseId, c]));
 
-        // courseId → theta from progress records
+        // courseId → theta from quiz progress
         const thetaMap = {};
         for (const p of progress) {
           try {
             const state = JSON.parse(p.adaptiveScore || '{}');
             thetaMap[p.courseId] = typeof state.theta === 'number' ? state.theta : -3;
-          } catch {
-            thetaMap[p.courseId] = -3;
-          }
+          } catch { thetaMap[p.courseId] = -3; }
         }
+        const thetaToPercent = t => Math.round(Math.max(0, Math.min(100, ((t + 3) / 6) * 100)));
 
-        // Courses list: started courses sorted by progress descending
-        const startedIds = progress.map(p => p.courseId).filter(id => courseMap[id]);
-        let courseList;
-        if (startedIds.length > 0) {
-          courseList = startedIds.map(cid => ({
-            courseId:  cid,
-            name:     formatCourseId(cid),
-            progress: thetaToPercent(thetaMap[cid]),
-          })).sort((a, b) => b.progress - a.progress);
-        } else {
-          // No progress yet — show all available courses at 0%
-          courseList = courses.slice(0, 7).map(c => ({
-            courseId:  c.courseId,
-            name:     formatCourseId(c.courseId),
-            progress: 0,
-          }));
-        }
+        // All courses with progress — started ones first
+        const startedIds = new Set(progress.map(p => p.courseId));
+        const sorted = [
+          ...allCourses.filter(c => startedIds.has(c.courseId)),
+          ...allCourses.filter(c => !startedIds.has(c.courseId)),
+        ];
+        const courseList = sorted.map(c => ({
+          courseId: c.courseId,
+          name:     formatLessonId(c.courseId),
+          image:    c.image ?? null,
+          progress: thetaToPercent(thetaMap[c.courseId] ?? -3),
+          started:  startedIds.has(c.courseId),
+        }));
         setCourses(courseList);
 
-        // Last touched course: most recent lastUpdate, fallback to last in array
-        const lastTouchedRecord = progress.length > 0
-          ? [...progress].sort((a, b) => {
-              const tA = new Date(a.lastUpdate || 0).getTime();
-              const tB = new Date(b.lastUpdate || 0).getTime();
-              return tB - tA;
-            })[0]
+        // Current course: last touched by lastUpdate, fallback to first available
+        const lastRecord = progress.length > 0
+          ? [...progress].sort((a, b) => new Date(b.lastUpdate || 0) - new Date(a.lastUpdate || 0))[0]
           : null;
-
-        // Chart data: only the last touched course's history
-        const history = lastTouchedRecord
-          ? (() => { try { return JSON.parse(lastTouchedRecord.adaptiveHistory || '[]'); } catch { return []; } })()
-          : [];
-        setChartData(history.length > 0 ? history : [0]);
-
-        // Current course: last touched (so chart and panel always match)
-        const active = lastTouchedRecord
-          ? courseList.find(c => c.courseId === lastTouchedRecord.courseId) ?? courseList[0] ?? null
-          : courseList[0] ?? null;
-        setCurrentCourse(active);
-
-        // Fetch quiz count for the current course
-        if (active) {
-          const qRes = await fetch(
-            `${API_URL}/api/v1/quizzes/course/${active.courseId}`,
-            { headers }
-          );
-          if (qRes.ok) {
-            const quizzes = await qRes.json();
-            setQuestionCount(quizzes.length);
-          }
+        const activeCourseId = lastRecord?.courseId ?? allCourses[0]?.courseId ?? null;
+        if (activeCourseId && courseMap[activeCourseId]) {
+          const c = courseMap[activeCourseId];
+          setCurrentCourse({
+            courseId: c.courseId,
+            name:     formatLessonId(c.courseId),
+            image:    c.image ?? null,
+            progress: thetaToPercent(thetaMap[activeCourseId] ?? -3),
+            started:  !!lastRecord,
+          });
         }
       } catch (err) {
         console.error('HomePage fetch error:', err);
@@ -379,7 +581,7 @@ export default function HomePage() {
 
   if (loading) {
     return (
-      <main className="h-full flex flex-col items-center justify-center p-7 overflow-auto max-sm:p-4">
+      <main className="h-full flex flex-col items-center p-7 overflow-auto max-sm:p-4">
         <style>{`
           @keyframes shimmer {
             0%   { background-position: -600px 0; }
@@ -392,26 +594,21 @@ export default function HomePage() {
             border-radius: 10px;
           }
         `}</style>
-        <div className="h-[88vh] grid grid-cols-[auto_auto] grid-rows-[auto_1fr] gap-[1.1rem] w-fit min-w-[70%] max-lg:min-w-[90%] max-sm:h-auto max-sm:w-full max-sm:flex max-sm:flex-col">
+        <div className="grid grid-cols-[auto_auto] gap-[1.1rem] w-fit min-w-[70%] max-lg:min-w-[90%] max-sm:w-full max-sm:flex max-sm:flex-col">
 
           {/* Profile Card Skeleton */}
           <div className={`${cardCls} col-start-1 row-start-1 flex items-center gap-7 min-w-[440px] max-lg:min-w-0`}>
             <div className="flex-shrink-0 flex flex-col items-center gap-2">
-              {/* Avatar circle */}
               <div className="sk w-[90px] h-[90px] rounded-full" />
-              {/* Edit button */}
               <div className="sk w-16 h-6 rounded-lg" />
             </div>
             <div className="flex flex-col gap-3 flex-1 min-w-0">
-              {/* "Welcome back" */}
               <div className="sk w-24 h-3 rounded" />
-              {/* Name — tall to match text-[2.2rem] heading */}
               <div className="sk w-52 h-10 rounded-lg" />
-              {/* View Stats button */}
               <div className="sk w-28 h-9 rounded-[10px]" />
             </div>
-            {/* XP + Rank badges */}
             <div className="flex flex-col gap-2 flex-shrink-0 ml-auto max-sm:hidden">
+              <div className="sk w-24 h-9 rounded-[20px]" />
               <div className="sk w-24 h-9 rounded-[20px]" />
               <div className="sk w-24 h-9 rounded-[20px]" />
             </div>
@@ -419,16 +616,12 @@ export default function HomePage() {
 
           {/* My Courses Card Skeleton */}
           <div className={`${cardCls} col-start-2 row-start-1 flex flex-col min-w-[260px] max-lg:min-w-0`}>
-            {/* Title */}
             <div className="sk w-28 h-3 rounded mb-4" />
             <ul className="list-none m-0 p-0 flex flex-col gap-[0.55rem]">
               {[140, 100, 120].map((w, i) => (
                 <li key={i} className="flex flex-col gap-[0.4rem] px-[0.9rem] py-[0.6rem] bg-[rgba(255,255,255,0.03)] border border-[rgba(139,92,246,0.12)] rounded-[10px]">
                   <div className="flex items-center justify-between">
-                    <div className="flex flex-col gap-[0.25rem]">
-                      <div className="sk h-3 rounded" style={{ width: w }} />
-                      <div className="sk w-20 h-2.5 rounded" />
-                    </div>
+                    <div className="sk h-3 rounded" style={{ width: w }} />
                     <div className="sk w-8 h-3 rounded ml-3" />
                   </div>
                   <div className="sk h-[5px] rounded-full w-full" />
@@ -437,39 +630,13 @@ export default function HomePage() {
             </ul>
           </div>
 
-          {/* Activity + Course Card Skeleton */}
-          <div className={`${cardCls} col-span-full row-start-2 grid grid-cols-[1.35fr_1fr] gap-[1.1rem] items-stretch max-sm:grid-cols-1`}>
-            {/* Left: XP Chart */}
-            <div className="flex flex-col gap-3 min-w-0">
-              <div className="flex items-center justify-between">
-                <div className="sk w-24 h-3 rounded" />
-                <div className="sk w-20 h-3 rounded" />
-              </div>
-              <div className="sk flex-1 min-h-[120px] rounded-[14px]" />
-            </div>
-
-            {/* Right: Current Course */}
-            <div className="flex flex-col justify-center gap-[1.1rem] border-l border-[rgba(139,92,246,0.15)] pl-[1.1rem] max-sm:border-l-0 max-sm:border-t max-sm:border-[rgba(139,92,246,0.15)] max-sm:pl-0 max-sm:pt-4">
-              <div className="flex flex-col gap-2">
-                <div className="flex items-center justify-between">
-                  <div className="sk w-28 h-3 rounded" />
-                  <div className="sk w-10 h-3 rounded" />
-                </div>
-                <div className="sk w-44 h-5 rounded" />
-                <div className="sk h-3 rounded-full w-full" />
-              </div>
-              <div className="sk w-24 h-7 rounded-lg" />
-              <div className="sk w-full h-11 rounded-xl" />
-            </div>
-          </div>
-
         </div>
       </main>
     );
   }
 
   return (
-    <main className="h-full flex flex-col items-center justify-center p-7 overflow-auto max-sm:p-4">
+    <main className="h-full flex flex-col items-center p-7 overflow-auto max-sm:p-4">
       {showEditModal && (
         <EditProfileModal
           userData={userData}
@@ -477,10 +644,10 @@ export default function HomePage() {
           onSave={updated => setUserData(updated)}
         />
       )}
-      <div className="h-[88vh] grid grid-cols-[auto_auto] grid-rows-[auto_1fr] gap-[1.1rem] w-fit min-w-[70%] max-lg:min-w-[90%] max-sm:h-auto max-sm:w-full max-sm:flex max-sm:flex-col">
+      <div className="flex flex-col gap-[1.1rem] my-auto w-fit min-w-[70%] max-lg:min-w-[90%] max-sm:w-full">
 
         {/* ── Profile Card ── */}
-        <div className={`${cardCls} col-start-1 row-start-1 flex items-center gap-7`}>
+        <div className={`${cardCls} flex items-center gap-7`}>
           <div className="flex-shrink-0 flex flex-col items-center gap-2">
             <div className="relative">
               <img
@@ -506,9 +673,6 @@ export default function HomePage() {
             <h2 className="text-[2.2rem] font-extrabold text-[#f0eeff] m-0 -tracking-[0.5px]">
               {userData?.name ?? '...'}
             </h2>
-            <button className="mt-1 self-start px-5 py-2 bg-[rgba(139,92,246,0.15)] text-[#a78bfa] border border-[rgba(139,92,246,0.3)] rounded-[10px] text-sm font-bold cursor-pointer transition-all hover:bg-[rgba(139,92,246,0.28)] hover:text-[#ede9fe] hover:shadow-[0_0_14px_rgba(139,92,246,0.25)]">
-              View Stats →
-            </button>
           </div>
           <div className="flex flex-col gap-2 flex-shrink-0 ml-auto max-sm:hidden">
             {/* XP Badge */}
@@ -520,107 +684,31 @@ export default function HomePage() {
             <span className="text-sm font-bold px-4 py-2 rounded-[20px] bg-[rgba(139,92,246,0.15)] text-[#a78bfa] border border-[rgba(139,92,246,0.3)] text-center">
               {rank}
             </span>
+            {/* Streak Badge */}
+            <span
+              title={`Longest streak: ${streakData?.longestStreak ?? 0} days`}
+              className="text-sm font-bold px-4 py-2 rounded-[20px] bg-[rgba(251,146,60,0.15)] text-[#fb923c] border border-[rgba(251,146,60,0.35)] flex items-center justify-center gap-1"
+            >
+              🔥 {streakData?.currentStreak ?? 0} day{(streakData?.currentStreak ?? 0) !== 1 ? 's' : ''}
+            </span>
           </div>
         </div>
 
-        {/* ── My Courses Card ── */}
-        <div className={`${cardCls} col-start-2 row-start-1 flex flex-col`}>
-          <h3 className={cardTitleCls}>My Courses</h3>
-          {courses.length === 0 ? (
-            <div className="flex flex-col gap-2 flex-1 justify-center items-start">
-              <p className="text-[#5a5278] text-sm m-0">No courses started yet.</p>
-              <button
-                onClick={() => navigate('/learn')}
-                className="text-[#a78bfa] text-sm font-semibold hover:underline cursor-pointer bg-transparent border-none p-0"
-              >
-                Explore courses →
-              </button>
-            </div>
-          ) : (
-            <ul className="styled-scroll list-none m-0 p-0 flex flex-col gap-[0.55rem] overflow-y-auto max-h-[220px] pr-1">
-              {courses.map((c, i) => (
-                <li
-                  key={i}
-                  onClick={() => navigate(`/home/learn/${c.courseId}`)}
-                  className="flex flex-col gap-[0.4rem] px-[0.9rem] py-[0.6rem] bg-[rgba(255,255,255,0.03)] border border-[rgba(139,92,246,0.12)] rounded-[10px] cursor-pointer transition-all hover:border-[rgba(139,92,246,0.3)] hover:bg-[rgba(139,92,246,0.06)]"
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="flex flex-col gap-[0.1rem]">
-                      <span className="text-[0.87rem] font-bold text-[#e0d9ff] leading-tight">{c.name}</span>
-                      <span className="text-[0.7rem] text-[#6b6490] font-medium">{c.progress}% complete</span>
-                    </div>
-                    <span className="text-[0.75rem] font-extrabold text-[#a78bfa] flex-shrink-0 ml-3">{c.progress}%</span>
-                  </div>
-                  <div className="h-[5px] bg-[rgba(139,92,246,0.12)] rounded-full overflow-hidden">
-                    <div
-                      className="h-full bg-gradient-to-r from-[#7c3aed] to-[#a78bfa] rounded-full transition-all"
-                      style={{ width: `${c.progress}%` }}
-                    />
-                  </div>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
+        {/* ── Jump Back In ── */}
+        {currentCourse && <JumpBackIn course={currentCourse} navigate={navigate} />}
 
-        {/* ── Activity + Course Card ── */}
-        <div className={`${cardCls} col-span-full row-start-2 grid grid-cols-[1.35fr_1fr] gap-[1.1rem] items-stretch max-sm:grid-cols-1`}>
-
-          {/* Left: XP Chart */}
-          <div className="flex flex-col gap-3 min-w-0">
-            <div className="flex items-center justify-between">
-              <h3 className={cardTitleCls}>Skill Wave</h3>
-            </div>
-            <div className="flex-1 min-h-[120px]">
-              <ActivityChart data={chartData} />
-            </div>
+        {/* ── My Courses + Badges ── */}
+        <div className="flex gap-5 max-md:flex-col">
+          <div className="flex-1 min-w-0 flex flex-col">
+            <CourseProgressSection courses={courses} earnedBadges={earnedBadges} navigate={navigate} />
           </div>
-
-          {/* Right: Current Course */}
-          {currentCourse ? (
-            <div className="flex flex-col justify-center gap-[1.1rem] border-l border-[rgba(139,92,246,0.15)] pl-[1.1rem] max-sm:border-l-0 max-sm:border-t max-sm:border-[rgba(139,92,246,0.15)] max-sm:pl-0 max-sm:pt-4">
-              <div className="flex flex-col gap-2">
-                <div className="flex items-center justify-between">
-                  <span className="text-[0.72rem] font-bold text-[#7c6ea8] uppercase tracking-[0.1em]">Most recent Course</span>
-                  <span className="text-[0.82rem] font-extrabold text-[#a78bfa]">{currentCourse.progress}%</span>
-                </div>
-                <span className="text-[1.05rem] font-black text-[#c4b5fd] tracking-[0.15em]">{currentCourse.name}</span>
-                <div className="relative h-3 rounded-full bg-[rgba(139,92,246,0.12)] border border-[rgba(139,92,246,0.2)] overflow-hidden">
-                  <div
-                    className="absolute inset-y-0 left-0 bg-gradient-to-r from-[#7c3aed] to-[#a78bfa] rounded-full shadow-[0_0_8px_rgba(139,92,246,0.5)]"
-                    style={{ width: `${currentCourse.progress}%` }}
-                  />
-                  {stripePositions
-                    .filter(left => left < currentCourse.progress)
-                    .map((left, i) => (
-                      <div key={i} className="absolute top-[-2px] w-[1.5px] h-5 bg-[rgba(0,0,0,0.18)] rotate-[20deg]" style={{ left: `${left}%` }} />
-                    ))}
-                </div>
-              </div>
-              <div className="flex gap-3 flex-wrap">
-                <span className="text-[0.78rem] text-[#6b6490] font-semibold bg-[rgba(255,255,255,0.03)] border border-[rgba(139,92,246,0.1)] px-[0.7rem] py-[0.3rem] rounded-lg">
-                  {questionCount != null ? `${questionCount} questions` : 'Loading...'}
-                </span>
-              </div>
-              <button className="px-6 py-3 bg-gradient-to-br from-[#7c3aed] to-[#4f46e5] text-white border-none rounded-xl text-[0.9rem] font-extrabold cursor-pointer tracking-[0.03em] shadow-[0_4px_20px_rgba(124,58,237,0.35)] transition-all hover:-translate-y-0.5 hover:shadow-[0_8px_28px_rgba(124,58,237,0.5)] active:translate-y-0 flex items-center justify-center gap-2">
-                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"><path fill="currentColor" d="M6 22q-.825 0-1.412-.587T4 20V10q0-.825.588-1.412T6 8h1V6q0-2.075 1.463-3.537T12 1t3.538 1.463T17 6v2h1q.825 0 1.413.588T20 10v10q0 .825-.587 1.413T18 22zm0-2h12V10H6zm7.413-3.588Q14 15.826 14 15t-.587-1.412T12 13t-1.412.588T10 15t.588 1.413T12 17t1.413-.587M9 8h6V6q0-1.25-.875-2.125T12 3t-2.125.875T9 6zM6 20V10z"/></svg>
-                Lock In
-              </button>
-            </div>
-          ) : (
-            <div className="flex flex-col justify-center items-center gap-3 border-l border-[rgba(139,92,246,0.15)] pl-[1.1rem] max-sm:border-l-0 max-sm:border-t max-sm:border-[rgba(139,92,246,0.15)] max-sm:pl-0 max-sm:pt-4">
-              <p className="text-[#5a5278] text-sm text-center m-0">No active course yet.</p>
-              <button
-                onClick={() => navigate('/learn')}
-                className="px-5 py-2 bg-gradient-to-br from-[#7c3aed] to-[#4f46e5] text-white rounded-xl text-sm font-bold border-none cursor-pointer shadow-[0_4px_20px_rgba(124,58,237,0.35)] transition-all hover:-translate-y-0.5 hover:shadow-[0_8px_28px_rgba(124,58,237,0.5)]"
-              >
-                Start Learning →
-              </button>
-            </div>
-          )}
-
+          <div className="w-[260px] flex-shrink-0 max-md:w-full flex flex-col">
+            <BadgesSection />
+          </div>
         </div>
+
       </div>
+
     </main>
   );
 }

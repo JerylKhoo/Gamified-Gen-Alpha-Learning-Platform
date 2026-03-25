@@ -17,9 +17,6 @@ public class Badge {
     @Column(name = "badge_id")
     private String badgeId;
 
-    @Column(nullable = false)
-    private String name;
-
     @Column
     private String description;
 

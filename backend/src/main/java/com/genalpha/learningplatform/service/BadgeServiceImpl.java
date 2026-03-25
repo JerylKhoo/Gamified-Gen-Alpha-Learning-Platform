@@ -47,7 +47,6 @@ public class BadgeServiceImpl implements BadgeService {
     public Badge update(String badgeId, Badge updates, UUID requesterId) {
         requireAdmin(requesterId);
         Badge badge = getById(badgeId);
-        if (updates.getName() != null)        badge.setName(updates.getName());
         if (updates.getDescription() != null) badge.setDescription(updates.getDescription());
         if (updates.getIcon() != null)        badge.setIcon(updates.getIcon());
         return badgeRepository.save(badge);
