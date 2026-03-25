@@ -1,3 +1,6 @@
+# Local credentials
+**/application-local.properties
+
 # Java / Spring Boot Backend
 *.class
 *.log
