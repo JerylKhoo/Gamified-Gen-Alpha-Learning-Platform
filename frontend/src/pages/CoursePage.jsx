@@ -46,8 +46,7 @@ export default function CoursePage() {
     fetchCourseAndModules();
   }, [courseId]);
 
-  // Fetch progress separately — and re-fetch whenever this tab becomes visible again
-  // so returning from a module tab reflects the latest completion status
+  // Fetch progress separately
   useEffect(() => {
     async function fetchProgress() {
       try {
@@ -62,16 +61,10 @@ export default function CoursePage() {
     }
 
     fetchProgress();
-
-    function onVisible() {
-      if (document.visibilityState === 'visible') fetchProgress();
-    }
-    document.addEventListener('visibilitychange', onVisible);
-    return () => document.removeEventListener('visibilitychange', onVisible);
   }, [courseId]);
 
   function openModule(moduleId) {
-    window.open(`/course/${encodeURIComponent(courseId)}/module/${encodeURIComponent(moduleId)}`, '_blank');
+    navigate(`/course/${encodeURIComponent(courseId)}/module/${encodeURIComponent(moduleId)}`);
   }
 
   const title = formatId(courseId);

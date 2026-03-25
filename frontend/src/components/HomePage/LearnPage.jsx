@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabaseClient';
 
 const API_URL = import.meta.env.VITE_API_URL;
@@ -152,9 +153,9 @@ function CourseModal({ course, onClose }) {
 }
 
 export default function LearnPage() {
+  const navigate = useNavigate();
   const [courses, setCourses]           = useState([]);
   const [startedCourses, setStarted]    = useState(new Set());
-  const [selectedCourse, setSelected]   = useState(null);
   const [loading, setLoading]           = useState(true);
   const [error, setError]               = useState('');
 
@@ -220,7 +221,7 @@ export default function LearnPage() {
                 key={course.courseId}
                 course={course}
                 started={startedCourses.has(course.courseId)}
-                onClick={() => setSelected(course)}
+                onClick={() => navigate(`/course/${encodeURIComponent(course.courseId)}`)}
               />
             ))}
           </div>
@@ -232,9 +233,6 @@ export default function LearnPage() {
         )
       )}
 
-      {selectedCourse && (
-        <CourseModal course={selectedCourse} onClose={() => setSelected(null)} />
-      )}
     </div>
   );
 }
