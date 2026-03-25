@@ -213,9 +213,9 @@ function CreatePostModal({ onClose, onCreated }) {
       if (imageFile) {
         const ext = imageFile.name.split('.').pop();
         const path = `posts/${session.user.id}/${Date.now()}.${ext}`;
-        const { error: uploadErr } = await supabase.storage.from('post-images').upload(path, imageFile);
+        const { error: uploadErr } = await supabase.storage.from('posts').upload(path, imageFile);
         if (uploadErr) throw new Error('Image upload failed: ' + uploadErr.message);
-        const { data: urlData } = supabase.storage.from('post-images').getPublicUrl(path);
+        const { data: urlData } = supabase.storage.from('posts').getPublicUrl(path);
         pictureUrl = urlData.publicUrl;
       }
 
