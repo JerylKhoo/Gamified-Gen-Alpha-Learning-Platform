@@ -168,7 +168,8 @@ function CreatePostModal({ onClose, onCreated }) {
   const [title,    setTitle]    = useState('');
   const [category, setCategory] = useState(CATEGORIES[1]); // default: first real category
   const [content,  setContent]  = useState('');
-  const [picture,  setPicture]  = useState('');
+  const [imageFile, setImageFile]     = useState(null);
+  const [imagePreview, setImagePreview] = useState(null);
 
   // Close on Escape — same pattern as CourseModal in LearnPage.jsx
   useEffect(() => {
@@ -186,6 +187,20 @@ function CreatePostModal({ onClose, onCreated }) {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
 
+  function handleFileChange(e) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) { setError('Image must be under 5 MB.'); return; }
+    setImageFile(file);
+    setImagePreview(URL.createObjectURL(file));
+  }
+
+  function removeImage() {
+    setImageFile(null);
+    if (imagePreview) URL.revokeObjectURL(imagePreview);
+    setImagePreview(null);
+  }
+
   async function handleSubmit(e) {
     e.preventDefault();
     setSubmitting(true);
@@ -193,13 +208,24 @@ function CreatePostModal({ onClose, onCreated }) {
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) { setError('You must be logged in to post.'); return; }
+
+      let pictureUrl = null;
+      if (imageFile) {
+        const ext = imageFile.name.split('.').pop();
+        const path = `posts/${session.user.id}/${Date.now()}.${ext}`;
+        const { error: uploadErr } = await supabase.storage.from('post-images').upload(path, imageFile);
+        if (uploadErr) throw new Error('Image upload failed: ' + uploadErr.message);
+        const { data: urlData } = supabase.storage.from('post-images').getPublicUrl(path);
+        pictureUrl = urlData.publicUrl;
+      }
+
       const res = await fetch(`${API_URL}/api/v1/posts`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${session.access_token}`,
         },
-        body: JSON.stringify({ title, category, description: content, picture: picture || null }),
+        body: JSON.stringify({ title, category, description: content, picture: pictureUrl }),
       });
       if (!res.ok) {
         const msg = await res.text();
@@ -285,25 +311,43 @@ function CreatePostModal({ onClose, onCreated }) {
             />
           </div>
 
-          {/* Image URL */}
+          {/* Image Upload */}
           <div className="flex flex-col gap-[0.4rem]">
             <label className="text-[0.75rem] font-bold text-[#7c6ea8] uppercase tracking-[0.1em]">
-              Image URL <span className="font-normal text-[#5a5278]">(optional)</span>
+              Image <span className="font-normal text-[#5a5278]">(optional, max 5 MB)</span>
             </label>
-            <input
-              className={inputCls}
-              placeholder="Paste an image link..."
-              value={picture}
-              onChange={e => setPicture(e.target.value)}
-            />
-            {picture && (
-              <img
-                src={picture}
-                alt="Preview"
-                className="w-full max-h-[160px] object-cover rounded-lg border border-[rgba(139,92,246,0.15)] mt-1"
-                onError={e => { e.target.style.display = 'none'; }}
-                onLoad={e => { e.target.style.display = 'block'; }}
-              />
+            {imagePreview ? (
+              <div className="relative">
+                <img
+                  src={imagePreview}
+                  alt="Preview"
+                  className="w-full max-h-[160px] object-cover rounded-lg border border-[rgba(139,92,246,0.15)]"
+                />
+                <button
+                  type="button"
+                  onClick={removeImage}
+                  className="absolute top-2 right-2 w-7 h-7 rounded-full bg-black/70 text-white border-none cursor-pointer flex items-center justify-center hover:bg-red-500/80 transition-colors"
+                >
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M18 6 6 18M6 6l12 12"/>
+                  </svg>
+                </button>
+              </div>
+            ) : (
+              <label className="flex flex-col items-center justify-center gap-2 py-5 rounded-[10px] border border-dashed border-[rgba(139,92,246,0.25)] bg-[rgba(255,255,255,0.02)] cursor-pointer transition-all hover:border-[rgba(139,92,246,0.5)] hover:bg-[rgba(139,92,246,0.04)]">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#7c6ea8" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="3" y="3" width="18" height="18" rx="2"/>
+                  <circle cx="8.5" cy="8.5" r="1.5"/>
+                  <path d="m21 15-5-5L5 21"/>
+                </svg>
+                <span className="text-[0.82rem] text-[#7c6ea8]">Click to upload an image</span>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleFileChange}
+                  className="hidden"
+                />
+              </label>
             )}
           </div>
 
