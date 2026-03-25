@@ -60,6 +60,9 @@ bin/
 .vscode/
 *.code-workspace
 
+# Claude Code
+.claude/
+
 # IDE - NetBeans
 /nbproject/private/
 /nbbuild/
