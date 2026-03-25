@@ -1,3 +1,8 @@
+# Local run scripts and credentials
+run.bat
+run.sh
+**/application-local.properties
+
 # Java / Spring Boot Backend
 *.class
 *.log
