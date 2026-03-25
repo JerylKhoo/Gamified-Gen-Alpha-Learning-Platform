@@ -162,6 +162,16 @@ CREATE TRIGGER on_auth_user_created
 
 
 -- ============================================================
+-- POST_UPVOTES TABLE
+-- ============================================================
+CREATE TABLE IF NOT EXISTS public.POST_UPVOTES (
+    ID          UUID    PRIMARY KEY DEFAULT gen_random_uuid(),
+    Post_ID     UUID    NOT NULL REFERENCES public.POSTS(Post_ID) ON DELETE CASCADE,
+    User_ID     UUID    NOT NULL REFERENCES public."USER"(User_ID) ON DELETE CASCADE,
+    UNIQUE(Post_ID, User_ID)
+);
+
+-- ============================================================
 -- TRIGGER: Update streak on Quiz_Progress insert / update
 -- ============================================================
 CREATE OR REPLACE FUNCTION public.handle_quiz_progress_streak()
@@ -374,6 +384,7 @@ ALTER TABLE public.QUIZ             ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.QUIZ_PROGRESS    ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.COURSE_PROGRESS  ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.CHAT_BOT         ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.POST_UPVOTES     ENABLE ROW LEVEL SECURITY;
 
 
 -- ============================================================
@@ -422,6 +433,18 @@ CREATE POLICY "posts_delete_collaborator_or_admin"
         OR public.current_user_role() = 'Admin'
     );
 
+
+-- --------------------------------------------------------
+-- POST_UPVOTES policies
+-- --------------------------------------------------------
+
+CREATE POLICY "post_upvotes_select_public"
+    ON public.POST_UPVOTES FOR SELECT
+    USING (true);
+
+CREATE POLICY "post_upvotes_insert_authenticated"
+    ON public.POST_UPVOTES FOR INSERT
+    WITH CHECK (auth.uid() = User_ID);
 
 -- --------------------------------------------------------
 -- USER policies

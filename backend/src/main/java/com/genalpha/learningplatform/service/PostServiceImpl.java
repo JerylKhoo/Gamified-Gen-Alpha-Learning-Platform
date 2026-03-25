@@ -1,9 +1,16 @@
 package com.genalpha.learningplatform.service;
 
+import com.genalpha.learningplatform.dto.CommentResponse;
 import com.genalpha.learningplatform.dto.PostResponse;
+import com.genalpha.learningplatform.model.Comment;
 import com.genalpha.learningplatform.model.Post;
+import com.genalpha.learningplatform.model.PostReport;
+import com.genalpha.learningplatform.model.PostUpvote;
 import com.genalpha.learningplatform.model.User;
+import com.genalpha.learningplatform.repository.CommentRepository;
+import com.genalpha.learningplatform.repository.PostReportRepository;
 import com.genalpha.learningplatform.repository.PostRepository;
+import com.genalpha.learningplatform.repository.PostUpvoteRepository;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
@@ -18,10 +25,16 @@ import java.util.UUID;
 public class PostServiceImpl implements PostService {
 
     private final PostRepository postRepository;
+    private final PostUpvoteRepository postUpvoteRepository;
+    private final PostReportRepository postReportRepository;
+    private final CommentRepository commentRepository;
     private final UserService userService;
 
-    public PostServiceImpl(PostRepository postRepository, UserService userService) {
+    public PostServiceImpl(PostRepository postRepository, PostUpvoteRepository postUpvoteRepository, PostReportRepository postReportRepository, CommentRepository commentRepository, UserService userService) {
         this.postRepository = postRepository;
+        this.postUpvoteRepository = postUpvoteRepository;
+        this.postReportRepository = postReportRepository;
+        this.commentRepository = commentRepository;
         this.userService = userService;
     }
 
@@ -52,6 +65,7 @@ public class PostServiceImpl implements PostService {
         } catch (ResponseStatusException ignored) {
             r.setAuthorName("Unknown");
         }
+        r.setCommentCount(commentRepository.countByPostId(post.getPostId()));
         return r;
     }
 
@@ -59,6 +73,11 @@ public class PostServiceImpl implements PostService {
     public Post getById(UUID postId) {
         return postRepository.findById(postId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Post not found"));
+    }
+
+    @Override
+    public PostResponse getByIdWithAuthor(UUID postId) {
+        return toResponse(getById(postId));
     }
 
     @Override
@@ -90,6 +109,54 @@ public class PostServiceImpl implements PostService {
     }
 
     @Override
+    public Post upvote(UUID postId, UUID requesterId) {
+        Post post = getById(postId);
+        var existing = postUpvoteRepository.findByPostIdAndUserId(postId, requesterId);
+        if (existing.isPresent()) {
+            // Already upvoted — remove upvote (toggle off)
+            postUpvoteRepository.delete(existing.get());
+            post.setUpvote(Math.max(0, post.getUpvote() - 1));
+        } else {
+            // Not upvoted — add upvote (toggle on)
+            PostUpvote upvoteRecord = new PostUpvote();
+            upvoteRecord.setPostId(postId);
+            upvoteRecord.setUserId(requesterId);
+            postUpvoteRepository.save(upvoteRecord);
+            post.setUpvote(post.getUpvote() + 1);
+        }
+        return postRepository.save(post);
+    }
+
+    @Override
+    public Post report(UUID postId, UUID requesterId, String reason, String description) {
+        if (postReportRepository.existsByPostIdAndUserId(postId, requesterId)) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "You have already reported this post");
+        }
+        PostReport report = new PostReport();
+        report.setPostId(postId);
+        report.setUserId(requesterId);
+        report.setReason(reason);
+        report.setDescription(description);
+        postReportRepository.save(report);
+
+        Post post = getById(postId);
+        post.setReportCount((int) postReportRepository.countByPostId(postId));
+        return postRepository.save(post);
+    }
+
+    @Override
+    public List<UUID> getReportedPostIds(UUID userId) {
+        return postReportRepository.findByUserId(userId)
+                .stream().map(PostReport::getPostId).toList();
+    }
+
+    @Override
+    public List<UUID> getUpvotedPostIds(UUID userId) {
+        return postUpvoteRepository.findByUserId(userId)
+                .stream().map(PostUpvote::getPostId).toList();
+    }
+
+    @Override
     public void delete(UUID postId, UUID requesterId) {
         Post post = getById(postId);
         boolean isAdmin = userService.isAdmin(requesterId);
@@ -97,5 +164,39 @@ public class PostServiceImpl implements PostService {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Cannot delete another user's post");
         }
         postRepository.delete(post);
+    }
+
+    @Override
+    public List<CommentResponse> getComments(UUID postId) {
+        getById(postId); // ensure post exists
+        return commentRepository.findByPostIdOrderByCreatedAtAsc(postId)
+                .stream().map(this::toCommentResponse).toList();
+    }
+
+    @Override
+    public Comment addComment(UUID postId, UUID requesterId, String body) {
+        getById(postId); // ensure post exists
+        Comment comment = new Comment();
+        comment.setPostId(postId);
+        comment.setUserId(requesterId);
+        comment.setBody(body);
+        return commentRepository.save(comment);
+    }
+
+    private CommentResponse toCommentResponse(Comment comment) {
+        CommentResponse r = new CommentResponse();
+        r.setCommentId(comment.getCommentId());
+        r.setPostId(comment.getPostId());
+        r.setUserId(comment.getUserId());
+        r.setBody(comment.getBody());
+        r.setCreatedAt(comment.getCreatedAt());
+        try {
+            User author = userService.getById(comment.getUserId());
+            r.setAuthorName(author.getName());
+            r.setAuthorProfilePic(author.getProfilePic());
+        } catch (ResponseStatusException ignored) {
+            r.setAuthorName("Unknown");
+        }
+        return r;
     }
 }

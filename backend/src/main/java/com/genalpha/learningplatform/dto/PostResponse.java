@@ -21,4 +21,5 @@ public class PostResponse {
     private Integer upvote;
     private String authorName;
     private String authorProfilePic;
+    private long commentCount;
 }

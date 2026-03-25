@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabaseClient';
 
 const API_URL = import.meta.env.VITE_API_URL;
@@ -51,8 +52,13 @@ const IconReply = () => (
     <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
   </svg>
 );
-const IconHeart = () => (
-  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+const IconHeartOutline = () => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+  </svg>
+);
+const IconHeartFilled = () => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
   </svg>
 );
@@ -81,7 +87,7 @@ function CategoryPill({ category, small = false }) {
 // ─── ThreadCard ───────────────────────────────────────────────────────────────
 // Layout mirrors CourseCard from LearnPage.jsx:
 //   dark bg, subtle border, hover lift + purple glow, transition-all duration-300
-function ThreadCard({ thread, onClick }) {
+function ThreadCard({ thread, onClick, onUpvote, upvoted, upvoting }) {
   return (
     <div
       onClick={onClick}
@@ -107,7 +113,6 @@ function ThreadCard({ thread, onClick }) {
         <div className="flex items-center gap-[0.4rem] flex-wrap">
           <CategoryPill category={thread.category} small />
           {thread.isHot && (
-            // Hot badge — mirrors the orange "Day 5" streak pill in HomePage.jsx
             <span className="inline-flex items-center gap-[0.22rem] text-[0.63rem] font-bold text-[#fb923c] bg-[rgba(251,146,60,0.1)] border border-[rgba(251,146,60,0.2)] rounded-md px-[0.38rem] py-[0.1rem]">
               🔥 Hot
             </span>
@@ -119,12 +124,19 @@ function ThreadCard({ thread, onClick }) {
           {thread.title}
         </h3>
 
+        {/* Image thumbnail */}
+        {thread.picture && (
+          <div className="w-full max-h-[140px] overflow-hidden rounded-lg mt-1">
+            <img src={thread.picture} alt="" className="w-full h-full object-cover" />
+          </div>
+        )}
+
         {/* Row 3: preview snippet */}
         <p className="m-0 text-[0.82rem] text-[#6b7280] leading-relaxed line-clamp-1">
           {thread.preview}
         </p>
 
-        {/* Row 4: author · timestamp — mirrors course category label in LearnPage.jsx */}
+        {/* Row 4: author · timestamp */}
         <div className="flex items-center gap-[0.4rem] text-[0.75rem] text-[#5a5278] mt-[0.05rem]">
           <span className="font-semibold text-[#7c6ea8]">{thread.author}</span>
           <span className="opacity-40">·</span>
@@ -133,16 +145,23 @@ function ThreadCard({ thread, onClick }) {
       </div>
 
       {/* ── Stats Column ── */}
-      {/* Right-aligned reply/like counts — mirrors the lesson/time badges in HomePage.jsx */}
       <div className="flex-shrink-0 flex flex-col items-end gap-[0.45rem] text-[0.78rem] text-[#5a5278] mt-[0.1rem]">
         <span className="flex items-center gap-[0.3rem]">
           <IconReply />
           {thread.replies}
         </span>
-        <span className="flex items-center gap-[0.3rem]">
-          <IconHeart />
+        <button
+          onClick={e => { e.stopPropagation(); if (!upvoting) onUpvote(thread.id); }}
+          disabled={upvoting}
+          className={`flex items-center gap-[0.3rem] bg-transparent border-none p-0 cursor-pointer transition-all duration-200 ${
+            upvoted
+              ? 'text-[#f87171]'
+              : 'text-[#5a5278] hover:text-[#f87171]'
+          } ${upvoting ? 'opacity-50 cursor-not-allowed' : ''}`}
+        >
+          {upvoted ? <IconHeartFilled /> : <IconHeartOutline />}
           {thread.likes}
-        </span>
+        </button>
       </div>
     </div>
   );
@@ -156,6 +175,8 @@ function CreatePostModal({ onClose, onCreated }) {
   const [title,    setTitle]    = useState('');
   const [category, setCategory] = useState(CATEGORIES[1]); // default: first real category
   const [content,  setContent]  = useState('');
+  const [imageFile, setImageFile]     = useState(null);
+  const [imagePreview, setImagePreview] = useState(null);
 
   // Close on Escape — same pattern as CourseModal in LearnPage.jsx
   useEffect(() => {
@@ -173,6 +194,20 @@ function CreatePostModal({ onClose, onCreated }) {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
 
+  function handleFileChange(e) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) { setError('Image must be under 5 MB.'); return; }
+    setImageFile(file);
+    setImagePreview(URL.createObjectURL(file));
+  }
+
+  function removeImage() {
+    setImageFile(null);
+    if (imagePreview) URL.revokeObjectURL(imagePreview);
+    setImagePreview(null);
+  }
+
   async function handleSubmit(e) {
     e.preventDefault();
     setSubmitting(true);
@@ -180,13 +215,24 @@ function CreatePostModal({ onClose, onCreated }) {
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) { setError('You must be logged in to post.'); return; }
+
+      let pictureUrl = null;
+      if (imageFile) {
+        const ext = imageFile.name.split('.').pop();
+        const path = `posts/${session.user.id}/${Date.now()}.${ext}`;
+        const { error: uploadErr } = await supabase.storage.from('posts').upload(path, imageFile);
+        if (uploadErr) throw new Error('Image upload failed: ' + uploadErr.message);
+        const { data: urlData } = supabase.storage.from('posts').getPublicUrl(path);
+        pictureUrl = urlData.publicUrl;
+      }
+
       const res = await fetch(`${API_URL}/api/v1/posts`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${session.access_token}`,
         },
-        body: JSON.stringify({ title, category, description: content }),
+        body: JSON.stringify({ title, category, description: content, picture: pictureUrl }),
       });
       if (!res.ok) {
         const msg = await res.text();
@@ -272,6 +318,46 @@ function CreatePostModal({ onClose, onCreated }) {
             />
           </div>
 
+          {/* Image Upload */}
+          <div className="flex flex-col gap-[0.4rem]">
+            <label className="text-[0.75rem] font-bold text-[#7c6ea8] uppercase tracking-[0.1em]">
+              Image <span className="font-normal text-[#5a5278]">(optional, max 5 MB)</span>
+            </label>
+            {imagePreview ? (
+              <div className="relative">
+                <img
+                  src={imagePreview}
+                  alt="Preview"
+                  className="w-full max-h-[160px] object-cover rounded-lg border border-[rgba(139,92,246,0.15)]"
+                />
+                <button
+                  type="button"
+                  onClick={removeImage}
+                  className="absolute top-2 right-2 w-7 h-7 rounded-full bg-black/70 text-white border-none cursor-pointer flex items-center justify-center hover:bg-red-500/80 transition-colors"
+                >
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M18 6 6 18M6 6l12 12"/>
+                  </svg>
+                </button>
+              </div>
+            ) : (
+              <label className="flex flex-col items-center justify-center gap-2 py-5 rounded-[10px] border border-dashed border-[rgba(139,92,246,0.25)] bg-[rgba(255,255,255,0.02)] cursor-pointer transition-all hover:border-[rgba(139,92,246,0.5)] hover:bg-[rgba(139,92,246,0.04)]">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#7c6ea8" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="3" y="3" width="18" height="18" rx="2"/>
+                  <circle cx="8.5" cy="8.5" r="1.5"/>
+                  <path d="m21 15-5-5L5 21"/>
+                </svg>
+                <span className="text-[0.82rem] text-[#7c6ea8]">Click to upload an image</span>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleFileChange}
+                  className="hidden"
+                />
+              </label>
+            )}
+          </div>
+
           {error && (
             <p className="text-red-400 text-sm m-0">{error}</p>
           )}
@@ -311,28 +397,90 @@ function CreatePostModal({ onClose, onCreated }) {
 // Mounts at /home/community via App.jsx
 // Outer wrapper mirrors LearnPage.jsx: full-width, min-h-screen, px-8 py-8
 export default function CommunityPage() {
+  const navigate = useNavigate();
   const [activeCategory,  setActiveCategory]  = useState('All');
   const [search,          setSearch]          = useState('');
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [posts,           setPosts]           = useState([]);
   const [loading,         setLoading]         = useState(true);
+  const [upvotedIds,      setUpvotedIds]      = useState(new Set());
+  const [upvotingId,      setUpvotingId]      = useState(null);
 
   async function fetchPosts() {
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) return;
-      const res = await fetch(`${API_URL}/api/v1/posts`, {
-        headers: { Authorization: `Bearer ${session.access_token}` },
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setPosts(data);
+      const headers = { Authorization: `Bearer ${session.access_token}` };
+      const [postsRes, upvotesRes] = await Promise.all([
+        fetch(`${API_URL}/api/v1/posts`, { headers }),
+        fetch(`${API_URL}/api/v1/posts/upvotes/me`, { headers }),
+      ]);
+      if (postsRes.ok) {
+        setPosts(await postsRes.json());
+      }
+      if (upvotesRes.ok) {
+        const ids = await upvotesRes.json();
+        setUpvotedIds(new Set(ids));
       }
     } catch { /* keep empty */ }
     finally { setLoading(false); }
   }
 
   useEffect(() => { fetchPosts(); }, []);
+
+  async function handleUpvote(postId) {
+    const wasUpvoted = upvotedIds.has(postId);
+    const delta = wasUpvoted ? -1 : 1;
+    setUpvotingId(postId);
+
+    // Optimistic update
+    setPosts(prev => prev.map(p =>
+      p.postId === postId ? { ...p, upvote: Math.max(0, (p.upvote || 0) + delta) } : p
+    ));
+    setUpvotedIds(prev => {
+      const next = new Set(prev);
+      wasUpvoted ? next.delete(postId) : next.add(postId);
+      return next;
+    });
+
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+      const res = await fetch(`${API_URL}/api/v1/posts/${postId}/upvote`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      });
+      if (res.ok) {
+        // Sync with server's actual count
+        const updated = await res.json();
+        setPosts(prev => prev.map(p =>
+          p.postId === postId ? { ...p, upvote: updated.upvote } : p
+        ));
+      } else {
+        // Revert on error
+        setPosts(prev => prev.map(p =>
+          p.postId === postId ? { ...p, upvote: Math.max(0, (p.upvote || 0) - delta) } : p
+        ));
+        setUpvotedIds(prev => {
+          const next = new Set(prev);
+          wasUpvoted ? next.add(postId) : next.delete(postId);
+          return next;
+        });
+      }
+    } catch {
+      // Revert on network error
+      setPosts(prev => prev.map(p =>
+        p.postId === postId ? { ...p, upvote: Math.max(0, (p.upvote || 0) - delta) } : p
+      ));
+      setUpvotedIds(prev => {
+        const next = new Set(prev);
+        wasUpvoted ? next.add(postId) : next.delete(postId);
+        return next;
+      });
+    } finally {
+      setUpvotingId(null);
+    }
+  }
 
   // Map backend posts to thread-card shape
   const threads = posts.map((p) => ({
@@ -342,10 +490,11 @@ export default function CommunityPage() {
     author: p.authorName || 'Member',
     authorProfilePic: p.authorProfilePic || null,
     timestamp: '',
-    replies: 0,
+    replies: p.commentCount || 0,
     likes: p.upvote || 0,
     isHot: (p.upvote || 0) >= 10,
     preview: p.description || '',
+    picture: p.picture || null,
   }));
 
   const filtered = threads.filter(t =>
@@ -436,7 +585,10 @@ export default function CommunityPage() {
             <ThreadCard
               key={thread.id}
               thread={thread}
-              onClick={() => {}}
+              onClick={() => navigate(`/community/${thread.id}`)}
+              onUpvote={handleUpvote}
+              upvoted={upvotedIds.has(thread.id)}
+              upvoting={upvotingId === thread.id}
             />
           ))}
         </div>
