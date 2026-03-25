@@ -168,6 +168,7 @@ function CreatePostModal({ onClose, onCreated }) {
   const [title,    setTitle]    = useState('');
   const [category, setCategory] = useState(CATEGORIES[1]); // default: first real category
   const [content,  setContent]  = useState('');
+  const [picture,  setPicture]  = useState('');
 
   // Close on Escape — same pattern as CourseModal in LearnPage.jsx
   useEffect(() => {
@@ -198,7 +199,7 @@ function CreatePostModal({ onClose, onCreated }) {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${session.access_token}`,
         },
-        body: JSON.stringify({ title, category, description: content }),
+        body: JSON.stringify({ title, category, description: content, picture: picture || null }),
       });
       if (!res.ok) {
         const msg = await res.text();
@@ -282,6 +283,28 @@ function CreatePostModal({ onClose, onCreated }) {
               onChange={e => setContent(e.target.value)}
               required
             />
+          </div>
+
+          {/* Image URL */}
+          <div className="flex flex-col gap-[0.4rem]">
+            <label className="text-[0.75rem] font-bold text-[#7c6ea8] uppercase tracking-[0.1em]">
+              Image URL <span className="font-normal text-[#5a5278]">(optional)</span>
+            </label>
+            <input
+              className={inputCls}
+              placeholder="Paste an image link..."
+              value={picture}
+              onChange={e => setPicture(e.target.value)}
+            />
+            {picture && (
+              <img
+                src={picture}
+                alt="Preview"
+                className="w-full max-h-[160px] object-cover rounded-lg border border-[rgba(139,92,246,0.15)] mt-1"
+                onError={e => { e.target.style.display = 'none'; }}
+                onLoad={e => { e.target.style.display = 'block'; }}
+              />
+            )}
           </div>
 
           {error && (
