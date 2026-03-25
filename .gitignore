@@ -1,6 +1,4 @@
-# Local run scripts and credentials
-run.bat
-run.sh
+# Local credentials
 **/application-local.properties
 
 # Java / Spring Boot Backend
