@@ -65,6 +65,7 @@ public class PostServiceImpl implements PostService {
         } catch (ResponseStatusException ignored) {
             r.setAuthorName("Unknown");
         }
+        r.setCommentCount(commentRepository.countByPostId(post.getPostId()));
         return r;
     }
 

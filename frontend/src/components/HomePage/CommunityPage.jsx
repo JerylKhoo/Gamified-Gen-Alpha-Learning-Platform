@@ -490,7 +490,7 @@ export default function CommunityPage() {
     author: p.authorName || 'Member',
     authorProfilePic: p.authorProfilePic || null,
     timestamp: '',
-    replies: 0,
+    replies: p.commentCount || 0,
     likes: p.upvote || 0,
     isHot: (p.upvote || 0) >= 10,
     preview: p.description || '',
