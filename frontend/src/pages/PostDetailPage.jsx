@@ -52,6 +52,8 @@ export default function PostDetailPage() {
   const [editing, setEditing] = useState(false);
   const [editTitle, setEditTitle] = useState('');
   const [editDescription, setEditDescription] = useState('');
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   // Comment state
   const [comments, setComments]       = useState([]);
@@ -227,8 +229,8 @@ export default function PostDetailPage() {
     } catch { /* silent */ }
   }
 
-  async function handleDelete() {
-    if (!window.confirm('Are you sure you want to delete this post?')) return;
+  async function confirmDelete() {
+    setDeleting(true);
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) return;
@@ -237,7 +239,9 @@ export default function PostDetailPage() {
         headers: { Authorization: `Bearer ${session.access_token}` },
       });
       if (res.ok) navigate('/community');
-    } catch { /* silent */ }
+    } catch { /* silent */ } finally {
+      setDeleting(false);
+    }
   }
 
   if (loading) {
@@ -329,7 +333,7 @@ export default function PostDetailPage() {
                   </svg>
                 </button>
                 <button
-                  onClick={handleDelete}
+                  onClick={() => setShowDeleteModal(true)}
                   title="Delete post"
                   className="flex items-center justify-center w-8 h-8 rounded-lg bg-transparent border border-[rgba(255,255,255,0.08)] text-[#5a5278] cursor-pointer transition-all hover:border-[rgba(248,113,113,0.4)] hover:text-[#f87171]"
                 >
@@ -597,6 +601,50 @@ export default function PostDetailPage() {
               to   { opacity: 1; transform: scale(1)    translateY(0);   }
             }
           `}</style>
+        </div>
+      )}
+
+      {/* ── Delete Confirmation Modal ── */}
+      {showDeleteModal && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm"
+          onClick={() => !deleting && setShowDeleteModal(false)}
+        >
+          <div
+            className="w-full max-w-[400px] bg-[#0d0f18] border border-[rgba(248,113,113,0.25)] rounded-2xl overflow-hidden shadow-[0_32px_80px_rgba(0,0,0,0.8)]"
+            onClick={e => e.stopPropagation()}
+            style={{ animation: 'modalIn 0.18s cubic-bezier(0.2,0,0.2,1)' }}
+          >
+            <div className="p-6 flex flex-col items-center gap-4 text-center">
+              <div className="w-12 h-12 rounded-full bg-[rgba(248,113,113,0.12)] flex items-center justify-center text-[#f87171]">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="3 6 5 6 21 6"/>
+                  <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+                  <path d="M10 11v6M14 11v6M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
+                </svg>
+              </div>
+              <h3 className="text-[1.1rem] font-extrabold text-[#f0eeff] m-0">Delete Post?</h3>
+              <p className="text-[0.88rem] text-[#9090b0] m-0 leading-relaxed">
+                This action cannot be undone. Your post and all its data will be permanently removed.
+              </p>
+              <div className="flex gap-3 w-full mt-1">
+                <button
+                  onClick={() => setShowDeleteModal(false)}
+                  disabled={deleting}
+                  className="flex-1 px-4 py-2 bg-transparent border border-[rgba(139,92,246,0.2)] text-[#9090b0] rounded-[10px] text-[0.88rem] font-semibold cursor-pointer transition-all hover:border-[rgba(139,92,246,0.4)] hover:text-[#f0eeff] disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={confirmDelete}
+                  disabled={deleting}
+                  className="flex-1 px-4 py-2 bg-[rgba(248,113,113,0.15)] border border-[rgba(248,113,113,0.35)] text-[#f87171] rounded-[10px] text-[0.88rem] font-extrabold cursor-pointer transition-all hover:bg-[rgba(248,113,113,0.25)] disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {deleting ? 'Deleting...' : 'Delete'}
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       )}
     </div>
