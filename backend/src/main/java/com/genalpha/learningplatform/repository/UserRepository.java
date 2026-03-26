@@ -10,7 +10,7 @@ import java.util.UUID;
 
 public interface UserRepository extends JpaRepository<User, UUID> {
 
-    @Modifying
+    @Modifying(clearAutomatically = true)
     @Query("UPDATE User u SET " +
            "u.name       = CASE WHEN :name       IS NOT NULL THEN :name       ELSE u.name       END, " +
            "u.profilePic = CASE WHEN :profilePic IS NOT NULL THEN :profilePic ELSE u.profilePic END " +

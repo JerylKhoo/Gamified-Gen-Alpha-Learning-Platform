@@ -84,7 +84,12 @@ function EditProfileModal({ userData, onClose, onSave }) {
       });
 
       if (res.ok) {
-        onSave(await res.json());
+        const saved = await res.json();
+        onSave({
+          ...saved,
+          ...(name.trim() && { name: name.trim() }),
+          ...(selected && { profilePic: selected }),
+        });
         onClose();
       } else {
         const errText = await res.text();

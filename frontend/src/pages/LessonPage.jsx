@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
 
@@ -71,6 +71,23 @@ export default function LessonPage() {
     navigate(`/course/${encodeURIComponent(courseId)}`);
   }
 
+  const contentRef = useRef(null);
+
+  useEffect(() => {
+    if (contentRef.current && mod?.content) {
+      const el = contentRef.current;
+      el.innerHTML = mod.content;
+      el.querySelectorAll('script').forEach(oldScript => {
+        const newScript = document.createElement('script');
+        [...oldScript.attributes].forEach(attr =>
+          newScript.setAttribute(attr.name, attr.value)
+        );
+        newScript.textContent = oldScript.textContent;
+        oldScript.parentNode.replaceChild(newScript, oldScript);
+      });
+    }
+  }, [mod?.content]);
+
   const currentIndex = allModules.findIndex(m => m.moduleId === moduleId);
   const lessonNumber = currentIndex >= 0 ? currentIndex + 1 : null;
   const totalModules = allModules.length;
@@ -135,10 +152,9 @@ export default function LessonPage() {
 
         <div className="w-full h-px bg-[rgba(255,255,255,0.1)] mb-10" />
 
-        <div
-          className="lesson-content"
-          dangerouslySetInnerHTML={{ __html: mod?.content || '<p>No content available.</p>' }}
-        />
+        <div className="lesson-content" ref={contentRef}>
+          {!mod?.content && <p>No content available.</p>}
+        </div>
 
         <div className="w-full h-px bg-[rgba(255,255,255,0.06)] mt-12 mb-8" />
 
