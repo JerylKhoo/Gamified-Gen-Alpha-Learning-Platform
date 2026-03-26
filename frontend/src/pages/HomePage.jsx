@@ -238,6 +238,7 @@ function resolveBadgeIcon(icon) {
 
 function BadgesSection() {
   const [badges, setBadges] = useState([]);
+  const [hoveredBadge, setHoveredBadge] = useState(null); // { badge, x, y }
 
   useEffect(() => {
     async function fetchBadges() {
@@ -282,9 +283,18 @@ function BadgesSection() {
           <p className="text-[#6b6490] text-sm m-0">Complete courses to earn badges.</p>
         </div>
       ) : (
+        <>
         <div className="flex-1 flex flex-wrap gap-4 p-5 content-center bg-[rgba(255,255,255,0.02)] border border-[rgba(139,92,246,0.12)] rounded-[16px]">
           {badges.map(b => (
-            <div key={b.badgeId} className="flex flex-col items-center gap-2 w-[72px]" title={b.name}>
+            <div
+              key={b.badgeId}
+              className="flex flex-col items-center gap-2 w-[72px] cursor-default"
+              onMouseEnter={e => {
+                const rect = e.currentTarget.getBoundingClientRect();
+                setHoveredBadge({ badge: b, x: rect.left + rect.width / 2, y: rect.top });
+              }}
+              onMouseLeave={() => setHoveredBadge(null)}
+            >
               {b.icon ? (
                 <img src={resolveBadgeIcon(b.icon)} alt={b.name} className="w-14 h-14 object-contain drop-shadow-md" />
               ) : (
@@ -296,6 +306,24 @@ function BadgesSection() {
             </div>
           ))}
         </div>
+        {/* Fixed badge preview portal */}
+        {hoveredBadge && (
+          <div
+            className="pointer-events-none fixed z-[9999] flex flex-col items-center"
+            style={{ left: hoveredBadge.x, top: hoveredBadge.y - 8, transform: 'translate(-50%, -100%)' }}
+          >
+            <div className="bg-[#1a1530] border border-[rgba(139,92,246,0.3)] rounded-[14px] p-4 shadow-[0_8px_32px_rgba(0,0,0,0.7)] flex flex-col items-center gap-3">
+              {hoveredBadge.badge.icon ? (
+                <img src={resolveBadgeIcon(hoveredBadge.badge.icon)} alt={hoveredBadge.badge.name} className="w-48 h-48 object-contain drop-shadow-lg" />
+              ) : (
+                <div className="w-48 h-48 rounded-full bg-gradient-to-br from-[#7c3aed] to-[#a78bfa] flex items-center justify-center text-8xl">🏅</div>
+              )}
+              <span className="text-[0.85rem] text-[#e0d9ff] font-semibold text-center max-w-[160px]">{hoveredBadge.badge.name}</span>
+            </div>
+            <div className="w-3 h-3 bg-[#1a1530] border-r border-b border-[rgba(139,92,246,0.3)] rotate-45 -mt-[6px]" />
+          </div>
+        )}
+        </>
       )}
     </div>
   );
@@ -304,7 +332,7 @@ function BadgesSection() {
 function CourseProgressSection({ courses, earnedBadges, navigate }) {
   if (courses.length === 0) return null;
 
-  const hasStarted = courses.some(c => c.started);
+  const hasStarted = courses.some(c => c.started && c.progress < 100);
 
   if (!hasStarted) {
     return (
@@ -336,7 +364,7 @@ function CourseProgressSection({ courses, earnedBadges, navigate }) {
     <div className="w-full flex-1 flex flex-col">
       <h2 className="text-[1.1rem] font-extrabold text-[#f0eeff] mb-3">My Courses</h2>
       <div className="grid grid-cols-1 gap-3">
-        {courses.filter(c => c.started).map(c => {
+        {courses.filter(c => c.started && c.progress < 100).map(c => {
           const badges = getBadgesForCourse(c.courseId);
           const { bg, pattern } = getVisual(c.courseId);
           return (
@@ -413,14 +441,14 @@ function CourseThumb({ courseId, image, bg, pattern }) {
   );
 }
 
-function JumpBackIn({ course, navigate }) {
+function JumpBackIn({ course }) {
   const { bg, pattern } = getVisual(course.courseId);
   const [imgOk, setImgOk] = useState(!!course.image);
 
   return (
     <div className="w-full">
       <h2 className="text-[1.1rem] font-extrabold text-[#f0eeff] mb-3">
-        {course.started ? 'Jump back in' : 'Start learning'}
+        {course.jumpState === 'in-progress' ? 'Jump back in' : course.jumpState === 'all-completed' ? 'Continue Learning' : 'Start Learning'}
       </h2>
       <div className={`relative rounded-[20px] overflow-hidden h-[200px] bg-gradient-to-br ${bg} cursor-pointer group`}
         onClick={() => window.open(`/course/${encodeURIComponent(course.courseId)}`, '_blank')}>
@@ -460,13 +488,7 @@ function JumpBackIn({ course, navigate }) {
                 onClick={e => { e.stopPropagation(); window.open(`/course/${encodeURIComponent(course.courseId)}`, '_blank'); }}
                 className="px-5 py-2 bg-[#8b5cf6] hover:bg-[#7c3aed] text-white text-sm font-bold rounded-xl border-none cursor-pointer transition-all shadow-[0_4px_18px_rgba(139,92,246,0.5)]"
               >
-                {course.started ? 'Continue Learning' : 'Start Course'}
-              </button>
-              <button
-                onClick={e => { e.stopPropagation(); navigate(`/learn`); }}
-                className="text-white/70 hover:text-white text-sm font-semibold bg-transparent border-none cursor-pointer transition-all"
-              >
-                View course
+                {course.jumpState === 'in-progress' ? 'Continue Learning' : 'Start Course'}
               </button>
             </div>
           </div>
@@ -495,21 +517,25 @@ export default function HomePage() {
         const userId  = session.user.id;
 
         // Fetch everything in parallel
-        const [userRes, coursesRes, progressRes, streakRes, badgesRes, userBadgesRes] = await Promise.all([
-          fetch(`${API_URL}/api/v1/users/${userId}`,      { headers }),
-          fetch(`${API_URL}/api/v1/courses`,              { headers }),
-          fetch(`${API_URL}/api/v1/quiz-progress/me`,     { headers }),
-          fetch(`${API_URL}/api/v1/streaks/me`,           { headers }),
-          fetch(`${API_URL}/api/v1/badges`,               { headers }),
-          fetch(`${API_URL}/api/v1/user-badges/me`,       { headers }),
+        const [userRes, coursesRes, progressRes, streakRes, badgesRes, userBadgesRes, courseProgressRes, coursesWithModulesRes] = await Promise.all([
+          fetch(`${API_URL}/api/v1/users/${userId}`,        { headers }),
+          fetch(`${API_URL}/api/v1/courses`,                { headers }),
+          fetch(`${API_URL}/api/v1/quiz-progress/me`,       { headers }),
+          fetch(`${API_URL}/api/v1/streaks/me`,             { headers }),
+          fetch(`${API_URL}/api/v1/badges`,                 { headers }),
+          fetch(`${API_URL}/api/v1/user-badges/me`,         { headers }),
+          fetch(`${API_URL}/api/v1/course-progress/me`,     { headers }),
+          fetch(`${API_URL}/api/v1/courses-with-modules`,   { headers }),
         ]);
 
-        const user       = userRes.ok       ? await userRes.json()       : null;
-        const allCourses = coursesRes.ok    ? await coursesRes.json()    : [];
-        const progress   = progressRes.ok   ? await progressRes.json()   : [];
-        const streak     = streakRes.ok     ? await streakRes.json()     : null;
-        const allBadges  = badgesRes.ok     ? await badgesRes.json()     : [];
-        const userBadges = userBadgesRes.ok ? await userBadgesRes.json() : [];
+        const user               = userRes.ok               ? await userRes.json()               : null;
+        const allCourses         = coursesRes.ok            ? await coursesRes.json()            : [];
+        const progress           = progressRes.ok           ? await progressRes.json()           : [];
+        const streak             = streakRes.ok             ? await streakRes.json()             : null;
+        const allBadges          = badgesRes.ok             ? await badgesRes.json()             : [];
+        const userBadges         = userBadgesRes.ok         ? await userBadgesRes.json()         : [];
+        const courseProgress     = courseProgressRes.ok     ? await courseProgressRes.json()     : [];
+        const coursesWithModules = coursesWithModulesRes.ok ? await coursesWithModulesRes.json() : [];
 
         // badgeId → full badge details, filtered to only earned ones
         const badgeDetailsMap = Object.fromEntries(allBadges.map(b => [b.badgeId, b]));
@@ -522,21 +548,30 @@ export default function HomePage() {
 
         setUserData(user);
 
-        // courseId → course lookup
-        const courseMap = Object.fromEntries(allCourses.map(c => [c.courseId, c]));
+        // courseId → total module count
+        const totalModulesMap = Object.fromEntries(
+          coursesWithModules.map(c => [c.courseId, c.modules?.length ?? 0])
+        );
 
-        // courseId → theta from quiz progress
-        const thetaMap = {};
-        for (const p of progress) {
-          try {
-            const state = JSON.parse(p.adaptiveScore || '{}');
-            thetaMap[p.courseId] = typeof state.theta === 'number' ? state.theta : -3;
-          } catch { thetaMap[p.courseId] = -3; }
+        // courseId → completed module count
+        const completedModulesMap = {};
+        for (const p of courseProgress) {
+          completedModulesMap[p.courseId] = (completedModulesMap[p.courseId] ?? 0) + 1;
         }
-        const thetaToPercent = t => Math.round(Math.max(0, Math.min(100, ((t + 3) / 6) * 100)));
 
-        // All courses with progress — started ones first
-        const startedIds = new Set(progress.map(p => p.courseId));
+        // Progress = (completedModules + quizCompleted) / (totalModules + 1)
+        const quizStartedIds   = new Set(progress.map(p => p.courseId));
+        const moduleStartedIds = new Set(courseProgress.map(p => p.courseId));
+        const startedIds       = new Set([...quizStartedIds, ...moduleStartedIds]);
+
+        const moduleProgress = (courseId) => {
+          const total = totalModulesMap[courseId] ?? 0;
+          if (total === 0) return 0;
+          const completedMods = completedModulesMap[courseId] ?? 0;
+          const quizDone = quizStartedIds.has(courseId) ? 1 : 0;
+          return Math.round(((completedMods + quizDone) / (total + 1)) * 100);
+        };
+
         const sorted = [
           ...allCourses.filter(c => startedIds.has(c.courseId)),
           ...allCourses.filter(c => !startedIds.has(c.courseId)),
@@ -545,25 +580,35 @@ export default function HomePage() {
           courseId: c.courseId,
           name:     formatLessonId(c.courseId),
           image:    c.image ?? null,
-          progress: thetaToPercent(thetaMap[c.courseId] ?? -3),
+          progress: moduleProgress(c.courseId),
           started:  startedIds.has(c.courseId),
         }));
         setCourses(courseList);
 
-        // Current course: last touched by lastUpdate, fallback to first available
-        const lastRecord = progress.length > 0
-          ? [...progress].sort((a, b) => new Date(b.lastUpdate || 0) - new Date(a.lastUpdate || 0))[0]
-          : null;
-        const activeCourseId = lastRecord?.courseId ?? allCourses[0]?.courseId ?? null;
-        if (activeCourseId && courseMap[activeCourseId]) {
-          const c = courseMap[activeCourseId];
-          setCurrentCourse({
-            courseId: c.courseId,
-            name:     formatLessonId(c.courseId),
-            image:    c.image ?? null,
-            progress: thetaToPercent(thetaMap[activeCourseId] ?? -3),
-            started:  !!lastRecord,
-          });
+        // Determine Jump Back In state
+        const inProgressCourses = courseList.filter(c => c.started && c.progress < 100);
+        const notStartedCourses = courseList.filter(c => !c.started);
+
+        let jumpCourse = null;
+        let jumpState  = 'not-started';
+
+        if (inProgressCourses.length > 0) {
+          // State 2: show in-progress course with highest progress
+          jumpCourse = inProgressCourses.reduce((best, c) => c.progress > best.progress ? c : best);
+          jumpState  = 'in-progress';
+        } else if (startedIds.size > 0) {
+          // State 3: all started courses are completed, show a not-yet-started course
+          const fallback = notStartedCourses[0] ?? courseList[0] ?? null;
+          jumpCourse = fallback;
+          jumpState  = 'all-completed';
+        } else {
+          // State 1: nothing started, show first available course
+          jumpCourse = courseList[0] ?? null;
+          jumpState  = 'not-started';
+        }
+
+        if (jumpCourse) {
+          setCurrentCourse({ ...jumpCourse, jumpState });
         }
       } catch (err) {
         console.error('HomePage fetch error:', err);
