@@ -171,6 +171,26 @@ CREATE TABLE IF NOT EXISTS public.POST_UPVOTES (
     UNIQUE(Post_ID, User_ID)
 );
 
+-- COMMENTS
+CREATE TABLE IF NOT EXISTS public.COMMENTS (
+    comment_id  UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+    post_id     UUID        NOT NULL REFERENCES public.POSTS(Post_ID) ON DELETE CASCADE,
+    user_id     UUID        NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+    body        TEXT        NOT NULL,
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- POST_REPORTS
+CREATE TABLE IF NOT EXISTS public.POST_REPORTS (
+    id          UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+    post_id     UUID        NOT NULL REFERENCES public.POSTS(Post_ID) ON DELETE CASCADE,
+    user_id     UUID        NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+    reason      VARCHAR(255) NOT NULL,
+    description TEXT,
+    UNIQUE (post_id, user_id)
+);
+
+
 -- ============================================================
 -- TRIGGER: Update streak on Quiz_Progress insert / update
 -- ============================================================
@@ -385,6 +405,8 @@ ALTER TABLE public.QUIZ_PROGRESS    ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.COURSE_PROGRESS  ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.CHAT_BOT         ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.POST_UPVOTES     ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.COMMENTS         ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.POST_REPORTS     ENABLE ROW LEVEL SECURITY;
 
 
 -- ============================================================
@@ -445,6 +467,37 @@ CREATE POLICY "post_upvotes_select_public"
 CREATE POLICY "post_upvotes_insert_authenticated"
     ON public.POST_UPVOTES FOR INSERT
     WITH CHECK (auth.uid() = User_ID);
+
+CREATE POLICY "post_upvotes_delete_own"
+    ON public.POST_UPVOTES FOR DELETE
+    USING (auth.uid() = User_ID);
+
+
+-- --------------------------------------------------------
+-- COMMENTS policies
+-- --------------------------------------------------------
+
+CREATE POLICY "comments_select_all"
+    ON public.COMMENTS FOR SELECT
+    USING (true);
+
+CREATE POLICY "comments_insert_own"
+    ON public.COMMENTS FOR INSERT
+    WITH CHECK (auth.uid() = user_id);
+
+
+-- --------------------------------------------------------
+-- POST_REPORTS policies
+-- --------------------------------------------------------
+
+CREATE POLICY "post_reports_insert_own"
+    ON public.POST_REPORTS FOR INSERT
+    WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "post_reports_select_own"
+    ON public.POST_REPORTS FOR SELECT
+    USING (auth.uid() = user_id);
+
 
 -- --------------------------------------------------------
 -- USER policies
@@ -639,6 +692,11 @@ CREATE POLICY "posts_collaborator_write"
         bucket_id = 'posts'
         AND public.current_user_role() IN ('Collaborator', 'Admin')
     );
+
+CREATE POLICY "allow_authenticated_uploads_on_posts"
+    ON storage.objects FOR INSERT
+    TO authenticated
+    WITH CHECK (bucket_id = 'posts');
 
 -- course: authenticated read, admin write
 CREATE POLICY "course_auth_read"
