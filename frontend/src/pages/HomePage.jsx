@@ -413,14 +413,14 @@ function CourseThumb({ courseId, image, bg, pattern }) {
   );
 }
 
-function JumpBackIn({ course, navigate }) {
+function JumpBackIn({ course }) {
   const { bg, pattern } = getVisual(course.courseId);
   const [imgOk, setImgOk] = useState(!!course.image);
 
   return (
     <div className="w-full">
       <h2 className="text-[1.1rem] font-extrabold text-[#f0eeff] mb-3">
-        {course.started ? 'Jump back in' : 'Start learning'}
+        {course.jumpState === 'in-progress' ? 'Jump back in' : course.jumpState === 'all-completed' ? 'Continue Learning' : 'Start Learning'}
       </h2>
       <div className={`relative rounded-[20px] overflow-hidden h-[200px] bg-gradient-to-br ${bg} cursor-pointer group`}
         onClick={() => window.open(`/course/${encodeURIComponent(course.courseId)}`, '_blank')}>
@@ -460,13 +460,7 @@ function JumpBackIn({ course, navigate }) {
                 onClick={e => { e.stopPropagation(); window.open(`/course/${encodeURIComponent(course.courseId)}`, '_blank'); }}
                 className="px-5 py-2 bg-[#8b5cf6] hover:bg-[#7c3aed] text-white text-sm font-bold rounded-xl border-none cursor-pointer transition-all shadow-[0_4px_18px_rgba(139,92,246,0.5)]"
               >
-                {course.started ? 'Continue Learning' : 'Start Course'}
-              </button>
-              <button
-                onClick={e => { e.stopPropagation(); navigate(`/learn`); }}
-                className="text-white/70 hover:text-white text-sm font-semibold bg-transparent border-none cursor-pointer transition-all"
-              >
-                View course
+                {course.jumpState === 'in-progress' ? 'Continue Learning' : 'Start Course'}
               </button>
             </div>
           </div>
@@ -526,9 +520,6 @@ export default function HomePage() {
 
         setUserData(user);
 
-        // courseId → course lookup
-        const courseMap = Object.fromEntries(allCourses.map(c => [c.courseId, c]));
-
         // courseId → total module count
         const totalModulesMap = Object.fromEntries(
           coursesWithModules.map(c => [c.courseId, c.modules?.length ?? 0])
@@ -566,20 +557,30 @@ export default function HomePage() {
         }));
         setCourses(courseList);
 
-        // Current course: last touched by lastUpdate, fallback to first available
-        const lastRecord = progress.length > 0
-          ? [...progress].sort((a, b) => new Date(b.lastUpdate || 0) - new Date(a.lastUpdate || 0))[0]
-          : null;
-        const activeCourseId = lastRecord?.courseId ?? allCourses[0]?.courseId ?? null;
-        if (activeCourseId && courseMap[activeCourseId]) {
-          const c = courseMap[activeCourseId];
-          setCurrentCourse({
-            courseId: c.courseId,
-            name:     formatLessonId(c.courseId),
-            image:    c.image ?? null,
-            progress: moduleProgress(activeCourseId),
-            started:  !!lastRecord,
-          });
+        // Determine Jump Back In state
+        const inProgressCourses = courseList.filter(c => c.started && c.progress < 100);
+        const notStartedCourses = courseList.filter(c => !c.started);
+
+        let jumpCourse = null;
+        let jumpState  = 'not-started';
+
+        if (inProgressCourses.length > 0) {
+          // State 2: show in-progress course with highest progress
+          jumpCourse = inProgressCourses.reduce((best, c) => c.progress > best.progress ? c : best);
+          jumpState  = 'in-progress';
+        } else if (startedIds.size > 0) {
+          // State 3: all started courses are completed, show a not-yet-started course
+          const fallback = notStartedCourses[0] ?? courseList[0] ?? null;
+          jumpCourse = fallback;
+          jumpState  = 'all-completed';
+        } else {
+          // State 1: nothing started, show first available course
+          jumpCourse = courseList[0] ?? null;
+          jumpState  = 'not-started';
+        }
+
+        if (jumpCourse) {
+          setCurrentCourse({ ...jumpCourse, jumpState });
         }
       } catch (err) {
         console.error('HomePage fetch error:', err);
