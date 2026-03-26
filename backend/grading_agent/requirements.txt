@@ -6,3 +6,4 @@ python-dotenv
 slowapi
 pyjwt
 google-genai
+#work in progress

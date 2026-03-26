@@ -7,13 +7,12 @@ import re
 import io
 import wave
 
-from fastapi import FastAPI, Request, HTTPException, Depends
+from fastapi import FastAPI, Request
 from fastapi.responses import StreamingResponse
 
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
-
 from pydantic import BaseModel, field_validator
 from groq import Groq
 from google import genai
@@ -25,17 +24,17 @@ load_dotenv()
 
 #external
 redis_client = redis.Redis(
-    host='redis-16449.c334.asia-southeast2-1.gce.cloud.redislabs.com',
-    port=16449,
+    host=os.getenv("redis_host"),
+    port=os.getenv("redis_port"),
     decode_responses=True,
     username="default",
     password=os.getenv("redis_password")
 )
 client = Groq(api_key=os.getenv("GROQ_API_KEY"))
+google_client = genai.Client(api_key=os.getenv("GOOGLE_API_KEY"))
 
 #initialisation
 app = FastAPI()
-# lambda request: request.state.user_id
 limiter = Limiter(key_func=get_remote_address)
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
@@ -82,7 +81,8 @@ def build_messages(system_prompt, recent, user_input):
     return messages
 
 #chat history management
-def save_recent(session_id, recent):
+def save_recent(session_id, recent) -> None:
+    #redis data: "chat:session_id"
     safe_redis_set(
         f"chat:{session_id}:recent",
         json.dumps(recent),
@@ -108,20 +108,96 @@ def update_memory(session_id, recent, new_user_msg, new_assistant_msg):
 
     save_recent(session_id, recent)
 
-def strip_markdown(text: str) -> str:
+#TODO: switch frfr/iirc/fr/gng/gg etc into like WORDS
+def reconstruct(text: str) -> str:
     text = re.sub(r"```.*?```", "", text, flags=re.DOTALL)
     text = re.sub(r"`([^`]*)`", r"\1", text)
     text = re.sub(r"[*_#>-]", "", text)
 
     return text
 
+#grading helper
+def grading_conversation(session_id):
+    with open("./grading_agent.md") as f:
+        system_prompt = f.read()
+    
+    messages = [{"role": "system", "content": system_prompt}]
+    conversation = redis_client.get(f"chat:{session_id}:recent")
+    messages.append({"role": "user", "content": conversation})
+
+    return messages
+
+#supabase client
+from supabase import create_client
+import datetime
+
+SUPABASE_URL = os.getenv("SUPABASE_URL")
+SUPABASE_ANON_KEY = os.getenv("SUPABASE_KEY")
+supabase = create_client(SUPABASE_URL, SUPABASE_ANON_KEY)
+
+#TODO: change the input --> prereq: grading agent
+def save_conversation_to_supabase(session_id, user_message, full_response, score):
+    #1: resolve chat_id
+    #2: resolve to user_id (ui side)
+    #3: get score from grading json ["score"]
+        #score is out of 40, convert it into percentage
+    #4: chat history from recent
+
+    data = {
+        "session_id": session_id,
+        "chat_hitory": full_response,
+        "created_at": datetime.utcnow().isoformat(),  # store UTC timestamp
+        "score": score
+    }
+
+    #5: update persistent data
+    response = supabase.table("conversations").insert(data).execute()
+
+    if response.status_code == 201:  # inserted successfully
+        print("Conversation saved successfully!")
+    else:
+        print("Failed to save conversation:", response.data)
+
+import time
+import threading
+
 @app.post("/chat")
 @limiter.limit("20/minute")
-# session_id: str = Depends(get_session_id)
 def chat(request: Request, req: ChatRequest):
-    # request.state.user_id = session_id
     recent = load_memory(req.session_id)
     messages = build_messages(SYSTEM_PROMPT, recent, req.message)
+
+    def grading_agent(session_id):
+            try:
+                conversation = grading_conversation(session_id)
+                response = client.chat.completions.create(
+                            model="llama-3.3-70b-versatile",
+                            messages=conversation,
+                            temperature=0.7,
+                            max_tokens=500,
+                            stream=True
+                        )
+
+                full_response = ""
+
+                for chunk in response:
+                        content = chunk.choices[0].delta.content or ""
+                        full_response += content
+
+                print(full_response)
+                safe_redis_set(f"chat:{session_id}:score", full_response, ex=86400)
+            except Exception as e:
+                print(f"[grading_agent] error for {session_id}:", e)
+
+    #daemon checking if convo has ended
+    def checking_for_is_ended(session_id):
+        is_ended = redis_client.get(f"chat:{session_id}:active") is None
+
+        while not is_ended:
+            time.sleep(5)
+            is_ended = redis_client.get(f"chat:{session_id}:active") is None
+        
+        grading_agent(session_id)
 
     stream = client.chat.completions.create(
         model="llama-3.3-70b-versatile",
@@ -132,6 +208,19 @@ def chat(request: Request, req: ChatRequest):
     )
     
     def generate():
+        safe_redis_set(
+            f"chat:{req.session_id}:active",
+            "active",
+            ex=180
+        )
+
+        t = threading.Thread(
+            target=checking_for_is_ended,
+            args=(req.session_id,),
+            daemon=True
+        )
+        t.start()
+        
         full_response = ""
 
         for chunk in stream:
@@ -141,16 +230,16 @@ def chat(request: Request, req: ChatRequest):
         
         update_memory(req.session_id, recent, req.message, full_response)
 
-        voice_msg = strip_markdown(full_response)
+        voice_msg = reconstruct(full_response)
         safe_redis_set(
             f"chat:{req.session_id}:voice",
             voice_msg,
             ex=86400
         )
-    
+
     return StreamingResponse(generate(), media_type="text/plain")
 
-#tts side
+#tts helpers
 class TTSRequest(BaseModel):
     session_id: str
 
@@ -171,52 +260,28 @@ def pcm_to_wav(pcm_data: bytes, sample_rate: int = 24000, channels: int = 1, sam
         wav_file.writeframes(pcm_data)
     return buffer.getvalue()
 
-google_client = genai.Client(api_key=os.getenv("GOOGLE_API_KEY"))
-
 @app.post("/tts")
 @limiter.limit("10/minute")
 def tts(request: Request, req: TTSRequest):
     voice_msg = load_voice_message(req.session_id)
-    logging.debug(f"TTS input: '{voice_msg}'")
 
-    if not voice_msg:
-        raise HTTPException(status_code=404, detail="No voice messages found")
     
-    # contents = [
-    #     types.Content(
-    #         role="user",
-    #         parts=[
-    #             types.Part.from_text(text="""Read aloud in a warm and friendly tone: 
-    #             """),
-    #         ],
-    #     ),
-    # ]
-
-    try:
-        response = google_client.models.generate_content(
-            model="gemini-2.5-flash-preview-tts",
-            contents=voice_msg,
-            config=types.GenerateContentConfig(
-                response_modalities=["AUDIO"],
-                speech_config=types.SpeechConfig(
-                    voice_config=types.VoiceConfig(
-                        prebuilt_voice_config=types.PrebuiltVoiceConfig(
-                            voice_name="Leda"
-                        )
+    response = google_client.models.generate_content(
+        model="gemini-2.5-flash-preview-tts",
+        contents=voice_msg,
+        config=types.GenerateContentConfig(
+            response_modalities=["AUDIO"],
+            speech_config=types.SpeechConfig(
+                voice_config=types.VoiceConfig(
+                    prebuilt_voice_config=types.PrebuiltVoiceConfig(
+                        voice_name="Leda"
                     )
                 )
             )
         )
+    )
 
-        pcm_data = response.candidates[0].content.parts[0].inline_data.data
-        wav_data = pcm_to_wav(pcm_data)
+    pcm_data = response.candidates[0].content.parts[0].inline_data.data
+    wav_data = pcm_to_wav(pcm_data)
 
-        return StreamingResponse(
-            io.BytesIO(wav_data),
-            media_type="audio/wav"
-        )
-
-
-    except Exception as e:
-        logging.error(f"TTS failed: {e}")
-        raise HTTPException(status_code=500, detail="TTS generation failed")
+    return StreamingResponse(io.BytesIO(wav_data), media_type="audio/wav")
