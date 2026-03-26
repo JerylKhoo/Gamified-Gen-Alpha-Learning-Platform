@@ -304,7 +304,7 @@ function BadgesSection() {
 function CourseProgressSection({ courses, earnedBadges, navigate }) {
   if (courses.length === 0) return null;
 
-  const hasStarted = courses.some(c => c.started);
+  const hasStarted = courses.some(c => c.started && c.progress < 100);
 
   if (!hasStarted) {
     return (
@@ -336,7 +336,7 @@ function CourseProgressSection({ courses, earnedBadges, navigate }) {
     <div className="w-full flex-1 flex flex-col">
       <h2 className="text-[1.1rem] font-extrabold text-[#f0eeff] mb-3">My Courses</h2>
       <div className="grid grid-cols-1 gap-3">
-        {courses.filter(c => c.started).map(c => {
+        {courses.filter(c => c.started && c.progress < 100).map(c => {
           const badges = getBadgesForCourse(c.courseId);
           const { bg, pattern } = getVisual(c.courseId);
           return (
@@ -495,21 +495,25 @@ export default function HomePage() {
         const userId  = session.user.id;
 
         // Fetch everything in parallel
-        const [userRes, coursesRes, progressRes, streakRes, badgesRes, userBadgesRes] = await Promise.all([
-          fetch(`${API_URL}/api/v1/users/${userId}`,      { headers }),
-          fetch(`${API_URL}/api/v1/courses`,              { headers }),
-          fetch(`${API_URL}/api/v1/quiz-progress/me`,     { headers }),
-          fetch(`${API_URL}/api/v1/streaks/me`,           { headers }),
-          fetch(`${API_URL}/api/v1/badges`,               { headers }),
-          fetch(`${API_URL}/api/v1/user-badges/me`,       { headers }),
+        const [userRes, coursesRes, progressRes, streakRes, badgesRes, userBadgesRes, courseProgressRes, coursesWithModulesRes] = await Promise.all([
+          fetch(`${API_URL}/api/v1/users/${userId}`,        { headers }),
+          fetch(`${API_URL}/api/v1/courses`,                { headers }),
+          fetch(`${API_URL}/api/v1/quiz-progress/me`,       { headers }),
+          fetch(`${API_URL}/api/v1/streaks/me`,             { headers }),
+          fetch(`${API_URL}/api/v1/badges`,                 { headers }),
+          fetch(`${API_URL}/api/v1/user-badges/me`,         { headers }),
+          fetch(`${API_URL}/api/v1/course-progress/me`,     { headers }),
+          fetch(`${API_URL}/api/v1/courses-with-modules`,   { headers }),
         ]);
 
-        const user       = userRes.ok       ? await userRes.json()       : null;
-        const allCourses = coursesRes.ok    ? await coursesRes.json()    : [];
-        const progress   = progressRes.ok   ? await progressRes.json()   : [];
-        const streak     = streakRes.ok     ? await streakRes.json()     : null;
-        const allBadges  = badgesRes.ok     ? await badgesRes.json()     : [];
-        const userBadges = userBadgesRes.ok ? await userBadgesRes.json() : [];
+        const user               = userRes.ok               ? await userRes.json()               : null;
+        const allCourses         = coursesRes.ok            ? await coursesRes.json()            : [];
+        const progress           = progressRes.ok           ? await progressRes.json()           : [];
+        const streak             = streakRes.ok             ? await streakRes.json()             : null;
+        const allBadges          = badgesRes.ok             ? await badgesRes.json()             : [];
+        const userBadges         = userBadgesRes.ok         ? await userBadgesRes.json()         : [];
+        const courseProgress     = courseProgressRes.ok     ? await courseProgressRes.json()     : [];
+        const coursesWithModules = coursesWithModulesRes.ok ? await coursesWithModulesRes.json() : [];
 
         // badgeId → full badge details, filtered to only earned ones
         const badgeDetailsMap = Object.fromEntries(allBadges.map(b => [b.badgeId, b]));
@@ -525,18 +529,30 @@ export default function HomePage() {
         // courseId → course lookup
         const courseMap = Object.fromEntries(allCourses.map(c => [c.courseId, c]));
 
-        // courseId → theta from quiz progress
-        const thetaMap = {};
-        for (const p of progress) {
-          try {
-            const state = JSON.parse(p.adaptiveScore || '{}');
-            thetaMap[p.courseId] = typeof state.theta === 'number' ? state.theta : -3;
-          } catch { thetaMap[p.courseId] = -3; }
-        }
-        const thetaToPercent = t => Math.round(Math.max(0, Math.min(100, ((t + 3) / 6) * 100)));
+        // courseId → total module count
+        const totalModulesMap = Object.fromEntries(
+          coursesWithModules.map(c => [c.courseId, c.modules?.length ?? 0])
+        );
 
-        // All courses with progress — started ones first
-        const startedIds = new Set(progress.map(p => p.courseId));
+        // courseId → completed module count
+        const completedModulesMap = {};
+        for (const p of courseProgress) {
+          completedModulesMap[p.courseId] = (completedModulesMap[p.courseId] ?? 0) + 1;
+        }
+
+        // Progress = (completedModules + quizCompleted) / (totalModules + 1)
+        const quizStartedIds   = new Set(progress.map(p => p.courseId));
+        const moduleStartedIds = new Set(courseProgress.map(p => p.courseId));
+        const startedIds       = new Set([...quizStartedIds, ...moduleStartedIds]);
+
+        const moduleProgress = (courseId) => {
+          const total = totalModulesMap[courseId] ?? 0;
+          if (total === 0) return 0;
+          const completedMods = completedModulesMap[courseId] ?? 0;
+          const quizDone = quizStartedIds.has(courseId) ? 1 : 0;
+          return Math.round(((completedMods + quizDone) / (total + 1)) * 100);
+        };
+
         const sorted = [
           ...allCourses.filter(c => startedIds.has(c.courseId)),
           ...allCourses.filter(c => !startedIds.has(c.courseId)),
@@ -545,7 +561,7 @@ export default function HomePage() {
           courseId: c.courseId,
           name:     formatLessonId(c.courseId),
           image:    c.image ?? null,
-          progress: thetaToPercent(thetaMap[c.courseId] ?? -3),
+          progress: moduleProgress(c.courseId),
           started:  startedIds.has(c.courseId),
         }));
         setCourses(courseList);
@@ -561,7 +577,7 @@ export default function HomePage() {
             courseId: c.courseId,
             name:     formatLessonId(c.courseId),
             image:    c.image ?? null,
-            progress: thetaToPercent(thetaMap[activeCourseId] ?? -3),
+            progress: moduleProgress(activeCourseId),
             started:  !!lastRecord,
           });
         }
