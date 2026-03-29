@@ -98,6 +98,23 @@ public class PostController {
                 .body(postService.addComment(postId, requesterId, comment.getBody()));
     }
 
+    @Operation(summary = "Update own comment")
+    @PatchMapping("/comments/{commentId}")
+    public ResponseEntity<Comment> updateComment(@PathVariable UUID commentId,
+                                                  @RequestBody Comment comment,
+                                                  Authentication authentication) {
+        UUID requesterId = UUID.fromString(authentication.getName());
+        return ResponseEntity.ok(postService.updateComment(commentId, comment.getBody(), requesterId));
+    }
+
+    @Operation(summary = "Delete own comment")
+    @DeleteMapping("/comments/{commentId}")
+    public ResponseEntity<Void> deleteComment(@PathVariable UUID commentId, Authentication authentication) {
+        UUID requesterId = UUID.fromString(authentication.getName());
+        postService.deleteComment(commentId, requesterId);
+        return ResponseEntity.noContent().build();
+    }
+
     @Operation(summary = "Update own post")
     @PutMapping("/{postId}")
     public ResponseEntity<Post> update(@PathVariable UUID postId,

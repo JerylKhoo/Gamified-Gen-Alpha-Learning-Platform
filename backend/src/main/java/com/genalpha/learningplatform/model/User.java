@@ -31,4 +31,7 @@ public class User {
 
     @Column(nullable = false)
     private String role = "User";
+
+    @Column(name = "report_count")
+    private Integer reportCount = 0;
 }

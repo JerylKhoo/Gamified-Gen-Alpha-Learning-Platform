@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabaseClient';
+import { useAuth } from '../../context/AuthContext';
 
 const API_URL = import.meta.env.VITE_API_URL;
 
@@ -398,6 +399,7 @@ function CreatePostModal({ onClose, onCreated }) {
 // Outer wrapper mirrors LearnPage.jsx: full-width, min-h-screen, px-8 py-8
 export default function CommunityPage() {
   const navigate = useNavigate();
+  const { isContributor } = useAuth();
   const [activeCategory,  setActiveCategory]  = useState('All');
   const [search,          setSearch]          = useState('');
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -517,14 +519,16 @@ export default function CommunityPage() {
           </p>
         </div>
 
-        {/* "Create Post" — primary gradient button, mirrors "Lock In" in HomePage.jsx */}
-        <button
-          onClick={() => setShowCreateModal(true)}
-          className="flex-shrink-0 flex items-center gap-2 px-5 py-[0.6rem] bg-gradient-to-br from-[#7c3aed] to-[#4f46e5] text-white rounded-xl text-[0.9rem] font-extrabold cursor-pointer shadow-[0_4px_20px_rgba(124,58,237,0.35)] transition-all hover:-translate-y-0.5 hover:shadow-[0_8px_28px_rgba(124,58,237,0.5)] border-none"
-        >
-          <IconPlus />
-          Create Post
-        </button>
+        {/* "Create Post" — only visible for contributors and admins */}
+        {isContributor && (
+          <button
+            onClick={() => setShowCreateModal(true)}
+            className="flex-shrink-0 flex items-center gap-2 px-5 py-[0.6rem] bg-gradient-to-br from-[#7c3aed] to-[#4f46e5] text-white rounded-xl text-[0.9rem] font-extrabold cursor-pointer shadow-[0_4px_20px_rgba(124,58,237,0.35)] transition-all hover:-translate-y-0.5 hover:shadow-[0_8px_28px_rgba(124,58,237,0.5)] border-none"
+          >
+            <IconPlus />
+            Create Post
+          </button>
+        )}
       </div>
 
       {/* ── Community Stats Bar ──────────────────────────────────────────────── */}

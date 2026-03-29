@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabaseClient';
+import { useAuth } from '../../context/AuthContext';
 
 const navItems = [
   {
@@ -48,6 +49,7 @@ export default function Sidebar() {
   const [profileOpen, setProfileOpen] = useState(false);
   const profileRef = useRef(null);
   const navigate = useNavigate();
+  const { isAdmin } = useAuth();
 
   useEffect(() => {
     function handleClickOutside(e) {
@@ -103,6 +105,21 @@ export default function Sidebar() {
             {!collapsed && <span className="max-sm:hidden">{label}</span>}
           </NavLink>
         ))}
+        {isAdmin && (
+          <NavLink
+            to="/admin"
+            end
+            className={({ isActive }) => itemCls(isActive)}
+            title={collapsed ? 'Admin' : undefined}
+          >
+            <span className="flex items-center flex-shrink-0">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 15v2m-6 4h12a2 2 0 0 0 2-2v-6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2zm10-10V7a4 4 0 0 0-8 0v4h8z"/>
+              </svg>
+            </span>
+            {!collapsed && <span className="max-sm:hidden">Admin</span>}
+          </NavLink>
+        )}
       </nav>
 
       {/* Bottom profile */}

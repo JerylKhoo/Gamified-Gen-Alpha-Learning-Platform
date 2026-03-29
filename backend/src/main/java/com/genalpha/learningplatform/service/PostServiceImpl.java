@@ -87,6 +87,9 @@ public class PostServiceImpl implements PostService {
 
     @Override
     public Post create(Post post, UUID requesterId) {
+        if (!userService.isContributorOrAbove(requesterId)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only contributors and admins can create posts");
+        }
         post.setPostId(null);
         post.setUserId(requesterId);
         post.setReportCount(0);
@@ -98,8 +101,9 @@ public class PostServiceImpl implements PostService {
     public Post update(UUID postId, Post updates, UUID requesterId) {
         Post post = getById(postId);
         boolean isAdmin = userService.isAdmin(requesterId);
-        if (!isAdmin && !post.getUserId().equals(requesterId)) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Cannot edit another user's post");
+        boolean isOwner = post.getUserId().equals(requesterId);
+        if (!isAdmin && (!isOwner || !userService.isContributorOrAbove(requesterId))) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only contributors and admins can edit posts");
         }
         if (updates.getPicture() != null)     post.setPicture(updates.getPicture());
         if (updates.getDescription() != null) post.setDescription(updates.getDescription());
@@ -141,7 +145,12 @@ public class PostServiceImpl implements PostService {
 
         Post post = getById(postId);
         post.setReportCount((int) postReportRepository.countByPostId(postId));
-        return postRepository.save(post);
+        postRepository.save(post);
+
+        // Increment the post author's total report count
+        userService.incrementReportCount(post.getUserId());
+
+        return post;
     }
 
     @Override
@@ -160,8 +169,9 @@ public class PostServiceImpl implements PostService {
     public void delete(UUID postId, UUID requesterId) {
         Post post = getById(postId);
         boolean isAdmin = userService.isAdmin(requesterId);
-        if (!isAdmin && !post.getUserId().equals(requesterId)) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Cannot delete another user's post");
+        boolean isOwner = post.getUserId().equals(requesterId);
+        if (!isAdmin && (!isOwner || !userService.isContributorOrAbove(requesterId))) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only contributors and admins can delete posts");
         }
         postRepository.delete(post);
     }
@@ -181,6 +191,29 @@ public class PostServiceImpl implements PostService {
         comment.setUserId(requesterId);
         comment.setBody(body);
         return commentRepository.save(comment);
+    }
+
+    @Override
+    public Comment updateComment(UUID commentId, String body, UUID requesterId) {
+        Comment comment = commentRepository.findById(commentId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Comment not found"));
+        boolean isAdmin = userService.isAdmin(requesterId);
+        if (!isAdmin && !comment.getUserId().equals(requesterId)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Cannot edit another user's comment");
+        }
+        comment.setBody(body);
+        return commentRepository.save(comment);
+    }
+
+    @Override
+    public void deleteComment(UUID commentId, UUID requesterId) {
+        Comment comment = commentRepository.findById(commentId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Comment not found"));
+        boolean isAdmin = userService.isAdmin(requesterId);
+        if (!isAdmin && !comment.getUserId().equals(requesterId)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Cannot delete another user's comment");
+        }
+        commentRepository.delete(comment);
     }
 
     private CommentResponse toCommentResponse(Comment comment) {

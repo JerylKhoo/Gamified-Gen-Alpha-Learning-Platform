@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
+import { useAuth } from '../context/AuthContext';
 
 const API_URL = import.meta.env.VITE_API_URL;
 
@@ -42,6 +43,7 @@ const IconFlag = () => (
 export default function PostDetailPage() {
   const { postId } = useParams();
   const navigate = useNavigate();
+  const { isAdmin, isContributor } = useAuth();
 
   const [post, setPost]       = useState(null);
   const [loading, setLoading] = useState(true);
@@ -59,6 +61,7 @@ export default function PostDetailPage() {
   const [comments, setComments]       = useState([]);
   const [commentBody, setCommentBody] = useState('');
   const [submitting, setSubmitting]   = useState(false);
+  const [deletingCommentId, setDeletingCommentId] = useState(null);
 
   // Report state
   const [showReportModal, setShowReportModal] = useState(false);
@@ -201,7 +204,26 @@ export default function PostDetailPage() {
     }
   }
 
+  async function handleDeleteComment(commentId) {
+    setDeletingCommentId(commentId);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+      const res = await fetch(`${API_URL}/api/v1/posts/comments/${commentId}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      });
+      if (res.ok) {
+        setComments(prev => prev.filter(c => c.commentId !== commentId));
+      }
+    } catch { /* silent */ } finally {
+      setDeletingCommentId(null);
+    }
+  }
+
   const isOwner = currentUserId && post?.userId === currentUserId;
+  const canEditPost = (isOwner && isContributor) || isAdmin;
+  const canDeletePost = (isOwner && isContributor) || isAdmin;
 
   function startEditing() {
     setEditTitle(post.title || '');
@@ -319,30 +341,34 @@ export default function PostDetailPage() {
               <span className="text-[0.75rem] text-[#5a5278]">Community Member</span>
             </div>
 
-            {/* Edit / Delete — owner only */}
-            {isOwner && !editing && (
+            {/* Edit / Delete — contributors (own post) or admins (any post) */}
+            {!editing && (canEditPost || canDeletePost) && (
               <div className="ml-auto flex items-center gap-2">
-                <button
-                  onClick={startEditing}
-                  title="Edit post"
-                  className="flex items-center justify-center w-8 h-8 rounded-lg bg-transparent border border-[rgba(255,255,255,0.08)] text-[#7c6ea8] cursor-pointer transition-all hover:border-[rgba(139,92,246,0.4)] hover:text-[#a78bfa]"
-                >
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
-                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
-                  </svg>
-                </button>
-                <button
-                  onClick={() => setShowDeleteModal(true)}
-                  title="Delete post"
-                  className="flex items-center justify-center w-8 h-8 rounded-lg bg-transparent border border-[rgba(255,255,255,0.08)] text-[#5a5278] cursor-pointer transition-all hover:border-[rgba(248,113,113,0.4)] hover:text-[#f87171]"
-                >
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <polyline points="3 6 5 6 21 6"/>
-                    <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
-                    <path d="M10 11v6M14 11v6M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
-                  </svg>
-                </button>
+                {canEditPost && (
+                  <button
+                    onClick={startEditing}
+                    title="Edit post"
+                    className="flex items-center justify-center w-8 h-8 rounded-lg bg-transparent border border-[rgba(255,255,255,0.08)] text-[#7c6ea8] cursor-pointer transition-all hover:border-[rgba(139,92,246,0.4)] hover:text-[#a78bfa]"
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                      <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                    </svg>
+                  </button>
+                )}
+                {canDeletePost && (
+                  <button
+                    onClick={() => setShowDeleteModal(true)}
+                    title="Delete post"
+                    className="flex items-center justify-center w-8 h-8 rounded-lg bg-transparent border border-[rgba(255,255,255,0.08)] text-[#5a5278] cursor-pointer transition-all hover:border-[rgba(248,113,113,0.4)] hover:text-[#f87171]"
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <polyline points="3 6 5 6 21 6"/>
+                      <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+                      <path d="M10 11v6M14 11v6M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
+                    </svg>
+                  </button>
+                )}
               </div>
             )}
           </div>
@@ -470,32 +496,50 @@ export default function PostDetailPage() {
           <p className="text-[0.88rem] text-[#5a5278]">No comments yet. Be the first to comment!</p>
         ) : (
           <div className="flex flex-col gap-4">
-            {comments.map(c => (
-              <div key={c.commentId} className="bg-[#0d0f18] border border-[rgba(255,255,255,0.07)] rounded-xl p-4 flex gap-3">
-                {c.authorProfilePic ? (
-                  <img
-                    src={c.authorProfilePic}
-                    alt={c.authorName}
-                    className="w-9 h-9 rounded-full object-cover shadow-[0_2px_6px_rgba(0,0,0,0.4)] flex-shrink-0"
-                  />
-                ) : (
-                  <div className="w-9 h-9 rounded-full bg-gradient-to-br from-[#7c3aed] to-[#4f46e5] flex items-center justify-center text-[1rem] font-bold text-white select-none shadow-[0_2px_6px_rgba(0,0,0,0.4)] flex-shrink-0">
-                    {c.authorName?.charAt(0)?.toUpperCase() || '?'}
+            {comments.map(c => {
+              const isCommentOwner = currentUserId && c.userId === currentUserId;
+              const canDeleteComment = isCommentOwner || isAdmin;
+              return (
+                <div key={c.commentId} className="bg-[#0d0f18] border border-[rgba(255,255,255,0.07)] rounded-xl p-4 flex gap-3">
+                  {c.authorProfilePic ? (
+                    <img
+                      src={c.authorProfilePic}
+                      alt={c.authorName}
+                      className="w-9 h-9 rounded-full object-cover shadow-[0_2px_6px_rgba(0,0,0,0.4)] flex-shrink-0"
+                    />
+                  ) : (
+                    <div className="w-9 h-9 rounded-full bg-gradient-to-br from-[#7c3aed] to-[#4f46e5] flex items-center justify-center text-[1rem] font-bold text-white select-none shadow-[0_2px_6px_rgba(0,0,0,0.4)] flex-shrink-0">
+                      {c.authorName?.charAt(0)?.toUpperCase() || '?'}
+                    </div>
+                  )}
+                  <div className="flex flex-col gap-1 min-w-0 flex-1">
+                    <div className="flex items-center gap-2">
+                      <span className="text-[0.85rem] font-bold text-[#e0d9ff]">{c.authorName || 'Member'}</span>
+                      <span className="text-[0.72rem] text-[#4b4870]">
+                        {c.createdAt ? new Date(c.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : ''}
+                      </span>
+                      {canDeleteComment && (
+                        <button
+                          onClick={() => handleDeleteComment(c.commentId)}
+                          disabled={deletingCommentId === c.commentId}
+                          title="Delete comment"
+                          className="ml-auto flex items-center justify-center w-7 h-7 rounded-lg bg-transparent border border-[rgba(255,255,255,0.08)] text-[#5a5278] cursor-pointer transition-all hover:border-[rgba(248,113,113,0.4)] hover:text-[#f87171] disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <polyline points="3 6 5 6 21 6"/>
+                            <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+                            <path d="M10 11v6M14 11v6M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
+                          </svg>
+                        </button>
+                      )}
+                    </div>
+                    <p className="text-[0.88rem] text-[#c4c0d8] leading-relaxed m-0 whitespace-pre-wrap break-words">
+                      {c.body}
+                    </p>
                   </div>
-                )}
-                <div className="flex flex-col gap-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <span className="text-[0.85rem] font-bold text-[#e0d9ff]">{c.authorName || 'Member'}</span>
-                    <span className="text-[0.72rem] text-[#4b4870]">
-                      {c.createdAt ? new Date(c.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : ''}
-                    </span>
-                  </div>
-                  <p className="text-[0.88rem] text-[#c4c0d8] leading-relaxed m-0 whitespace-pre-wrap break-words">
-                    {c.body}
-                  </p>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>

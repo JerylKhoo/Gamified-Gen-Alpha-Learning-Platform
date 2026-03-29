@@ -13,6 +13,7 @@ import PostDetailPage from './pages/PostDetailPage';
 import LeaderboardPage from './pages/LeaderboardPage';
 import CoursePage from './pages/CoursePage';
 import LessonPage from './pages/LessonPage';
+import AdminDashboardPage from './pages/AdminDashboardPage';
 
 function ComingSoon({ label }) {
   return (
@@ -37,7 +38,7 @@ export default function App() {
             <Route path="/learn/:courseId" element={<AdaptiveLearningPage />} />
             <Route path="/community" element={<CommunityPage />} />
             <Route path="/community/:postId" element={<PostDetailPage />} />
-            <Route path="/dashboard" element={<ComingSoon label="Dashboard" />} />
+            <Route path="/admin" element={<AdminDashboardPage />} />
             <Route path="/leaderboard" element={<LeaderboardPage />} />
             <Route path="/course/:courseId" element={<CoursePage />} />
             <Route path="/course/:courseId/module/:moduleId" element={<LessonPage />} />
