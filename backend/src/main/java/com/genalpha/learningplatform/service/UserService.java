@@ -13,5 +13,7 @@ public interface UserService {
     boolean isAdmin(UUID userId);
     boolean isCollaborator(UUID userId);
     boolean isContributorOrAbove(UUID userId);
+    List<User> getAll();
     List<User> getLeaderboard();
+    User updateRole(UUID userId, String role, UUID requesterId);
 }

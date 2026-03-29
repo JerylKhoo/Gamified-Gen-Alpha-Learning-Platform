@@ -68,6 +68,25 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
+    public List<User> getAll() {
+        return userRepository.findAll();
+    }
+
+    @Override
+    @Transactional
+    public User updateRole(UUID userId, String role, UUID requesterId) {
+        if (!isAdmin(requesterId)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only admins can change user roles");
+        }
+        if (!List.of("User", "Collaborator", "Admin").contains(role)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid role: " + role);
+        }
+        getById(userId); // ensure user exists
+        userRepository.updateRole(userId, role);
+        return getById(userId);
+    }
+
+    @Override
     public List<User> getLeaderboard() {
         List<User> users = new java.util.ArrayList<>(userRepository.findAll());
         users.sort((User a, User b) -> {
