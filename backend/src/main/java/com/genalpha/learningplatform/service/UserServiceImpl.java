@@ -87,6 +87,14 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
+    @Transactional
+    public void incrementReportCount(UUID userId) {
+        User user = getById(userId);
+        user.setReportCount((user.getReportCount() != null ? user.getReportCount() : 0) + 1);
+        userRepository.save(user);
+    }
+
+    @Override
     public List<User> getLeaderboard() {
         List<User> users = new java.util.ArrayList<>(userRepository.findAll());
         users.sort((User a, User b) -> {

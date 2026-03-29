@@ -1,8 +1,6 @@
 package com.genalpha.learningplatform.controller;
 
-import com.genalpha.learningplatform.dto.AdminUserResponse;
 import com.genalpha.learningplatform.model.User;
-import com.genalpha.learningplatform.repository.PostReportRepository;
 import com.genalpha.learningplatform.service.UserService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -20,22 +18,19 @@ import java.util.UUID;
 public class AdminController {
 
     private final UserService userService;
-    private final PostReportRepository postReportRepository;
 
-    public AdminController(UserService userService, PostReportRepository postReportRepository) {
+    public AdminController(UserService userService) {
         this.userService = userService;
-        this.postReportRepository = postReportRepository;
     }
 
-    @Operation(summary = "Get all users with report counts (admin only)")
+    @Operation(summary = "Get all users (admin only)")
     @GetMapping("/users")
-    public ResponseEntity<List<AdminUserResponse>> getAllUsers(Authentication authentication) {
+    public ResponseEntity<List<User>> getAllUsers(Authentication authentication) {
         UUID requesterId = UUID.fromString(authentication.getName());
         if (!userService.isAdmin(requesterId)) {
             return ResponseEntity.status(403).build();
         }
-        List<AdminUserResponse> result = userService.getAll().stream().map(this::toResponse).toList();
-        return ResponseEntity.ok(result);
+        return ResponseEntity.ok(userService.getAll());
     }
 
     @Operation(summary = "Update a user's role (admin only)")
@@ -46,16 +41,5 @@ public class AdminController {
         UUID requesterId = UUID.fromString(authentication.getName());
         String role = body.get("role");
         return ResponseEntity.ok(userService.updateRole(userId, role, requesterId));
-    }
-
-    private AdminUserResponse toResponse(User user) {
-        AdminUserResponse r = new AdminUserResponse();
-        r.setUserId(user.getUserId());
-        r.setName(user.getName());
-        r.setPoints(user.getPoints());
-        r.setProfilePic(user.getProfilePic());
-        r.setRole(user.getRole());
-        r.setReportCount(postReportRepository.countReportsOnPostsByAuthor(user.getUserId()));
-        return r;
     }
 }

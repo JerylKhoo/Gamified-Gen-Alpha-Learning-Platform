@@ -16,4 +16,5 @@ public interface UserService {
     List<User> getAll();
     List<User> getLeaderboard();
     User updateRole(UUID userId, String role, UUID requesterId);
+    void incrementReportCount(UUID userId);
 }

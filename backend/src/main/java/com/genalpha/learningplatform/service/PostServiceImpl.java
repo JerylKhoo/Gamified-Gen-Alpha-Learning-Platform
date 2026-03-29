@@ -145,7 +145,12 @@ public class PostServiceImpl implements PostService {
 
         Post post = getById(postId);
         post.setReportCount((int) postReportRepository.countByPostId(postId));
-        return postRepository.save(post);
+        postRepository.save(post);
+
+        // Increment the post author's total report count
+        userService.incrementReportCount(post.getUserId());
+
+        return post;
     }
 
     @Override

@@ -18,11 +18,12 @@ ON CONFLICT (id) DO NOTHING;
 
 -- USER
 CREATE TABLE IF NOT EXISTS public."USER" (
-    User_ID     UUID        PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
-    Name        TEXT        NOT NULL,
-    Points      INTEGER     NOT NULL DEFAULT 0,
-    Profile_Pic TEXT,
-    Role        TEXT        NOT NULL DEFAULT 'User' CHECK (Role IN ('Admin', 'User', 'Collaborator'))
+    User_ID      UUID        PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+    Name         TEXT        NOT NULL,
+    Points       INTEGER     NOT NULL DEFAULT 0,
+    Profile_Pic  TEXT,
+    Role         TEXT        NOT NULL DEFAULT 'User' CHECK (Role IN ('Admin', 'User', 'Collaborator')),
+    Report_Count INTEGER     NOT NULL DEFAULT 0
 );
 
 -- BADGES
