@@ -89,9 +89,7 @@ public class UserServiceImpl implements UserService {
     @Override
     @Transactional
     public void incrementReportCount(UUID userId) {
-        User user = getById(userId);
-        user.setReportCount((user.getReportCount() != null ? user.getReportCount() : 0) + 1);
-        userRepository.save(user);
+        userRepository.incrementReportCount(userId);
     }
 
     @Override
