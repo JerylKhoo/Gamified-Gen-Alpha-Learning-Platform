@@ -164,6 +164,7 @@ export default function AdminDashboardPage() {
               <tr className="bg-[rgba(139,92,246,0.08)]">
                 <th className="text-left px-4 py-3 text-[0.75rem] font-bold text-[#7c6ea8] uppercase tracking-[0.1em]">User</th>
                 <th className="text-left px-4 py-3 text-[0.75rem] font-bold text-[#7c6ea8] uppercase tracking-[0.1em]">Points</th>
+                <th className="text-left px-4 py-3 text-[0.75rem] font-bold text-[#7c6ea8] uppercase tracking-[0.1em]">Reports</th>
                 <th className="text-left px-4 py-3 text-[0.75rem] font-bold text-[#7c6ea8] uppercase tracking-[0.1em]">Role</th>
                 <th className="text-left px-4 py-3 text-[0.75rem] font-bold text-[#7c6ea8] uppercase tracking-[0.1em]">Actions</th>
               </tr>
@@ -199,6 +200,13 @@ export default function AdminDashboardPage() {
                   <td className="px-4 py-3">
                     <span className="text-[0.88rem] font-bold text-[#fbbf24]">
                       {user.points ?? 0}
+                    </span>
+                  </td>
+
+                  {/* Report count */}
+                  <td className="px-4 py-3">
+                    <span className={`text-[0.88rem] font-bold ${user.reportCount > 0 ? 'text-[#f87171]' : 'text-[#5a5278]'}`}>
+                      {user.reportCount ?? 0}
                     </span>
                   </td>
 
