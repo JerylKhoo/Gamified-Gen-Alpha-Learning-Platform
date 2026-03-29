@@ -61,6 +61,13 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
+    public boolean isContributorOrAbove(UUID userId) {
+        return userRepository.findById(userId)
+                .map(u -> "Collaborator".equals(u.getRole()) || "Admin".equals(u.getRole()))
+                .orElse(false);
+    }
+
+    @Override
     public List<User> getLeaderboard() {
         List<User> users = new java.util.ArrayList<>(userRepository.findAll());
         users.sort((User a, User b) -> {
