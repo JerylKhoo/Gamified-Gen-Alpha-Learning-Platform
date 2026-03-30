@@ -14,6 +14,7 @@ import LeaderboardPage from './pages/LeaderboardPage';
 import CoursePage from './pages/CoursePage';
 import LessonPage from './pages/LessonPage';
 import AdminDashboardPage from './pages/AdminDashboardPage';
+import ModuleEditorPage from './pages/ModuleEditorPage';
 
 function ComingSoon({ label }) {
   return (
@@ -43,6 +44,8 @@ export default function App() {
             <Route path="/course/:courseId" element={<CoursePage />} />
             <Route path="/course/:courseId/module/:moduleId" element={<LessonPage />} />
           </Route>
+          {/* Full-screen module editor — outside HomeLayout (no navbar) */}
+          <Route path="/admin/module/:moduleId/edit" element={<ProtectedRoute><ModuleEditorPage /></ProtectedRoute>} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </BrowserRouter>

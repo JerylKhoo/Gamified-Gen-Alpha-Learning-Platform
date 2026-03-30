@@ -14,9 +14,8 @@ function formatId(id) {
 const inputCls = "w-full bg-[rgba(255,255,255,0.04)] border border-[rgba(139,92,246,0.18)] rounded-[10px] px-3 py-2 text-[0.9rem] text-[#f0eeff] placeholder:text-[#4b4870] outline-none focus:border-[rgba(139,92,246,0.5)] focus:shadow-[0_0_0_3px_rgba(139,92,246,0.08)] transition-all";
 
 // ── Create Module Modal ────────────────────────────────────────────────────────
-function CreateModuleModal({ courseId, nextOrder, onClose, onCreated }) {
+function CreateModuleModal({ courseId, nextOrder, onClose, onCreated, onOpenEditor }) {
   const [moduleId, setModuleId] = useState('');
-  const [content, setContent]   = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [err, setErr] = useState('');
 
@@ -35,11 +34,13 @@ function CreateModuleModal({ courseId, nextOrder, onClose, onCreated }) {
       const res = await fetch(`${API_URL}/api/v1/modules`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${session.access_token}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ moduleId: moduleId.trim(), courseId, content: content.trim() || null, order: nextOrder }),
+        body: JSON.stringify({ moduleId: moduleId.trim(), courseId, content: null, order: nextOrder }),
       });
       if (!res.ok) throw new Error((await res.text()) || 'Failed to create module');
-      onCreated(await res.json());
+      const mod = await res.json();
+      onCreated(mod);
       onClose();
+      onOpenEditor(mod.moduleId);
     } catch (e) { setErr(e.message); } finally { setSubmitting(false); }
   }
 
@@ -58,15 +59,12 @@ function CreateModuleModal({ courseId, nextOrder, onClose, onCreated }) {
             <input type="text" placeholder="e.g. intro-to-slang" value={moduleId} onChange={e => setModuleId(e.target.value)} className={inputCls} autoFocus />
             <p className="text-[0.72rem] text-[#4b4870] m-0">Used as the module name. Use hyphens for spaces.</p>
           </div>
-          <div className="flex flex-col gap-1.5">
-            <label className="text-[0.75rem] font-bold text-[#7c6ea8] uppercase tracking-[0.08em]">Content</label>
-            <textarea placeholder="Module content..." value={content} onChange={e => setContent(e.target.value)} rows={4} className={`${inputCls} resize-none`} />
-          </div>
+          <p className="text-[0.78rem] text-[#4b4870] m-0">After creating, the editor will open automatically so you can add content.</p>
           {err && <p className="text-[#f87171] text-[0.82rem] m-0">{err}</p>}
           <div className="flex gap-3 pt-1">
             <button type="button" onClick={onClose} className="flex-1 py-2.5 rounded-xl text-[0.88rem] font-bold border border-[rgba(255,255,255,0.1)] bg-transparent text-[#9090b0] cursor-pointer hover:bg-[rgba(255,255,255,0.05)] transition-all">Cancel</button>
             <button type="submit" disabled={submitting} className="flex-1 py-2.5 rounded-xl text-[0.88rem] font-bold bg-gradient-to-br from-[#8b5cf6] to-[#6d28d9] text-white border-none cursor-pointer shadow-[0_4px_18px_rgba(139,92,246,0.35)] hover:opacity-90 transition-all disabled:opacity-50 disabled:cursor-not-allowed">
-              {submitting ? 'Creating...' : 'Create Module'}
+              {submitting ? 'Creating...' : 'Create & Edit'}
             </button>
           </div>
         </form>
@@ -77,10 +75,8 @@ function CreateModuleModal({ courseId, nextOrder, onClose, onCreated }) {
 }
 
 // ── Edit Module Modal ──────────────────────────────────────────────────────────
-function EditModuleModal({ module, onClose, onUpdated, onDeleted }) {
-  const [content, setContent]     = useState(module.content || '');
-  const [submitting, setSubmitting] = useState(false);
-  const [deleting, setDeleting]   = useState(false);
+function EditModuleModal({ module, onClose, onDeleted, onOpenEditor }) {
+  const [deleting, setDeleting]       = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [err, setErr] = useState('');
 
@@ -89,22 +85,6 @@ function EditModuleModal({ module, onClose, onUpdated, onDeleted }) {
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [onClose]);
-
-  async function handleSave(e) {
-    e.preventDefault();
-    setSubmitting(true); setErr('');
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      const res = await fetch(`${API_URL}/api/v1/modules/${encodeURIComponent(module.moduleId)}`, {
-        method: 'PUT',
-        headers: { Authorization: `Bearer ${session.access_token}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ content: content.trim() || null }),
-      });
-      if (!res.ok) throw new Error((await res.text()) || 'Failed to update module');
-      onUpdated(await res.json());
-      onClose();
-    } catch (e) { setErr(e.message); } finally { setSubmitting(false); }
-  }
 
   async function handleDelete() {
     setDeleting(true); setErr('');
@@ -125,26 +105,23 @@ function EditModuleModal({ module, onClose, onUpdated, onDeleted }) {
       <div className="w-full max-w-[440px] bg-[#0d0f18] border border-[rgba(139,92,246,0.25)] rounded-2xl shadow-[0_32px_80px_rgba(0,0,0,0.8)]" onClick={e => e.stopPropagation()} style={{ animation: 'modalIn 0.18s cubic-bezier(0.2,0,0.2,1)' }}>
         <div className="px-6 pt-6 pb-2 flex items-center justify-between">
           <div>
-            <h2 className="text-[1.1rem] font-extrabold text-[#f0eeff] m-0">Edit Module</h2>
+            <h2 className="text-[1.1rem] font-extrabold text-[#f0eeff] m-0">Module Options</h2>
             <p className="text-[0.75rem] text-[#4b4870] m-0 mt-0.5">{formatId(module.moduleId)}</p>
           </div>
           <button onClick={onClose} className="flex items-center justify-center w-8 h-8 rounded-full bg-[rgba(255,255,255,0.06)] text-[#9090b0] border border-[rgba(255,255,255,0.08)] cursor-pointer hover:text-[#f0eeff] transition-all">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
           </button>
         </div>
-        <form onSubmit={handleSave} className="px-6 pb-6 pt-4 flex flex-col gap-4">
-          <div className="flex flex-col gap-1.5">
-            <label className="text-[0.75rem] font-bold text-[#7c6ea8] uppercase tracking-[0.08em]">Content</label>
-            <textarea value={content} onChange={e => setContent(e.target.value)} rows={5} className={`${inputCls} resize-none`} />
-          </div>
+        <div className="px-6 pb-6 pt-4 flex flex-col gap-3">
+          <button
+            onClick={() => { onClose(); onOpenEditor(module.moduleId); }}
+            className="w-full py-2.5 rounded-xl text-[0.88rem] font-bold bg-gradient-to-br from-[#8b5cf6] to-[#6d28d9] text-white border-none cursor-pointer shadow-[0_4px_18px_rgba(139,92,246,0.35)] hover:opacity-90 transition-all flex items-center justify-center gap-2"
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+            Edit Content
+          </button>
           {err && <p className="text-[#f87171] text-[0.82rem] m-0">{err}</p>}
-          <div className="flex gap-3 pt-1">
-            <button type="button" onClick={onClose} className="flex-1 py-2.5 rounded-xl text-[0.88rem] font-bold border border-[rgba(255,255,255,0.1)] bg-transparent text-[#9090b0] cursor-pointer hover:bg-[rgba(255,255,255,0.05)] transition-all">Cancel</button>
-            <button type="submit" disabled={submitting} className="flex-1 py-2.5 rounded-xl text-[0.88rem] font-bold bg-gradient-to-br from-[#8b5cf6] to-[#6d28d9] text-white border-none cursor-pointer shadow-[0_4px_18px_rgba(139,92,246,0.35)] hover:opacity-90 transition-all disabled:opacity-50 disabled:cursor-not-allowed">
-              {submitting ? 'Saving...' : 'Save Changes'}
-            </button>
-          </div>
-          <div className="border-t border-[rgba(248,113,113,0.15)] pt-4">
+          <div className="border-t border-[rgba(248,113,113,0.15)] pt-3">
             {!confirmDelete ? (
               <button type="button" onClick={() => setConfirmDelete(true)} className="w-full py-2.5 rounded-xl text-[0.88rem] font-bold border border-[rgba(248,113,113,0.3)] bg-[rgba(248,113,113,0.08)] text-[#f87171] cursor-pointer hover:bg-[rgba(248,113,113,0.18)] transition-all">
                 Delete Module
@@ -161,7 +138,7 @@ function EditModuleModal({ module, onClose, onUpdated, onDeleted }) {
               </div>
             )}
           </div>
-        </form>
+        </div>
         <style>{`@keyframes modalIn { from { opacity:0; transform:scale(0.94) translateY(8px); } to { opacity:1; transform:scale(1) translateY(0); } }`}</style>
       </div>
     </div>
@@ -340,6 +317,7 @@ export default function CoursePage() {
           nextOrder={modules.length + 1}
           onClose={() => setShowCreate(false)}
           onCreated={mod => setModules(prev => [...prev, mod])}
+          onOpenEditor={modId => navigate(`/admin/module/${encodeURIComponent(modId)}/edit`)}
         />
       )}
 
@@ -347,8 +325,8 @@ export default function CoursePage() {
         <EditModuleModal
           module={editingModule}
           onClose={() => setEditingModule(null)}
-          onUpdated={updated => setModules(prev => prev.map(m => m.moduleId === updated.moduleId ? updated : m))}
-          onDeleted={moduleId => setModules(prev => prev.filter(m => m.moduleId !== moduleId))}
+          onDeleted={modId => setModules(prev => prev.filter(m => m.moduleId !== modId))}
+          onOpenEditor={modId => navigate(`/admin/module/${encodeURIComponent(modId)}/edit`)}
         />
       )}
 
