@@ -265,7 +265,6 @@ public class PostServiceImpl implements PostService {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only admins can approve posts");
         }
         Post post = getById(postId);
-        postReportRepository.deleteByPostId(postId);
         post.setReportCount(0);
         postRepository.save(post);
     }
