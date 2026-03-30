@@ -272,6 +272,24 @@ public class PostServiceImpl implements PostService {
 
     @Override
     @Transactional
+    public void dismissReports(UUID postId, UUID requesterId) {
+        if (!userService.isAdmin(requesterId)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only admins can dismiss reports");
+        }
+        Post post = getById(postId);
+        int reportCount = post.getReportCount();
+        UUID authorId = post.getUserId();
+        // Decrement author's report count first (JPQL clears persistence context)
+        userService.decrementReportCount(authorId, reportCount);
+        // Re-fetch post after context clear, then delete reports and reset count
+        post = getById(postId);
+        postReportRepository.deleteByPostId(postId);
+        post.setReportCount(0);
+        postRepository.save(post);
+    }
+
+    @Override
+    @Transactional
     public void deleteReportedPost(UUID postId, UUID requesterId) {
         if (!userService.isAdmin(requesterId)) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only admins can delete reported posts");
