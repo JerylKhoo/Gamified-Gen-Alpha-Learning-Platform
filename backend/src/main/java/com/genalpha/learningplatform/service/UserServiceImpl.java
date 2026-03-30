@@ -3,9 +3,14 @@ package com.genalpha.learningplatform.service;
 import java.util.List;
 import java.util.UUID;
 
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.client.RestTemplate;
 import org.springframework.web.server.ResponseStatusException;
 
 import com.genalpha.learningplatform.model.User;
@@ -18,6 +23,13 @@ import com.genalpha.learningplatform.repository.UserRepository;
 public class UserServiceImpl implements UserService {
 
     private final UserRepository userRepository;
+    private final RestTemplate restTemplate = new RestTemplate();
+
+    @Value("${supabase.url}")
+    private String supabaseUrl;
+
+    @Value("${supabase.service.key}")
+    private String supabaseServiceKey;
 
     public UserServiceImpl(UserRepository userRepository) {
         this.userRepository = userRepository;
@@ -99,6 +111,36 @@ public class UserServiceImpl implements UserService {
     @Transactional
     public void decrementReportCount(UUID userId, int count) {
         userRepository.decrementReportCount(userId, count);
+    }
+
+    @Override
+    @Transactional
+    public void deleteUser(UUID userId, UUID requesterId) {
+        if (!isAdmin(requesterId)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only admins can delete users");
+        }
+        User target = getById(userId);
+        if ("Admin".equals(target.getRole()) && !userId.equals(requesterId)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Cannot delete another admin's account");
+        }
+
+        // Delete from Supabase Auth first using the service role key
+        HttpHeaders headers = new HttpHeaders();
+        headers.set("apikey", supabaseServiceKey);
+        headers.set("Authorization", "Bearer " + supabaseServiceKey);
+        try {
+            restTemplate.exchange(
+                supabaseUrl + "/auth/v1/admin/users/" + userId,
+                HttpMethod.DELETE,
+                new HttpEntity<>(headers),
+                Void.class
+            );
+        } catch (Exception e) {
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to delete Supabase auth user: " + e.getMessage());
+        }
+
+        // DB row will cascade-delete via FK constraints
+        userRepository.deleteById(userId);
     }
 
     @Override
