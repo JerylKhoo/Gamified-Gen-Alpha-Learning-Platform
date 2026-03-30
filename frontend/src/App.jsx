@@ -10,7 +10,7 @@ import LearnPage from './components/HomePage/LearnPage';
 import AdaptiveLearningPage from './pages/AdaptiveLearningPage';
 import CommunityPage from './components/HomePage/CommunityPage';
 import PostDetailPage from './pages/PostDetailPage';
-import LeaderboardPage from './pages/LeaderboardPage';
+import ChallengePage from './pages/ChallengePage';
 import CoursePage from './pages/CoursePage';
 import LessonPage from './pages/LessonPage';
 import AdminDashboardPage from './pages/AdminDashboardPage';
@@ -39,7 +39,7 @@ export default function App() {
             <Route path="/community" element={<CommunityPage />} />
             <Route path="/community/:postId" element={<PostDetailPage />} />
             <Route path="/admin" element={<AdminDashboardPage />} />
-            <Route path="/leaderboard" element={<LeaderboardPage />} />
+            <Route path="/challenge" element={<ChallengePage />} />
             <Route path="/course/:courseId" element={<CoursePage />} />
             <Route path="/course/:courseId/module/:moduleId" element={<LessonPage />} />
           </Route>
