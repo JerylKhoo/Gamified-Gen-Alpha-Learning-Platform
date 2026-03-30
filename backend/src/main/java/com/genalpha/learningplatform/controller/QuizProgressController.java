@@ -9,6 +9,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
+import com.genalpha.learningplatform.util.AuthUtils;
+
 import java.util.List;
 import java.util.UUID;
 
@@ -26,7 +28,7 @@ public class QuizProgressController {
     @Operation(summary = "List all quiz progress for the logged-in user")
     @GetMapping("/me")
     public ResponseEntity<List<QuizProgress>> getMyProgress(Authentication authentication) {
-        UUID userId = UUID.fromString(authentication.getName());
+        UUID userId = AuthUtils.userId(authentication);
         return ResponseEntity.ok(quizProgressService.getByUserId(userId));
     }
 
@@ -34,7 +36,7 @@ public class QuizProgressController {
     @GetMapping("/me/{courseId}")
     public ResponseEntity<QuizProgress> getMyCourseProgress(@PathVariable String courseId,
                                                              Authentication authentication) {
-        UUID userId = UUID.fromString(authentication.getName());
+        UUID userId = AuthUtils.userId(authentication);
         return ResponseEntity.ok(quizProgressService.getByUserIdAndCourseId(userId, courseId));
     }
 
@@ -42,7 +44,7 @@ public class QuizProgressController {
     @GetMapping("/{quizProgressId}")
     public ResponseEntity<QuizProgress> getById(@PathVariable UUID quizProgressId,
                                                  Authentication authentication) {
-        UUID requesterId = UUID.fromString(authentication.getName());
+        UUID requesterId = AuthUtils.userId(authentication);
         return ResponseEntity.ok(quizProgressService.getById(quizProgressId, requesterId));
     }
 
@@ -50,7 +52,7 @@ public class QuizProgressController {
     @PostMapping
     public ResponseEntity<QuizProgress> create(@RequestBody QuizProgress progress,
                                                 Authentication authentication) {
-        UUID requesterId = UUID.fromString(authentication.getName());
+        UUID requesterId = AuthUtils.userId(authentication);
         return ResponseEntity.status(HttpStatus.CREATED).body(quizProgressService.create(progress, requesterId));
     }
 
@@ -59,14 +61,14 @@ public class QuizProgressController {
     public ResponseEntity<QuizProgress> update(@PathVariable UUID quizProgressId,
                                                 @RequestBody QuizProgress updates,
                                                 Authentication authentication) {
-        UUID requesterId = UUID.fromString(authentication.getName());
+        UUID requesterId = AuthUtils.userId(authentication);
         return ResponseEntity.ok(quizProgressService.update(quizProgressId, updates, requesterId));
     }
 
     @Operation(summary = "Delete quiz progress (admin only)")
     @DeleteMapping("/{quizProgressId}")
     public ResponseEntity<Void> delete(@PathVariable UUID quizProgressId, Authentication authentication) {
-        UUID requesterId = UUID.fromString(authentication.getName());
+        UUID requesterId = AuthUtils.userId(authentication);
         quizProgressService.delete(quizProgressId, requesterId);
         return ResponseEntity.noContent().build();
     }

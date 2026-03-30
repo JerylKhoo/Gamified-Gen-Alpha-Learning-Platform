@@ -9,6 +9,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
+import com.genalpha.learningplatform.util.AuthUtils;
+
 import java.util.List;
 import java.util.UUID;
 
@@ -26,7 +28,7 @@ public class CourseProgressController {
     @Operation(summary = "List all course progress for the logged-in user")
     @GetMapping("/me")
     public ResponseEntity<List<CourseProgress>> getMyProgress(Authentication authentication) {
-        UUID userId = UUID.fromString(authentication.getName());
+        UUID userId = AuthUtils.userId(authentication);
         return ResponseEntity.ok(courseProgressService.getByUserId(userId));
     }
 
@@ -34,7 +36,7 @@ public class CourseProgressController {
     @GetMapping("/me/{courseId}")
     public ResponseEntity<List<CourseProgress>> getMyCourseProgress(@PathVariable String courseId,
                                                                      Authentication authentication) {
-        UUID userId = UUID.fromString(authentication.getName());
+        UUID userId = AuthUtils.userId(authentication);
         return ResponseEntity.ok(courseProgressService.getByUserIdAndCourseId(userId, courseId));
     }
 
@@ -42,14 +44,14 @@ public class CourseProgressController {
     @PostMapping
     public ResponseEntity<CourseProgress> create(@RequestBody CourseProgress progress,
                                                   Authentication authentication) {
-        UUID requesterId = UUID.fromString(authentication.getName());
+        UUID requesterId = AuthUtils.userId(authentication);
         return ResponseEntity.status(HttpStatus.CREATED).body(courseProgressService.create(progress, requesterId));
     }
 
     @Operation(summary = "Delete course progress (admin only)")
     @DeleteMapping("/{courseProgressId}")
     public ResponseEntity<Void> delete(@PathVariable UUID courseProgressId, Authentication authentication) {
-        UUID requesterId = UUID.fromString(authentication.getName());
+        UUID requesterId = AuthUtils.userId(authentication);
         courseProgressService.delete(courseProgressId, requesterId);
         return ResponseEntity.noContent().build();
     }

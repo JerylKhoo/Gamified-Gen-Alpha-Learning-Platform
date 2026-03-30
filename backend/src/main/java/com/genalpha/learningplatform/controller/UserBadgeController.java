@@ -9,6 +9,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
+import com.genalpha.learningplatform.util.AuthUtils;
+
 import java.util.List;
 import java.util.UUID;
 
@@ -26,28 +28,28 @@ public class UserBadgeController {
     @Operation(summary = "Get all badges earned by the logged-in user")
     @GetMapping("/me")
     public ResponseEntity<List<UserBadge>> getMyBadges(Authentication authentication) {
-        UUID userId = UUID.fromString(authentication.getName());
+        UUID userId = AuthUtils.userId(authentication);
         return ResponseEntity.ok(userBadgeService.getMyBadges(userId));
     }
 
     @Operation(summary = "Get a specific user-badge record by ID")
     @GetMapping("/{userBadgeId}")
     public ResponseEntity<UserBadge> getById(@PathVariable UUID userBadgeId, Authentication authentication) {
-        UUID userId = UUID.fromString(authentication.getName());
+        UUID userId = AuthUtils.userId(authentication);
         return ResponseEntity.ok(userBadgeService.getById(userBadgeId, userId));
     }
 
     @Operation(summary = "Award a badge to the logged-in user")
     @PostMapping("/{badgeId}")
     public ResponseEntity<UserBadge> award(@PathVariable String badgeId, Authentication authentication) {
-        UUID userId = UUID.fromString(authentication.getName());
+        UUID userId = AuthUtils.userId(authentication);
         return ResponseEntity.status(HttpStatus.CREATED).body(userBadgeService.award(badgeId, userId));
     }
 
     @Operation(summary = "Remove a badge from the logged-in user")
     @DeleteMapping("/{userBadgeId}")
     public ResponseEntity<Void> delete(@PathVariable UUID userBadgeId, Authentication authentication) {
-        UUID userId = UUID.fromString(authentication.getName());
+        UUID userId = AuthUtils.userId(authentication);
         userBadgeService.delete(userBadgeId, userId);
         return ResponseEntity.noContent().build();
     }

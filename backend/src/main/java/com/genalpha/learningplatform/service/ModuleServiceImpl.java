@@ -2,6 +2,7 @@ package com.genalpha.learningplatform.service;
 
 import com.genalpha.learningplatform.model.Module;
 import com.genalpha.learningplatform.repository.ModuleRepository;
+import com.genalpha.learningplatform.util.AdminGuard;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
@@ -36,7 +37,7 @@ public class ModuleServiceImpl implements ModuleService {
 
     @Override
     public Module create(Module module, UUID requesterId) {
-        requireAdmin(requesterId);
+        AdminGuard.requireAdmin(userService, requesterId);
         if (module.getModuleId() == null || module.getModuleId().isBlank()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Module ID is required");
         }
@@ -45,7 +46,7 @@ public class ModuleServiceImpl implements ModuleService {
 
     @Override
     public Module update(String moduleId, Module updates, UUID requesterId) {
-        requireAdmin(requesterId);
+        AdminGuard.requireAdmin(userService, requesterId);
         Module module = getById(moduleId);
         if (updates.getContent() != null) module.setContent(updates.getContent());
         return moduleRepository.save(module);
@@ -53,13 +54,7 @@ public class ModuleServiceImpl implements ModuleService {
 
     @Override
     public void delete(String moduleId, UUID requesterId) {
-        requireAdmin(requesterId);
+        AdminGuard.requireAdmin(userService, requesterId);
         moduleRepository.delete(getById(moduleId));
-    }
-
-    private void requireAdmin(UUID userId) {
-        if (!userService.isAdmin(userId)) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Admin access required");
-        }
     }
 }

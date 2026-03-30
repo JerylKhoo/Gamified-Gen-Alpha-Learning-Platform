@@ -2,6 +2,7 @@ package com.genalpha.learningplatform.service;
 
 import com.genalpha.learningplatform.model.CourseProgress;
 import com.genalpha.learningplatform.repository.CourseProgressRepository;
+import com.genalpha.learningplatform.util.AdminGuard;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
@@ -51,9 +52,7 @@ public class CourseProgressServiceImpl implements CourseProgressService {
 
     @Override
     public void delete(UUID courseProgressId, UUID requesterId) {
-        if (!userService.isAdmin(requesterId)) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Admin access required");
-        }
+        AdminGuard.requireAdmin(userService, requesterId);
         CourseProgress progress = courseProgressRepository.findById(courseProgressId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Course progress not found"));
         courseProgressRepository.delete(progress);

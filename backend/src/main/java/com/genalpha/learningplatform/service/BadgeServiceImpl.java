@@ -2,6 +2,7 @@ package com.genalpha.learningplatform.service;
 
 import com.genalpha.learningplatform.model.Badge;
 import com.genalpha.learningplatform.repository.BadgeRepository;
+import com.genalpha.learningplatform.util.AdminGuard;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
@@ -36,7 +37,7 @@ public class BadgeServiceImpl implements BadgeService {
 
     @Override
     public Badge create(Badge badge, UUID requesterId) {
-        requireAdmin(requesterId);
+        AdminGuard.requireAdmin(userService, requesterId);
         if (badge.getBadgeId() == null || badge.getBadgeId().isBlank()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Badge ID is required");
         }
@@ -45,7 +46,7 @@ public class BadgeServiceImpl implements BadgeService {
 
     @Override
     public Badge update(String badgeId, Badge updates, UUID requesterId) {
-        requireAdmin(requesterId);
+        AdminGuard.requireAdmin(userService, requesterId);
         Badge badge = getById(badgeId);
         if (updates.getDescription() != null) badge.setDescription(updates.getDescription());
         if (updates.getIcon() != null)        badge.setIcon(updates.getIcon());
@@ -54,13 +55,7 @@ public class BadgeServiceImpl implements BadgeService {
 
     @Override
     public void delete(String badgeId, UUID requesterId) {
-        requireAdmin(requesterId);
+        AdminGuard.requireAdmin(userService, requesterId);
         badgeRepository.delete(getById(badgeId));
-    }
-
-    private void requireAdmin(UUID userId) {
-        if (!userService.isAdmin(userId)) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Admin access required");
-        }
     }
 }

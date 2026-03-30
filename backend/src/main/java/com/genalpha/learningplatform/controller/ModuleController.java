@@ -9,6 +9,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
+import com.genalpha.learningplatform.util.AuthUtils;
+
 import java.util.List;
 import java.util.UUID;
 
@@ -38,7 +40,7 @@ public class ModuleController {
     @Operation(summary = "Create a module (admin)")
     @PostMapping
     public ResponseEntity<Module> create(@RequestBody Module module, Authentication authentication) {
-        UUID requesterId = UUID.fromString(authentication.getName());
+        UUID requesterId = AuthUtils.userId(authentication);
         return ResponseEntity.status(HttpStatus.CREATED).body(moduleService.create(module, requesterId));
     }
 
@@ -47,14 +49,14 @@ public class ModuleController {
     public ResponseEntity<Module> update(@PathVariable String moduleId,
                                          @RequestBody Module updates,
                                          Authentication authentication) {
-        UUID requesterId = UUID.fromString(authentication.getName());
+        UUID requesterId = AuthUtils.userId(authentication);
         return ResponseEntity.ok(moduleService.update(moduleId, updates, requesterId));
     }
 
     @Operation(summary = "Delete a module (admin)")
     @DeleteMapping("/{moduleId}")
     public ResponseEntity<Void> delete(@PathVariable String moduleId, Authentication authentication) {
-        UUID requesterId = UUID.fromString(authentication.getName());
+        UUID requesterId = AuthUtils.userId(authentication);
         moduleService.delete(moduleId, requesterId);
         return ResponseEntity.noContent().build();
     }

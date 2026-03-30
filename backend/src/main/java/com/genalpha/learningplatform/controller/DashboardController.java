@@ -11,6 +11,8 @@ import com.genalpha.learningplatform.repository.BadgeRepository;
 import com.genalpha.learningplatform.repository.CourseRepository;
 import com.genalpha.learningplatform.repository.ModuleRepository;
 import com.genalpha.learningplatform.service.*;
+import com.genalpha.learningplatform.util.AuthUtils;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.http.ResponseEntity;
@@ -35,6 +37,7 @@ public class DashboardController {
     private final ModuleRepository moduleRepository;
     private final CourseRepository courseRepository;
     private final BadgeRepository badgeRepository;
+    private final ObjectMapper objectMapper;
 
     public DashboardController(UserService userService,
                                CourseProgressService courseProgressService,
@@ -43,7 +46,8 @@ public class DashboardController {
                                UserStreakService userStreakService,
                                ModuleRepository moduleRepository,
                                CourseRepository courseRepository,
-                               BadgeRepository badgeRepository) {
+                               BadgeRepository badgeRepository,
+                               ObjectMapper objectMapper) {
         this.userService = userService;
         this.courseProgressService = courseProgressService;
         this.quizProgressService = quizProgressService;
@@ -52,12 +56,13 @@ public class DashboardController {
         this.moduleRepository = moduleRepository;
         this.courseRepository = courseRepository;
         this.badgeRepository = badgeRepository;
+        this.objectMapper = objectMapper;
     }
 
     @Operation(summary = "Get all dashboard data for the authenticated user")
     @GetMapping
     public ResponseEntity<DashboardResponse> getDashboard(Authentication authentication) {
-        UUID userId = UUID.fromString(authentication.getName());
+        UUID userId = AuthUtils.userId(authentication);
 
         // Course progress
         List<CourseProgress> allProgress = courseProgressService.getByUserId(userId);
@@ -88,8 +93,7 @@ public class DashboardController {
                     if (qp != null && qp.getAdaptiveScore() != null) {
                         try {
                             com.fasterxml.jackson.databind.JsonNode node =
-                                    new com.fasterxml.jackson.databind.ObjectMapper()
-                                            .readTree(qp.getAdaptiveScore());
+                                    objectMapper.readTree(qp.getAdaptiveScore());
                             if (node.has("theta")) {
                                 double theta = node.get("theta").asDouble();
                                 score = (theta + 3.0) / 6.0 * 100.0;

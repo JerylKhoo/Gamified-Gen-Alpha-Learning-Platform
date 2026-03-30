@@ -2,6 +2,7 @@ package com.genalpha.learningplatform.service;
 
 import com.genalpha.learningplatform.model.Quiz;
 import com.genalpha.learningplatform.repository.QuizRepository;
+import com.genalpha.learningplatform.util.AdminGuard;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
@@ -36,14 +37,14 @@ public class QuizServiceImpl implements QuizService {
 
     @Override
     public Quiz create(Quiz quiz, UUID requesterId) {
-        requireAdmin(requesterId);
+        AdminGuard.requireAdmin(userService, requesterId);
         quiz.setQuizId(null);
         return quizRepository.save(quiz);
     }
 
     @Override
     public Quiz update(UUID quizId, Quiz updates, UUID requesterId) {
-        requireAdmin(requesterId);
+        AdminGuard.requireAdmin(userService, requesterId);
         Quiz quiz = getById(quizId);
         if (updates.getCourseId() != null)      quiz.setCourseId(updates.getCourseId());
         if (updates.getQuestion() != null)      quiz.setQuestion(updates.getQuestion());
@@ -58,13 +59,7 @@ public class QuizServiceImpl implements QuizService {
 
     @Override
     public void delete(UUID quizId, UUID requesterId) {
-        requireAdmin(requesterId);
+        AdminGuard.requireAdmin(userService, requesterId);
         quizRepository.delete(getById(quizId));
-    }
-
-    private void requireAdmin(UUID userId) {
-        if (!userService.isAdmin(userId)) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Admin access required");
-        }
     }
 }
