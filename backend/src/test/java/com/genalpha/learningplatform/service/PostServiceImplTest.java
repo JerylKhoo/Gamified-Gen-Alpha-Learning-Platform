@@ -99,6 +99,7 @@ class PostServiceImplTest {
     @DisplayName("Should save post with requester ID as owner when creating")
     void create_savesPost_withRequesterIdAsOwner() {
         // Arrange
+        when(userService.isContributorOrAbove(userId)).thenReturn(true);
         when(postRepository.save(any(Post.class))).thenReturn(post);
 
         Post input = new Post();
