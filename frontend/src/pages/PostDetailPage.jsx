@@ -222,7 +222,7 @@ export default function PostDetailPage() {
   }
 
   const isOwner = currentUserId && post?.userId === currentUserId;
-  const canEditPost = (isOwner && isContributor) || isAdmin;
+  const canEditPost = isOwner && isContributor;
   const canDeletePost = (isOwner && isContributor) || isAdmin;
 
   function startEditing() {

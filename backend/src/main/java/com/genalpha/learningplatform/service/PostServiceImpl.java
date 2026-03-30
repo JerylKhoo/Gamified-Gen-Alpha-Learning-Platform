@@ -102,10 +102,9 @@ public class PostServiceImpl implements PostService {
     @Override
     public Post update(UUID postId, Post updates, UUID requesterId) {
         Post post = getById(postId);
-        boolean isAdmin = userService.isAdmin(requesterId);
         boolean isOwner = post.getUserId().equals(requesterId);
-        if (!isAdmin && (!isOwner || !userService.isContributorOrAbove(requesterId))) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only contributors and admins can edit posts");
+        if (!isOwner || !userService.isContributorOrAbove(requesterId)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only the post owner (contributor+) can edit posts");
         }
         if (updates.getPicture() != null)     post.setPicture(updates.getPicture());
         if (updates.getDescription() != null) post.setDescription(updates.getDescription());
