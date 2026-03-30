@@ -30,5 +30,6 @@ public interface PostService {
     void deleteComment(UUID commentId, UUID requesterId);
     List<ReportedPostResponse> getReportedPosts();
     void approvePost(UUID postId, UUID requesterId);
+    void dismissReports(UUID postId, UUID requesterId);
     void deleteReportedPost(UUID postId, UUID requesterId);
 }

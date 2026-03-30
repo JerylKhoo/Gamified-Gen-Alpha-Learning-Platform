@@ -65,6 +65,14 @@ public class AdminController {
         return ResponseEntity.ok().build();
     }
 
+    @Operation(summary = "Dismiss reports as fake (clear reports and undo author report count)")
+    @PostMapping("/reports/{postId}/dismiss")
+    public ResponseEntity<Void> dismissReports(@PathVariable UUID postId, Authentication authentication) {
+        UUID requesterId = UUID.fromString(authentication.getName());
+        postService.dismissReports(postId, requesterId);
+        return ResponseEntity.ok().build();
+    }
+
     @Operation(summary = "Delete a reported post")
     @DeleteMapping("/reports/{postId}")
     public ResponseEntity<Void> deleteReportedPost(@PathVariable UUID postId, Authentication authentication) {
