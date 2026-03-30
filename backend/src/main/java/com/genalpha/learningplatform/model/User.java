@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
 
+import java.time.Instant;
 import java.util.UUID;
 
 /**
@@ -29,9 +30,15 @@ public class User {
     @Column(name = "profile_pic")
     private String profilePic;
 
+    @Column
+    private String email;
+
     @Column(nullable = false)
     private String role = "User";
 
     @Column(name = "report_count")
     private Integer reportCount = 0;
+
+    @Column(name = "created_at", updatable = false)
+    private Instant createdAt;
 }

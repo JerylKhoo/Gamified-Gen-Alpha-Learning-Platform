@@ -81,7 +81,10 @@ public class UserServiceImpl implements UserService {
         if (!List.of("User", "Collaborator", "Admin").contains(role)) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid role: " + role);
         }
-        getById(userId); // ensure user exists
+        User target = getById(userId);
+        if ("Admin".equals(target.getRole()) && !userId.equals(requesterId)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Cannot modify another admin's role");
+        }
         userRepository.updateRole(userId, role);
         return getById(userId);
     }
