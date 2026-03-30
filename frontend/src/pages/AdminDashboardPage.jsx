@@ -35,6 +35,7 @@ export default function AdminDashboardPage() {
   const [reportsLoading, setReportsLoading] = useState(true);
   const [reportsError, setReportsError] = useState('');
   const [actioningId, setActioningId] = useState(null);
+  const [deleteConfirm, setDeleteConfirm] = useState(null); // postId to confirm delete
 
   useEffect(() => {
     if (isAdmin === false) {
@@ -495,7 +496,7 @@ export default function AdminDashboardPage() {
                       Approve (Clear Reports)
                     </button>
                     <button
-                      onClick={() => handleDeletePost(post.postId)}
+                      onClick={() => setDeleteConfirm(post.postId)}
                       disabled={actioningId === post.postId}
                       className="px-4 py-2 rounded-lg text-[0.85rem] font-bold border border-[rgba(248,113,113,0.3)] bg-[rgba(248,113,113,0.1)] text-[#f87171] cursor-pointer hover:bg-[rgba(248,113,113,0.2)] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                     >
@@ -507,6 +508,33 @@ export default function AdminDashboardPage() {
             </div>
           )}
         </>
+      )}
+
+      {/* Delete confirmation modal */}
+      {deleteConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+          <div className="bg-[#1a1a2e] border border-[rgba(248,113,113,0.25)] rounded-2xl p-6 max-w-md w-full mx-4 shadow-[0_20px_60px_rgba(0,0,0,0.5)]">
+            <h3 className="text-[1.1rem] font-extrabold text-[#f0eeff] m-0 mb-2">Delete this post?</h3>
+            <p className="text-[0.88rem] text-[#8a82a6] m-0 mb-5 leading-relaxed">
+              This will permanently remove the post, all its comments, and reports. This action cannot be undone.
+            </p>
+            <div className="flex gap-3 justify-end">
+              <button
+                onClick={() => setDeleteConfirm(null)}
+                className="px-4 py-2 rounded-lg text-[0.85rem] font-bold border border-[rgba(255,255,255,0.12)] bg-transparent text-[#9090b0] cursor-pointer hover:bg-[rgba(255,255,255,0.06)] transition-all"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => { handleDeletePost(deleteConfirm); setDeleteConfirm(null); }}
+                disabled={actioningId === deleteConfirm}
+                className="px-4 py-2 rounded-lg text-[0.85rem] font-bold border border-[rgba(248,113,113,0.4)] bg-[rgba(248,113,113,0.15)] text-[#f87171] cursor-pointer hover:bg-[rgba(248,113,113,0.3)] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Yes, Delete
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
