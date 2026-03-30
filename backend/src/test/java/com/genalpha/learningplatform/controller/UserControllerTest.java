@@ -2,6 +2,7 @@ package com.genalpha.learningplatform.controller;
 
 import com.genalpha.learningplatform.model.User;
 import com.genalpha.learningplatform.service.UserService;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
@@ -23,6 +24,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * The service layer is mocked so no database is required.
  */
 @WebMvcTest(UserController.class)
+@DisplayName("UserController Unit Tests")
 class UserControllerTest {
 
     @Autowired
@@ -33,7 +35,9 @@ class UserControllerTest {
 
     @Test
     @WithMockUser
+    @DisplayName("Should return 200 with user list when leaderboard is requested")
     void getLeaderboard_returns200WithUserList() throws Exception {
+        // Arrange
         User user = new User();
         user.setUserId(UUID.randomUUID());
         user.setName("Alice");
@@ -41,14 +45,19 @@ class UserControllerTest {
 
         when(userService.getLeaderboard()).thenReturn(List.of(user));
 
+        // Act & Assert
         mockMvc.perform(get("/api/v1/users/leaderboard"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].name").value("Alice"));
+
+        verify(userService, times(1)).getLeaderboard();
     }
 
     @Test
     @WithMockUser
+    @DisplayName("Should return 200 with user when user exists")
     void getById_returns200_whenUserExists() throws Exception {
+        // Arrange
         UUID userId = UUID.randomUUID();
         User user = new User();
         user.setUserId(userId);
@@ -56,19 +65,27 @@ class UserControllerTest {
 
         when(userService.getById(userId)).thenReturn(user);
 
+        // Act & Assert
         mockMvc.perform(get("/api/v1/users/{userId}", userId))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.name").value("Bob"));
+
+        verify(userService, times(1)).getById(userId);
     }
 
     @Test
     @WithMockUser
+    @DisplayName("Should return 404 when user does not exist")
     void getById_returns404_whenUserNotFound() throws Exception {
+        // Arrange
         UUID userId = UUID.randomUUID();
         when(userService.getById(userId))
                 .thenThrow(new ResponseStatusException(NOT_FOUND, "User not found"));
 
+        // Act & Assert
         mockMvc.perform(get("/api/v1/users/{userId}", userId))
                 .andExpect(status().isNotFound());
+
+        verify(userService, times(1)).getById(userId);
     }
 }

@@ -13,6 +13,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
+import com.genalpha.learningplatform.util.AuthUtils;
+
 import java.util.List;
 import java.util.UUID;
 
@@ -48,21 +50,21 @@ public class PostController {
     @Operation(summary = "Create a post")
     @PostMapping
     public ResponseEntity<Post> create(@RequestBody Post post, Authentication authentication) {
-        UUID requesterId = UUID.fromString(authentication.getName());
+        UUID requesterId = AuthUtils.userId(authentication);
         return ResponseEntity.status(HttpStatus.CREATED).body(postService.create(post, requesterId));
     }
 
     @Operation(summary = "Toggle upvote on a post (upvote if not yet, remove if already upvoted)")
     @PostMapping("/{postId}/upvote")
     public ResponseEntity<Post> upvote(@PathVariable UUID postId, Authentication authentication) {
-        UUID requesterId = UUID.fromString(authentication.getName());
+        UUID requesterId = AuthUtils.userId(authentication);
         return ResponseEntity.ok(postService.upvote(postId, requesterId));
     }
 
     @Operation(summary = "Get list of post IDs the current user has upvoted")
     @GetMapping("/upvotes/me")
     public ResponseEntity<List<UUID>> getMyUpvotes(Authentication authentication) {
-        UUID requesterId = UUID.fromString(authentication.getName());
+        UUID requesterId = AuthUtils.userId(authentication);
         return ResponseEntity.ok(postService.getUpvotedPostIds(requesterId));
     }
 
@@ -71,14 +73,14 @@ public class PostController {
     public ResponseEntity<Post> report(@PathVariable UUID postId,
                                        @RequestBody ReportRequest request,
                                        Authentication authentication) {
-        UUID requesterId = UUID.fromString(authentication.getName());
+        UUID requesterId = AuthUtils.userId(authentication);
         return ResponseEntity.ok(postService.report(postId, requesterId, request.getReason(), request.getDescription()));
     }
 
     @Operation(summary = "Get list of post IDs the current user has reported")
     @GetMapping("/reports/me")
     public ResponseEntity<List<UUID>> getMyReports(Authentication authentication) {
-        UUID requesterId = UUID.fromString(authentication.getName());
+        UUID requesterId = AuthUtils.userId(authentication);
         return ResponseEntity.ok(postService.getReportedPostIds(requesterId));
     }
 
@@ -93,7 +95,7 @@ public class PostController {
     public ResponseEntity<Comment> addComment(@PathVariable UUID postId,
                                                @RequestBody Comment comment,
                                                Authentication authentication) {
-        UUID requesterId = UUID.fromString(authentication.getName());
+        UUID requesterId = AuthUtils.userId(authentication);
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(postService.addComment(postId, requesterId, comment.getBody()));
     }
@@ -103,14 +105,14 @@ public class PostController {
     public ResponseEntity<Post> update(@PathVariable UUID postId,
                                        @RequestBody Post updates,
                                        Authentication authentication) {
-        UUID requesterId = UUID.fromString(authentication.getName());
+        UUID requesterId = AuthUtils.userId(authentication);
         return ResponseEntity.ok(postService.update(postId, updates, requesterId));
     }
 
     @Operation(summary = "Delete own post")
     @DeleteMapping("/{postId}")
     public ResponseEntity<Void> delete(@PathVariable UUID postId, Authentication authentication) {
-        UUID requesterId = UUID.fromString(authentication.getName());
+        UUID requesterId = AuthUtils.userId(authentication);
         postService.delete(postId, requesterId);
         return ResponseEntity.noContent().build();
     }

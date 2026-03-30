@@ -9,6 +9,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
+import com.genalpha.learningplatform.util.AuthUtils;
+
 import java.util.List;
 import java.util.UUID;
 
@@ -33,14 +35,14 @@ public class ChatBotController {
     @Operation(summary = "Get chat session by ID")
     @GetMapping("/{chatId}")
     public ResponseEntity<ChatBot> getById(@PathVariable UUID chatId, Authentication authentication) {
-        UUID requesterId = UUID.fromString(authentication.getName());
+        UUID requesterId = AuthUtils.userId(authentication);
         return ResponseEntity.ok(chatBotService.getById(chatId, requesterId));
     }
 
     @Operation(summary = "Create a new chat session")
     @PostMapping
     public ResponseEntity<ChatBot> create(@RequestBody ChatBot chatBot, Authentication authentication) {
-        UUID requesterId = UUID.fromString(authentication.getName());
+        UUID requesterId = AuthUtils.userId(authentication);
         return ResponseEntity.status(HttpStatus.CREATED).body(chatBotService.create(chatBot, requesterId));
     }
 
@@ -49,14 +51,14 @@ public class ChatBotController {
     public ResponseEntity<ChatBot> update(@PathVariable UUID chatId,
                                           @RequestBody ChatBot updates,
                                           Authentication authentication) {
-        UUID requesterId = UUID.fromString(authentication.getName());
+        UUID requesterId = AuthUtils.userId(authentication);
         return ResponseEntity.ok(chatBotService.update(chatId, updates, requesterId));
     }
 
     @Operation(summary = "Delete a chat session (admin only)")
     @DeleteMapping("/{chatId}")
     public ResponseEntity<Void> delete(@PathVariable UUID chatId, Authentication authentication) {
-        UUID requesterId = UUID.fromString(authentication.getName());
+        UUID requesterId = AuthUtils.userId(authentication);
         chatBotService.delete(chatId, requesterId);
         return ResponseEntity.noContent().build();
     }

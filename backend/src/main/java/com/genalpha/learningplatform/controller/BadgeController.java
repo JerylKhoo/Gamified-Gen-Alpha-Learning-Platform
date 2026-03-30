@@ -9,6 +9,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
+import com.genalpha.learningplatform.util.AuthUtils;
+
 import java.util.List;
 import java.util.UUID;
 
@@ -38,7 +40,7 @@ public class BadgeController {
     @Operation(summary = "Create a badge (admin)")
     @PostMapping
     public ResponseEntity<Badge> create(@RequestBody Badge badge, Authentication authentication) {
-        UUID requesterId = UUID.fromString(authentication.getName());
+        UUID requesterId = AuthUtils.userId(authentication);
         return ResponseEntity.status(HttpStatus.CREATED).body(badgeService.create(badge, requesterId));
     }
 
@@ -47,14 +49,14 @@ public class BadgeController {
     public ResponseEntity<Badge> update(@PathVariable String badgeId,
                                         @RequestBody Badge updates,
                                         Authentication authentication) {
-        UUID requesterId = UUID.fromString(authentication.getName());
+        UUID requesterId = AuthUtils.userId(authentication);
         return ResponseEntity.ok(badgeService.update(badgeId, updates, requesterId));
     }
 
     @Operation(summary = "Delete a badge (admin)")
     @DeleteMapping("/{badgeId}")
     public ResponseEntity<Void> delete(@PathVariable String badgeId, Authentication authentication) {
-        UUID requesterId = UUID.fromString(authentication.getName());
+        UUID requesterId = AuthUtils.userId(authentication);
         badgeService.delete(badgeId, requesterId);
         return ResponseEntity.noContent().build();
     }
