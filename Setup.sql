@@ -726,6 +726,10 @@ CREATE POLICY "course_admin_write"
     ON storage.objects FOR INSERT
     WITH CHECK (bucket_id = 'course' AND public.current_user_role() = 'Admin');
 
+CREATE POLICY "course_admin_delete"
+    ON storage.objects FOR DELETE
+    USING (bucket_id = 'course' AND public.current_user_role() = 'Admin');
+
 -- module: authenticated read, admin write
 CREATE POLICY "module_auth_read"
     ON storage.objects FOR SELECT
