@@ -489,6 +489,13 @@ CREATE POLICY "comments_insert_own"
     ON public.COMMENTS FOR INSERT
     WITH CHECK (auth.uid() = user_id);
 
+CREATE POLICY "comments_delete_own_or_admin"
+    ON public.COMMENTS FOR DELETE
+    USING (
+        auth.uid() = user_id
+        OR public.current_user_role() = 'Admin'
+    );
+
 
 -- --------------------------------------------------------
 -- POST_REPORTS policies
@@ -501,6 +508,14 @@ CREATE POLICY "post_reports_insert_own"
 CREATE POLICY "post_reports_select_own"
     ON public.POST_REPORTS FOR SELECT
     USING (auth.uid() = user_id);
+
+CREATE POLICY "post_reports_select_admin"
+    ON public.POST_REPORTS FOR SELECT
+    USING (public.current_user_role() = 'Admin');
+
+CREATE POLICY "post_reports_delete_admin"
+    ON public.POST_REPORTS FOR DELETE
+    USING (public.current_user_role() = 'Admin');
 
 
 -- --------------------------------------------------------
