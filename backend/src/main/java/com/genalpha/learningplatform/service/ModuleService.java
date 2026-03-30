@@ -13,4 +13,5 @@ public interface ModuleService {
     Module create(Module module, UUID requesterId);
     Module update(String moduleId, Module updates, UUID requesterId);
     void delete(String moduleId, UUID requesterId);
+    void reorder(List<String> moduleIds, UUID requesterId);
 }
