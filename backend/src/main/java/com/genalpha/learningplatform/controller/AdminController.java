@@ -47,6 +47,14 @@ public class AdminController {
         return ResponseEntity.ok(userService.updateRole(userId, role, requesterId));
     }
 
+    @Operation(summary = "Delete a user account (admin only) — removes from Supabase Auth and cascades DB deletion")
+    @DeleteMapping("/users/{userId}")
+    public ResponseEntity<Void> deleteUser(@PathVariable UUID userId, Authentication authentication) {
+        UUID requesterId = UUID.fromString(authentication.getName());
+        userService.deleteUser(userId, requesterId);
+        return ResponseEntity.noContent().build();
+    }
+
     @Operation(summary = "Get all reported posts (admin only)")
     @GetMapping("/reports")
     public ResponseEntity<List<ReportedPostResponse>> getReportedPosts(Authentication authentication) {

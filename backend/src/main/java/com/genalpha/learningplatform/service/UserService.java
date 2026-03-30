@@ -18,4 +18,5 @@ public interface UserService {
     User updateRole(UUID userId, String role, UUID requesterId);
     void incrementReportCount(UUID userId);
     void decrementReportCount(UUID userId, int count);
+    void deleteUser(UUID userId, UUID requesterId);
 }

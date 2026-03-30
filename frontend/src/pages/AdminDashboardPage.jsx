@@ -29,6 +29,8 @@ export default function AdminDashboardPage() {
   const [updatingId, setUpdatingId] = useState(null);
   const [filterRole, setFilterRole] = useState('All');
   const [page, setPage] = useState(1);
+  const [sortKey, setSortKey] = useState(null); // 'name' | 'email' | 'createdAt' | 'points' | 'reportCount'
+  const [sortDir, setSortDir] = useState('asc'); // 'asc' | 'desc'
 
   // Moderation state
   const [reports, setReports] = useState([]);
@@ -36,6 +38,8 @@ export default function AdminDashboardPage() {
   const [reportsError, setReportsError] = useState('');
   const [actioningId, setActioningId] = useState(null);
   const [deleteConfirm, setDeleteConfirm] = useState(null); // postId to confirm delete
+  const [deleteUserConfirm, setDeleteUserConfirm] = useState(null); // userId to confirm user deletion
+  const [deletingUserId, setDeletingUserId] = useState(null);
 
   useEffect(() => {
     if (isAdmin === false) {
@@ -140,6 +144,24 @@ export default function AdminDashboardPage() {
     }
   }
 
+  async function handleDeleteUser(userId) {
+    setDeletingUserId(userId);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+      const res = await fetch(`${API_URL}/api/v1/admin/users/${userId}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      });
+      if (res.ok) {
+        setUsers(prev => prev.filter(u => u.userId !== userId));
+      }
+    } catch { /* silent */ } finally {
+      setDeletingUserId(null);
+      setDeleteUserConfirm(null);
+    }
+  }
+
   async function handleDeletePost(postId) {
     setActioningId(postId);
     try {
@@ -157,7 +179,19 @@ export default function AdminDashboardPage() {
     }
   }
 
-  // Filtered and paginated users
+  function handleSort(key) {
+    if (sortKey !== key) {
+      setSortKey(key);
+      setSortDir('asc');
+    } else if (sortDir === 'asc') {
+      setSortDir('desc');
+    } else {
+      setSortKey(null);
+      setSortDir('asc');
+    }
+  }
+
+  // Filtered, sorted, and paginated users
   const filtered = users.filter(u => {
     const matchesSearch = search === '' ||
       u.name?.toLowerCase().includes(search.toLowerCase()) ||
@@ -167,12 +201,30 @@ export default function AdminDashboardPage() {
     return matchesSearch && matchesRole;
   });
 
-  const totalPages = Math.max(1, Math.ceil(filtered.length / ROWS_PER_PAGE));
-  const safePage = Math.min(page, totalPages);
-  const paginated = filtered.slice((safePage - 1) * ROWS_PER_PAGE, safePage * ROWS_PER_PAGE);
+  const sorted = sortKey ? [...filtered].sort((a, b) => {
+    let aVal = a[sortKey];
+    let bVal = b[sortKey];
+    if (sortKey === 'createdAt') {
+      aVal = aVal ? new Date(aVal).getTime() : 0;
+      bVal = bVal ? new Date(bVal).getTime() : 0;
+    } else if (sortKey === 'points' || sortKey === 'reportCount') {
+      aVal = aVal ?? 0;
+      bVal = bVal ?? 0;
+    } else {
+      aVal = aVal?.toLowerCase() ?? '';
+      bVal = bVal?.toLowerCase() ?? '';
+    }
+    if (aVal < bVal) return sortDir === 'asc' ? -1 : 1;
+    if (aVal > bVal) return sortDir === 'asc' ? 1 : -1;
+    return 0;
+  }) : filtered;
 
-  // Reset page when search/filter changes
-  useEffect(() => { setPage(1); }, [search, filterRole]);
+  const totalPages = Math.max(1, Math.ceil(sorted.length / ROWS_PER_PAGE));
+  const safePage = Math.min(page, totalPages);
+  const paginated = sorted.slice((safePage - 1) * ROWS_PER_PAGE, safePage * ROWS_PER_PAGE);
+
+  // Reset page when search/filter/sort changes
+  useEffect(() => { setPage(1); }, [search, filterRole, sortKey, sortDir]);
 
   const stats = {
     total: users.length,
@@ -291,13 +343,30 @@ export default function AdminDashboardPage() {
               <table className="w-full border-collapse">
                 <thead>
                   <tr className="bg-[rgba(139,92,246,0.08)]">
-                    <th className="text-left px-4 py-3 text-[0.75rem] font-bold text-[#7c6ea8] uppercase tracking-[0.1em]">User</th>
-                    <th className="text-left px-4 py-3 text-[0.75rem] font-bold text-[#7c6ea8] uppercase tracking-[0.1em]">Email</th>
-                    <th className="text-left px-4 py-3 text-[0.75rem] font-bold text-[#7c6ea8] uppercase tracking-[0.1em]">Joined</th>
-                    <th className="text-left px-4 py-3 text-[0.75rem] font-bold text-[#7c6ea8] uppercase tracking-[0.1em]">XP</th>
-                    <th className="text-left px-4 py-3 text-[0.75rem] font-bold text-[#7c6ea8] uppercase tracking-[0.1em]">Reports</th>
-                    <th className="text-left px-4 py-3 text-[0.75rem] font-bold text-[#7c6ea8] uppercase tracking-[0.1em]">Role</th>
-                    <th className="text-left px-4 py-3 text-[0.75rem] font-bold text-[#7c6ea8] uppercase tracking-[0.1em]">Actions</th>
+                    {[
+                      { label: 'User', key: 'name' },
+                      { label: 'Email', key: 'email' },
+                      { label: 'Joined', key: 'createdAt' },
+                      { label: 'XP', key: 'points' },
+                      { label: 'Reports', key: 'reportCount' },
+                      { label: 'Role', key: null },
+                      { label: 'Actions', key: null },
+                    ].map(({ label, key }) => (
+                      <th
+                        key={label}
+                        onClick={key ? () => handleSort(key) : undefined}
+                        className={`text-left px-4 py-3 text-[0.75rem] font-bold text-[#7c6ea8] uppercase tracking-[0.1em] select-none ${key ? 'cursor-pointer hover:text-[#a78bfa] transition-colors' : ''}`}
+                      >
+                        <span className="inline-flex items-center gap-1">
+                          {label}
+                          {key && (
+                            <span className="text-[0.65rem] leading-none">
+                              {sortKey === key ? (sortDir === 'asc' ? '▲' : '▼') : '⇅'}
+                            </span>
+                          )}
+                        </span>
+                      </th>
+                    ))}
                   </tr>
                 </thead>
                 <tbody>
@@ -348,17 +417,10 @@ export default function AdminDashboardPage() {
                         </span>
                       </td>
 
-                      {/* Current role badge */}
-                      <td className="px-4 py-3">
-                        <span className={`inline-flex items-center border rounded-md font-semibold tracking-[0.06em] uppercase text-[0.72rem] px-2 py-[0.25rem] ${ROLE_STYLE[user.role] || ROLE_STYLE.User}`}>
-                          {user.role || 'User'}
-                        </span>
-                      </td>
-
                       {/* Role change dropdown */}
                       <td className="px-4 py-3">
                         {user.role === 'Admin' && user.userId !== authSession?.user?.id ? (
-                          <span className="text-[0.78rem] text-[#4b4870] italic">Protected</span>
+                          <span className={`inline-flex items-center border rounded-md font-semibold tracking-[0.06em] uppercase text-[0.72rem] px-2 py-[0.25rem] ${ROLE_STYLE.Admin}`}>Admin</span>
                         ) : (
                           <select
                             value={user.role || 'User'}
@@ -372,12 +434,29 @@ export default function AdminDashboardPage() {
                           </select>
                         )}
                       </td>
+
+                      {/* Delete action */}
+                      <td className="px-4 py-3">
+                        {user.userId === authSession?.user?.id ? (
+                          <span className="text-[0.78rem] text-[#4b4870] italic">You</span>
+                        ) : user.role === 'Admin' ? (
+                          <span className="text-[0.78rem] text-[#4b4870] italic">Protected</span>
+                        ) : (
+                          <button
+                            onClick={() => setDeleteUserConfirm(user)}
+                            disabled={deletingUserId === user.userId}
+                            className="px-3 py-[0.4rem] rounded-[8px] text-[0.82rem] font-semibold border border-[rgba(248,113,113,0.3)] bg-[rgba(248,113,113,0.08)] text-[#f87171] cursor-pointer hover:bg-[rgba(248,113,113,0.2)] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            Delete
+                          </button>
+                        )}
+                      </td>
                     </tr>
                   ))}
                 </tbody>
               </table>
 
-              {filtered.length === 0 && (
+              {sorted.length === 0 && (
                 <div className="flex flex-col items-center justify-center py-12 text-[#4b4870]">
                   <p className="text-[0.9rem] font-semibold m-0">No users found</p>
                 </div>
@@ -389,7 +468,7 @@ export default function AdminDashboardPage() {
           {!loading && !error && totalPages > 1 && (
             <div className="flex items-center justify-between">
               <p className="text-[0.78rem] text-[#5a5278] font-semibold m-0">
-                Showing {(safePage - 1) * ROWS_PER_PAGE + 1}–{Math.min(safePage * ROWS_PER_PAGE, filtered.length)} of {filtered.length} users
+                Showing {(safePage - 1) * ROWS_PER_PAGE + 1}–{Math.min(safePage * ROWS_PER_PAGE, sorted.length)} of {sorted.length} users
               </p>
               <div className="flex gap-1.5">
                 <button
@@ -423,9 +502,9 @@ export default function AdminDashboardPage() {
             </div>
           )}
 
-          {!loading && !error && totalPages <= 1 && filtered.length > 0 && (
+          {!loading && !error && totalPages <= 1 && sorted.length > 0 && (
             <p className="text-[0.78rem] text-[#5a5278] font-semibold m-0">
-              Showing {filtered.length} of {users.length} users
+              Showing {sorted.length} of {users.length} users
             </p>
           )}
         </>
@@ -555,6 +634,35 @@ export default function AdminDashboardPage() {
                 className="px-4 py-2 rounded-lg text-[0.85rem] font-bold border border-[rgba(248,113,113,0.4)] bg-[rgba(248,113,113,0.15)] text-[#f87171] cursor-pointer hover:bg-[rgba(248,113,113,0.3)] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Yes, Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Delete user confirmation modal */}
+      {deleteUserConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+          <div className="bg-[#1a1a2e] border border-[rgba(248,113,113,0.25)] rounded-2xl p-6 max-w-md w-full mx-4 shadow-[0_20px_60px_rgba(0,0,0,0.5)]">
+            <h3 className="text-[1.1rem] font-extrabold text-[#f0eeff] m-0 mb-2">Delete user account?</h3>
+            <p className="text-[0.88rem] text-[#8a82a6] m-0 mb-1 leading-relaxed">
+              You are about to permanently delete <span className="font-bold text-[#f0eeff]">{deleteUserConfirm.name}</span>.
+            </p>
+            <p className="text-[0.88rem] text-[#8a82a6] m-0 mb-5 leading-relaxed">
+              This will remove their Supabase auth account and all associated data. This action cannot be undone.
+            </p>
+            <div className="flex gap-3 justify-end">
+              <button
+                onClick={() => setDeleteUserConfirm(null)}
+                className="px-4 py-2 rounded-lg text-[0.85rem] font-bold border border-[rgba(255,255,255,0.12)] bg-transparent text-[#9090b0] cursor-pointer hover:bg-[rgba(255,255,255,0.06)] transition-all"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => handleDeleteUser(deleteUserConfirm.userId)}
+                disabled={deletingUserId === deleteUserConfirm.userId}
+                className="px-4 py-2 rounded-lg text-[0.85rem] font-bold border border-[rgba(248,113,113,0.4)] bg-[rgba(248,113,113,0.15)] text-[#f87171] cursor-pointer hover:bg-[rgba(248,113,113,0.3)] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {deletingUserId === deleteUserConfirm.userId ? 'Deleting...' : 'Yes, Delete'}
               </button>
             </div>
           </div>
