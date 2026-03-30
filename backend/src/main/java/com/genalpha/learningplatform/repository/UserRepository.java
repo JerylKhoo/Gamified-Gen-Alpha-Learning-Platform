@@ -26,4 +26,8 @@ public interface UserRepository extends JpaRepository<User, UUID> {
     @Modifying(clearAutomatically = true)
     @Query("UPDATE User u SET u.reportCount = u.reportCount + 1 WHERE u.userId = :userId")
     void incrementReportCount(@Param("userId") UUID userId);
+
+    @Modifying(clearAutomatically = true)
+    @Query("UPDATE User u SET u.reportCount = CASE WHEN u.reportCount >= :count THEN u.reportCount - :count ELSE 0 END WHERE u.userId = :userId")
+    void decrementReportCount(@Param("userId") UUID userId, @Param("count") int count);
 }

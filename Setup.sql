@@ -22,8 +22,10 @@ CREATE TABLE IF NOT EXISTS public."USER" (
     Name         TEXT        NOT NULL,
     Points       INTEGER     NOT NULL DEFAULT 0,
     Profile_Pic  TEXT,
+    Email        TEXT,
     Role         TEXT        NOT NULL DEFAULT 'User' CHECK (Role IN ('Admin', 'User', 'Collaborator')),
-    Report_Count INTEGER     NOT NULL DEFAULT 0
+    Report_Count INTEGER     NOT NULL DEFAULT 0,
+    Created_At   TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 -- BADGES
@@ -142,10 +144,11 @@ BEGIN
         v_avatar_url := 'https://thuyecuhlufqvabzeqlg.supabase.co/storage/v1/object/public/profilepic/' || v_avatar_name;
     END IF;
 
-    INSERT INTO public."USER" (User_ID, Name, Profile_Pic)
+    INSERT INTO public."USER" (User_ID, Name, Email, Profile_Pic)
     VALUES (
         NEW.id,
         split_part(NEW.email, '@', 1),
+        NEW.email,
         v_avatar_url
     );
 
@@ -486,6 +489,13 @@ CREATE POLICY "comments_insert_own"
     ON public.COMMENTS FOR INSERT
     WITH CHECK (auth.uid() = user_id);
 
+CREATE POLICY "comments_delete_own_or_admin"
+    ON public.COMMENTS FOR DELETE
+    USING (
+        auth.uid() = user_id
+        OR public.current_user_role() = 'Admin'
+    );
+
 
 -- --------------------------------------------------------
 -- POST_REPORTS policies
@@ -498,6 +508,14 @@ CREATE POLICY "post_reports_insert_own"
 CREATE POLICY "post_reports_select_own"
     ON public.POST_REPORTS FOR SELECT
     USING (auth.uid() = user_id);
+
+CREATE POLICY "post_reports_select_admin"
+    ON public.POST_REPORTS FOR SELECT
+    USING (public.current_user_role() = 'Admin');
+
+CREATE POLICY "post_reports_delete_admin"
+    ON public.POST_REPORTS FOR DELETE
+    USING (public.current_user_role() = 'Admin');
 
 
 -- --------------------------------------------------------

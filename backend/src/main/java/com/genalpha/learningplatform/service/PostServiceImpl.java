@@ -2,6 +2,7 @@ package com.genalpha.learningplatform.service;
 
 import com.genalpha.learningplatform.dto.CommentResponse;
 import com.genalpha.learningplatform.dto.PostResponse;
+import com.genalpha.learningplatform.dto.ReportedPostResponse;
 import com.genalpha.learningplatform.model.Comment;
 import com.genalpha.learningplatform.model.Post;
 import com.genalpha.learningplatform.model.PostReport;
@@ -13,6 +14,7 @@ import com.genalpha.learningplatform.repository.PostRepository;
 import com.genalpha.learningplatform.repository.PostUpvoteRepository;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
@@ -100,10 +102,9 @@ public class PostServiceImpl implements PostService {
     @Override
     public Post update(UUID postId, Post updates, UUID requesterId) {
         Post post = getById(postId);
-        boolean isAdmin = userService.isAdmin(requesterId);
         boolean isOwner = post.getUserId().equals(requesterId);
-        if (!isAdmin && (!isOwner || !userService.isContributorOrAbove(requesterId))) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only contributors and admins can edit posts");
+        if (!isOwner || !userService.isContributorOrAbove(requesterId)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only the post owner (contributor+) can edit posts");
         }
         if (updates.getPicture() != null)     post.setPicture(updates.getPicture());
         if (updates.getDescription() != null) post.setDescription(updates.getDescription());
@@ -214,6 +215,88 @@ public class PostServiceImpl implements PostService {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Cannot delete another user's comment");
         }
         commentRepository.delete(comment);
+    }
+
+    @Override
+    public List<ReportedPostResponse> getReportedPosts() {
+        List<Post> reportedPosts = postRepository.findByReportCountGreaterThan(0);
+        return reportedPosts.stream().map(post -> {
+            ReportedPostResponse resp = new ReportedPostResponse();
+            resp.setPostId(post.getPostId());
+            resp.setTitle(post.getTitle());
+            resp.setDescription(post.getDescription());
+            resp.setPicture(post.getPicture());
+            resp.setCategory(post.getCategory());
+            resp.setReportCount(post.getReportCount());
+
+            try {
+                User author = userService.getById(post.getUserId());
+                resp.setAuthorId(author.getUserId());
+                resp.setAuthorName(author.getName());
+                resp.setAuthorProfilePic(author.getProfilePic());
+            } catch (ResponseStatusException ignored) {
+                resp.setAuthorName("Unknown");
+            }
+
+            List<PostReport> reports = postReportRepository.findByPostId(post.getPostId());
+            resp.setReports(reports.stream().map(r -> {
+                ReportedPostResponse.ReportDetail detail = new ReportedPostResponse.ReportDetail();
+                detail.setReportId(r.getId());
+                detail.setReporterId(r.getUserId());
+                detail.setReason(r.getReason());
+                detail.setDescription(r.getDescription());
+                try {
+                    User reporter = userService.getById(r.getUserId());
+                    detail.setReporterName(reporter.getName());
+                } catch (ResponseStatusException ignored) {
+                    detail.setReporterName("Unknown");
+                }
+                return detail;
+            }).toList());
+
+            return resp;
+        }).toList();
+    }
+
+    @Override
+    @Transactional
+    public void approvePost(UUID postId, UUID requesterId) {
+        if (!userService.isAdmin(requesterId)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only admins can approve posts");
+        }
+        Post post = getById(postId);
+        post.setReportCount(0);
+        postRepository.save(post);
+    }
+
+    @Override
+    @Transactional
+    public void dismissReports(UUID postId, UUID requesterId) {
+        if (!userService.isAdmin(requesterId)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only admins can dismiss reports");
+        }
+        Post post = getById(postId);
+        int reportCount = post.getReportCount();
+        UUID authorId = post.getUserId();
+        // Decrement author's report count first (JPQL clears persistence context)
+        userService.decrementReportCount(authorId, reportCount);
+        // Re-fetch post after context clear, then delete reports and reset count
+        post = getById(postId);
+        postReportRepository.deleteByPostId(postId);
+        post.setReportCount(0);
+        postRepository.save(post);
+    }
+
+    @Override
+    @Transactional
+    public void deleteReportedPost(UUID postId, UUID requesterId) {
+        if (!userService.isAdmin(requesterId)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only admins can delete reported posts");
+        }
+        Post post = getById(postId);
+        postReportRepository.deleteByPostId(postId);
+        commentRepository.deleteByPostId(postId);
+        postRepository.delete(post);
     }
 
     private CommentResponse toCommentResponse(Comment comment) {
