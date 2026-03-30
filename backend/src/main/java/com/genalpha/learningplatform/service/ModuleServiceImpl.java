@@ -5,6 +5,7 @@ import com.genalpha.learningplatform.repository.ModuleRepository;
 import com.genalpha.learningplatform.util.AdminGuard;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
@@ -56,5 +57,16 @@ public class ModuleServiceImpl implements ModuleService {
     public void delete(String moduleId, UUID requesterId) {
         AdminGuard.requireAdmin(userService, requesterId);
         moduleRepository.delete(getById(moduleId));
+    }
+
+    @Override
+    @Transactional
+    public void reorder(List<String> moduleIds, UUID requesterId) {
+        AdminGuard.requireAdmin(userService, requesterId);
+        for (int i = 0; i < moduleIds.size(); i++) {
+            Module module = getById(moduleIds.get(i));
+            module.setOrder(i + 1);
+            moduleRepository.save(module);
+        }
     }
 }

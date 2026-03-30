@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.*;
 import com.genalpha.learningplatform.util.AuthUtils;
 
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @Tag(name = "Modules", description = "Course module management")
@@ -51,6 +52,15 @@ public class ModuleController {
                                          Authentication authentication) {
         UUID requesterId = AuthUtils.userId(authentication);
         return ResponseEntity.ok(moduleService.update(moduleId, updates, requesterId));
+    }
+
+    @Operation(summary = "Reorder modules (admin) — body: { moduleIds: [id1, id2, ...] }")
+    @PatchMapping("/reorder")
+    public ResponseEntity<Void> reorder(@RequestBody Map<String, List<String>> body,
+                                        Authentication authentication) {
+        UUID requesterId = AuthUtils.userId(authentication);
+        moduleService.reorder(body.get("moduleIds"), requesterId);
+        return ResponseEntity.noContent().build();
     }
 
     @Operation(summary = "Delete a module (admin)")
