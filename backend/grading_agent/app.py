@@ -13,7 +13,8 @@ from fastapi.responses import StreamingResponse
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel, Field, field_validator
+from uuid import uuid4
 from groq import Groq
 from google import genai
 from google.genai import types
@@ -41,6 +42,7 @@ app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 
 class ChatRequest(BaseModel):
+    user_id: str
     session_id: str
     message: str
 
@@ -80,6 +82,13 @@ def build_messages(system_prompt, recent, user_input):
 
     return messages
 
+from datetime import datetime, timedelta
+
+def endtime() -> str:
+    now = datetime.now()
+    end = now + timedelta(minutes=3)
+    return end.strftime("%Y-%m-%d %H:%M:%S")
+
 #chat history management
 def save_recent(session_id, recent) -> None:
     #redis data: "chat:session_id"
@@ -88,6 +97,13 @@ def save_recent(session_id, recent) -> None:
         json.dumps(recent),
         ex=86400
     )
+
+    if redis_client.get(f"chat:{session_id}:endtime") is None:
+        safe_redis_set(
+            f"chat:{session_id}:endtime",
+            json.dumps(endtime()),
+            ex=86400
+        )
 
 def load_memory(session_id):
     try:
@@ -108,13 +124,83 @@ def update_memory(session_id, recent, new_user_msg, new_assistant_msg):
 
     save_recent(session_id, recent)
 
-#TODO: switch frfr/iirc/fr/gng/gg etc into like WORDS
+SLANG_MAP = {
+    # Affirmations / Agreement
+    "fr": "for real",
+    "frfr": "for real for real",
+    "ong": "on god",
+    "ngl": "not gonna lie",
+    "istg": "i swear to god",
+    "ight": "alright",
+    "fasho": "for sure",
+    "fs": "for sure",
+
+    # People / Social
+    "gng": "gang",
+    "bff": "best friend forever",
+    "bffl": "best friend for life",
+
+    # Reactions / Emotions
+    "ded": "dead",
+    "💀": "skull emoji",
+
+    # Hype / Positive
+    "iykyk": "if you know you know",
+
+    # Internet / Meta
+    "imo": "in my opinion",
+    "imho": "in my honest opinion",
+    "tbh": "to be honest",
+    "afaik": "as far as i know",
+    "gtg": "got to go",
+    "ttyl": "talk to you later",
+    "hmu": "hit me up",
+    "dm": "direct message",
+    "fyp": "for you page",
+    "smth" : "something",
+
+    # Filler / Emphasis
+    "periodt": "period",
+    "srs": "serious",
+    "nbs": "no bull shit",
+    "rn": "right now",
+    "atm": "at the moment",
+    "imo": "in my opinion",
+    "tbf": "to be fair",
+}
+
+def expand_slang(text: str) -> str:
+    """Replace Gen Z/Alpha acronyms with their full forms for TTS readability."""
+    def replace_match(match):
+        word = match.group(0)
+        return SLANG_MAP.get(word.lower(), word)
+
+    # Build pattern from all keys, longest first to avoid partial matches
+    sorted_keys = sorted(SLANG_MAP.keys(), key=len, reverse=True)
+    escaped = [re.escape(k) for k in sorted_keys]
+    pattern = r"\b(?:" + "|".join(escaped) + r")\b"
+
+    return re.sub(pattern, replace_match, text, flags=re.IGNORECASE)
+
 def reconstruct(text: str) -> str:
     text = re.sub(r"```.*?```", "", text, flags=re.DOTALL)
     text = re.sub(r"`([^`]*)`", r"\1", text)
     text = re.sub(r"[*_#>-]", "", text)
+    text = expand_slang(text)
 
     return text
+
+#role sanitation: deletes assistant and system messages
+def role_sanitation(messages_data)-> list: 
+    messages = []
+    if messages_data:
+        try:
+            messages = json.loads(messages_data)
+            messages = [msg for msg in messages if msg.get("role") != "system" and msg.get("role") != "assistant"]
+        except Exception as e:
+            print("No conversation recorded:", e)
+
+    return messages
 
 #grading helper
 def grading_conversation(session_id):
@@ -134,60 +220,92 @@ import datetime
 SUPABASE_URL = os.getenv("SUPABASE_URL")
 SUPABASE_ANON_KEY = os.getenv("SUPABASE_KEY")
 supabase = create_client(SUPABASE_URL, SUPABASE_ANON_KEY)
+from datetime import datetime
 
-#TODO: change the input --> prereq: grading agent
-def save_conversation_to_supabase(session_id, user_message, full_response, score):
-    #1: resolve chat_id
-    #2: resolve to user_id (ui side)
-    #3: get score from grading json ["score"]
-        #score is out of 40, convert it into percentage
-    #4: chat history from recent
+def save_conversation_to_supabase(session_id, user_id, chat_history):
+    # 1. Get score from Redis
+    score_data = redis_client.get(f"chat:{session_id}:score")
 
+    score_percentage = None
+
+    if score_data:
+        try:
+            score_json = json.loads(score_data)
+            raw_score = score_json.get("score", 0)
+            score_percentage = (raw_score / 40) * 100
+        except Exception as e:
+            print("Error parsing score:", e)
+    
     data = {
         "session_id": session_id,
-        "chat_hitory": full_response,
-        "created_at": datetime.utcnow().isoformat(),  # store UTC timestamp
-        "score": score
+        "user_id": user_id,
+        "chat_history": chat_history,
+        "created_at": datetime.utcnow().isoformat(),
+        "score": score_percentage
     }
 
-    #5: update persistent data
-    response = supabase.table("conversations").insert(data).execute()
+    #making retires possible
+    response = supabase.table("conversations").upsert(data, on_conflict="session_id").execute()
 
-    if response.status_code == 201:  # inserted successfully
+    # 5. Logging
+    if response.data:
         print("Conversation saved successfully!")
     else:
-        print("Failed to save conversation:", response.data)
+        print("Failed to save:", response)
 
 import time
 import threading
+from datetime import datetime
 
 @app.post("/chat")
 @limiter.limit("20/minute")
 def chat(request: Request, req: ChatRequest):
     recent = load_memory(req.session_id)
     messages = build_messages(SYSTEM_PROMPT, recent, req.message)
+    session_id = req.session_id
 
     def grading_agent(session_id):
-            try:
-                conversation = grading_conversation(session_id)
-                response = client.chat.completions.create(
-                            model="llama-3.3-70b-versatile",
-                            messages=conversation,
-                            temperature=0.7,
-                            max_tokens=500,
-                            stream=True
-                        )
+        try:
+            conversation = grading_conversation(session_id)
+            response = client.chat.completions.create(
+                        model="llama-3.3-70b-versatile",
+                        messages=conversation,
+                        temperature=0.7,
+                        max_tokens=500,
+                        stream=True
+                    )
 
-                full_response = ""
+            full_response = ""
 
-                for chunk in response:
-                        content = chunk.choices[0].delta.content or ""
-                        full_response += content
+            for chunk in response:
+                    content = chunk.choices[0].delta.content or ""
+                    full_response += content
 
-                print(full_response)
-                safe_redis_set(f"chat:{session_id}:score", full_response, ex=86400)
-            except Exception as e:
-                print(f"[grading_agent] error for {session_id}:", e)
+            safe_redis_set(f"chat:{session_id}:score", full_response, ex=86400)
+            print("Saving score to supabase!")
+
+            #getting messages
+            chat_messages = f"chat:{session_id}:recent"
+            messages_data = redis_client.get(chat_messages)
+
+            messages = role_sanitation(messages_data=messages_data)
+            
+            #saving to supabase
+            print("Saving to Supabase...[supposedly]")
+            print("timing of scoring: "+ datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+
+            print("data checking: messages thats being saved: ")
+            for msg in messages:   
+                print(msg)
+
+            # save_conversation_to_supabase(
+            #     session_id=req.session_id,
+            #     user_id=req.user_id,
+            #     chat_history=messages
+            # )
+
+        except Exception as e:
+            print(f"[grading_agent] error for {session_id}:", e)
 
     #daemon checking if convo has ended
     def checking_for_is_ended(session_id):
@@ -199,6 +317,15 @@ def chat(request: Request, req: ChatRequest):
         
         grading_agent(session_id)
 
+    #TODO: fix this part so it doesnt run with every call 
+    t = threading.Thread(
+            target=checking_for_is_ended,
+            args=(session_id,),
+            daemon=True
+        )
+    t.start()
+
+    #main LLM loop
     stream = client.chat.completions.create(
         model="llama-3.3-70b-versatile",
         messages=messages,
@@ -209,17 +336,10 @@ def chat(request: Request, req: ChatRequest):
     
     def generate():
         safe_redis_set(
-            f"chat:{req.session_id}:active",
+            f"chat:{session_id}:active",
             "active",
             ex=180
         )
-
-        t = threading.Thread(
-            target=checking_for_is_ended,
-            args=(req.session_id,),
-            daemon=True
-        )
-        t.start()
         
         full_response = ""
 
@@ -228,11 +348,11 @@ def chat(request: Request, req: ChatRequest):
             full_response += content
             yield content
         
-        update_memory(req.session_id, recent, req.message, full_response)
+        update_memory(session_id, recent, req.message, full_response)
 
         voice_msg = reconstruct(full_response)
         safe_redis_set(
-            f"chat:{req.session_id}:voice",
+            f"chat:{session_id}:voice",
             voice_msg,
             ex=86400
         )

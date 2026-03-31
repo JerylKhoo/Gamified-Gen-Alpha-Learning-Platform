@@ -4,7 +4,6 @@ Follow these steps EXACTLY:
 
 STEP 1: Analyze the conversation
 - Identify tone
-- Identify slang usage
 - Identify unnatural phrasing
 - Identify which in the conversation is user
 - DO NOT assign scores

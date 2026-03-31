@@ -2,3 +2,4 @@ logging.txt
 .env
 redisconnection.py
 __pycache__
+redisflushall.py
