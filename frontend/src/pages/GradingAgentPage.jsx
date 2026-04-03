@@ -19,6 +19,9 @@ export default function GradingAgentPage() {
   const [user, setUser] = useState(null);
   const [error, setError] = useState(null);
 
+  const [conversationStarted, setConversationStarted] = useState(false);
+  const [startLoading, setStartLoading] = useState(false);
+
   const [timeLeft, setTimeLeft] = useState(null);
   const [status, setStatus] = useState("idle"); // idle, active, finished
   const [scoreData, setScoreData] = useState(null);
@@ -39,9 +42,45 @@ export default function GradingAgentPage() {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
+  const handleStart = async () => {
+    if (!user || startLoading) return;
+    setStartLoading(true);
+    setError(null);
+    try {
+      const res = await fetch(`${GRADING_AGENT_URL}/start`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ session_id: sessionId }),
+      });
+      if (!res.ok) throw new Error('Failed to start session. Ensure the grading agent is running.');
+      const { question } = await res.json();
+      setMessages([{ role: 'assistant', content: question }]);
+      setConversationStarted(true);
+
+      try {
+        const ttsRes = await fetch(`${GRADING_AGENT_URL}/tts`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ session_id: sessionId })
+        });
+        if (ttsRes.ok) {
+          const audioBlob = await ttsRes.blob();
+          const audioUrl = URL.createObjectURL(audioBlob);
+          const audio = new Audio(audioUrl);
+          audio.play().catch(e => console.error("Audio playback blocked", e));
+        }
+      } catch (ttsErr) {
+        console.warn('TTS for initial question failed:', ttsErr);
+      }
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setStartLoading(false);
+    }
+  };
+
   useEffect(() => {
-    // Stop aggressively polling the server if the user hasn't sent a message yet, or if grading is already complete!
-    if (messages.length === 0 || scoreData !== null) return;
+    if (!conversationStarted || scoreData !== null) return;
 
     const interval = setInterval(async () => {
       try {
@@ -57,7 +96,6 @@ export default function GradingAgentPage() {
             setStatus("active");
           }
         }
-
         if (data.score) {
           setScoreData(data.score);
           setStatus("finished");
@@ -69,49 +107,51 @@ export default function GradingAgentPage() {
     return () => clearInterval(interval);
   }, [sessionId, messages.length, scoreData]);
 
-  // const loadLeaderboard = async () => {
-  //   setBoardLoading(true);
-  //   try {
-  //     const { data: { session } } = await supabase.auth.getSession();
+  const loadLeaderboard = async () => {
+    setBoardLoading(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
 
-  //     const res = await fetch(`${API_URL}/api/v1/users/leaderboard`, {
-  //       headers: { Authorization: `Bearer ${session.access_token}` },
-  //     });
-  //     if (!res.ok) throw new Error("Failed to load user info");
-  //     const usersInfo = await res.json();
+      const res = await fetch(`${API_URL}/api/v1/users/leaderboard`, {
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      });
+      if (!res.ok) throw new Error("Failed to load user info");
+      const usersInfo = await res.json();
 
-  //     const { data: convData, error: dbError } = await supabase
-  //       .from('conversations')
-  //       .select('user_id, score');
+      const { data: convData, error: dbError } = await supabase
+        .from('chat_bot')
+        .select('user_id, score');
 
-  //     if (dbError) throw dbError;
+      if (dbError) throw dbError;
 
-  //     const maxScores = {};
-  //     convData?.forEach(c => {
-  //       if (!maxScores[c.user_id] || c.score > maxScores[c.user_id]) {
-  //         maxScores[c.user_id] = c.score;
-  //       }
-  //     });
+      // score is stored as raw final_score out of 100,000
+      const maxScores = {};
+      convData?.forEach(c => {
+        const score = c.score ? parseFloat(c.score) : 0;
+        if (!maxScores[c.user_id] || score > maxScores[c.user_id]) {
+          maxScores[c.user_id] = score;
+        }
+      });
 
-  //     const merged = usersInfo.map(u => ({
-  //       ...u,
-  //       agentScore: maxScores[u.userId] || 0
-  //     })).filter(u => u.agentScore > 0)
-  //       .sort((a, b) => b.agentScore - a.agentScore);
+      const merged = usersInfo.map(u => ({
+        ...u,
+        agentScore: maxScores[u.userId] || 0
+      })).filter(u => u.agentScore > 0)
+        .sort((a, b) => b.agentScore - a.agentScore);
 
-  //     setBoardUsers(merged);
-  //   } catch (e) {
-  //     console.error(e);
-  //   } finally {
-  //     setBoardLoading(false);
-  //   }
-  // };
+      setBoardUsers(merged);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setBoardLoading(false);
+    }
+  };
 
-  // useEffect(() => {
-  //   if (showLeaderboard) {
-  //     loadLeaderboard();
-  //   }
-  // }, [showLeaderboard]);
+  useEffect(() => {
+    if (showLeaderboard) {
+      loadLeaderboard();
+    }
+  }, [showLeaderboard]);
 
   const handleSend = async () => {
     if (!input.trim() || !user || status === "finished") return;
@@ -189,7 +229,7 @@ export default function GradingAgentPage() {
         <div className="flex flex-col gap-1">
           <div className="flex justify-between items-center flex-wrap gap-4">
             <h1 className="text-[1.8rem] font-extrabold text-[#f0eeff] m-0 flex items-center gap-3">
-              🤖 Grading Agent
+              🤖 Challenge
             </h1>
             <div className="flex items-center gap-3">
               <button
@@ -212,9 +252,20 @@ export default function GradingAgentPage() {
         <div className="flex-1 bg-[rgba(22,18,48,0.4)] border border-[rgba(139,92,246,0.15)] rounded-2xl flex flex-col overflow-hidden max-h-[75vh]">
           {/* Messages List */}
           <div className="flex-1 overflow-y-auto p-6 flex flex-col gap-4">
-            {messages.length === 0 && (
-              <div className="text-center text-[#6b6490] mt-10">
-                Start the conversation. Type below to begin!
+            {!conversationStarted && (
+              <div className="flex flex-col items-center justify-center flex-1 gap-5 py-16">
+                <div className="text-5xl">🤖</div>
+                <div className="text-center">
+                  <p className="text-[#f0eeff] font-bold text-xl mb-1">Ready for the challenge?</p>
+                  <p className="text-[#6b6490] text-sm">You'll get a random question and 1 minute to impress the agent.</p>
+                </div>
+                <button
+                  onClick={handleStart}
+                  disabled={startLoading || !user}
+                  className="bg-[#8b5cf6] hover:bg-[#7c3aed] disabled:bg-[rgba(139,92,246,0.4)] disabled:cursor-not-allowed text-white font-bold px-8 py-3 rounded-xl transition-colors text-base"
+                >
+                  {startLoading ? 'Starting...' : 'Start Conversation'}
+                </button>
               </div>
             )}
             {messages.map((msg, i) => (
@@ -252,7 +303,7 @@ export default function GradingAgentPage() {
             <div className="p-6 border-t border-[rgba(139,92,246,0.3)] bg-[rgba(13,11,30,0.8)] flex flex-col gap-3">
               <h3 className="text-[#f0eeff] text-xl font-bold m-0 flex items-center gap-2">✅ Grading Complete</h3>
               <div className="text-[2.2rem] font-black text-[#8b5cf6] m-0 leading-none">
-                {scoreData.final_score ?? scoreData.score ?? scoreData.score_percentage ?? 0} <span className="text-lg text-[#6b6490] font-bold">/ 40 pts</span>
+                {(scoreData.final_score ?? scoreData.score ?? 0).toLocaleString()} <span className="text-lg text-[#6b6490] font-bold">/ 100K pts</span>
               </div>
               <p className="text-[#c0b8e8] text-[0.95rem] leading-relaxed m-0 border-t border-white/5 pt-3 whitespace-pre-wrap">
                 {scoreData.feedback || scoreData.analysis}
@@ -261,7 +312,7 @@ export default function GradingAgentPage() {
           )}
 
           {/* Input Bar */}
-          {status !== "finished" && (
+          {conversationStarted && status !== "finished" && (
             <div className="p-4 border-t border-[rgba(139,92,246,0.15)] bg-[rgba(13,11,30,0.6)]">
               <div className="flex gap-3">
                 <input
@@ -325,7 +376,7 @@ export default function GradingAgentPage() {
                       </span>
                       <div className="flex items-center gap-1 flex-shrink-0">
                         <span className={`font-bold text-[0.85rem] ${isTop3 ? 'text-[#8b5cf6]' : 'text-[#6b6490]'}`}>
-                          {Math.round(bu.agentScore)}
+                          {Math.round(bu.agentScore).toLocaleString()}
                         </span>
                         <span className="text-[0.65rem] text-[#4b5563]">pts</span>
                       </div>
