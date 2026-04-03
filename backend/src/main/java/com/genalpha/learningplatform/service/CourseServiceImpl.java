@@ -2,6 +2,7 @@ package com.genalpha.learningplatform.service;
 
 import com.genalpha.learningplatform.model.Course;
 import com.genalpha.learningplatform.repository.CourseRepository;
+import com.genalpha.learningplatform.util.AdminGuard;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
@@ -36,7 +37,7 @@ public class CourseServiceImpl implements CourseService {
 
     @Override
     public Course create(Course course, UUID requesterId) {
-        requireAdmin(requesterId);
+        AdminGuard.requireAdmin(userService, requesterId);
         if (course.getCourseId() == null || course.getCourseId().isBlank()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Course ID is required");
         }
@@ -45,7 +46,7 @@ public class CourseServiceImpl implements CourseService {
 
     @Override
     public Course update(String courseId, Course updates, UUID requesterId) {
-        requireAdmin(requesterId);
+        AdminGuard.requireAdmin(userService, requesterId);
         Course course = getById(courseId);
         if (updates.getDescription() != null) course.setDescription(updates.getDescription());
         if (updates.getImage() != null)       course.setImage(updates.getImage());
@@ -54,13 +55,7 @@ public class CourseServiceImpl implements CourseService {
 
     @Override
     public void delete(String courseId, UUID requesterId) {
-        requireAdmin(requesterId);
+        AdminGuard.requireAdmin(userService, requesterId);
         courseRepository.delete(getById(courseId));
-    }
-
-    private void requireAdmin(UUID userId) {
-        if (!userService.isAdmin(userId)) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Admin access required");
-        }
     }
 }

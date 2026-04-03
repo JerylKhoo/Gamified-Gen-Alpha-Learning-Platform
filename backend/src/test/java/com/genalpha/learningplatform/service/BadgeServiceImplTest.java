@@ -3,6 +3,7 @@ package com.genalpha.learningplatform.service;
 import com.genalpha.learningplatform.model.Badge;
 import com.genalpha.learningplatform.repository.BadgeRepository;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -14,13 +15,14 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
-import static org.assertj.core.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 /**
  * Unit tests for BadgeServiceImpl.
  */
 @ExtendWith(MockitoExtension.class)
+@DisplayName("BadgeServiceImpl Unit Tests")
 class BadgeServiceImplTest {
 
     @Mock
@@ -40,53 +42,82 @@ class BadgeServiceImplTest {
         adminId = UUID.randomUUID();
         badge = new Badge();
         badge.setBadgeId("first-login");
-        badge.setName("First Login");
         badge.setDescription("Logged in for the first time");
     }
 
     @Test
+    @DisplayName("Should return all badges when badges exist")
     void getAll_returnsBadgeList() {
-        when(badgeRepository.findAll()).thenReturn(List.of(badge));
+        // Arrange
+        List<Badge> expectedBadges = List.of(badge);
+        when(badgeRepository.findAll()).thenReturn(expectedBadges);
 
-        List<Badge> result = badgeService.getAll();
+        // Act
+        List<Badge> actualBadges = badgeService.getAll();
 
-        assertThat(result).hasSize(1);
+        // Assert
+        assertNotNull(actualBadges);
+        assertEquals(1, actualBadges.size());
+        assertEquals(expectedBadges, actualBadges);
+        verify(badgeRepository, times(1)).findAll();
     }
 
     @Test
+    @DisplayName("Should return badge when badge exists")
     void getById_returnsBadge_whenFound() {
+        // Arrange
         when(badgeRepository.findById("first-login")).thenReturn(Optional.of(badge));
 
+        // Act
         Badge result = badgeService.getById("first-login");
 
-        assertThat(result.getName()).isEqualTo("First Login");
+        // Assert
+        assertNotNull(result);
+        assertEquals("first-login", result.getBadgeId());
+        verify(badgeRepository, times(1)).findById("first-login");
     }
 
     @Test
+    @DisplayName("Should throw ResponseStatusException when badge does not exist")
     void getById_throwsNotFound_whenMissing() {
+        // Arrange
         when(badgeRepository.findById("x")).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> badgeService.getById("x"))
-                .isInstanceOf(ResponseStatusException.class)
-                .hasMessageContaining("Badge not found");
+        // Act & Assert
+        ResponseStatusException exception = assertThrows(ResponseStatusException.class,
+                () -> badgeService.getById("x"));
+        assertNotNull(exception);
+        verify(badgeRepository, times(1)).findById("x");
     }
 
     @Test
+    @DisplayName("Should save and return badge when requester is admin")
     void create_savesBadge_whenAdmin() {
+        // Arrange
         when(userService.isAdmin(adminId)).thenReturn(true);
         when(badgeRepository.save(badge)).thenReturn(badge);
 
+        // Act
         Badge result = badgeService.create(badge, adminId);
 
-        assertThat(result.getBadgeId()).isEqualTo("first-login");
+        // Assert
+        assertNotNull(result);
+        assertEquals("first-login", result.getBadgeId());
+        verify(userService, times(1)).isAdmin(adminId);
+        verify(badgeRepository, times(1)).save(badge);
     }
 
     @Test
+    @DisplayName("Should throw ResponseStatusException when requester is not admin")
     void create_throwsForbidden_whenNotAdmin() {
+        // Arrange
         when(userService.isAdmin(adminId)).thenReturn(false);
 
-        assertThatThrownBy(() -> badgeService.create(badge, adminId))
-                .isInstanceOf(ResponseStatusException.class)
-                .hasMessageContaining("Admin access required");
+        // Act & Assert
+        ResponseStatusException exception = assertThrows(ResponseStatusException.class,
+                () -> badgeService.create(badge, adminId));
+        assertNotNull(exception);
+        verify(userService, times(1)).isAdmin(adminId);
+        verify(badgeRepository, never()).save(any());
     }
 }

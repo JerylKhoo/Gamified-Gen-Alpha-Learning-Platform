@@ -4,8 +4,8 @@ import { supabase } from '../lib/supabaseClient';
 
 const API_URL = import.meta.env.VITE_API_URL;
 
-function formatLessonId(lessonId) {
-  return lessonId
+function formatCourseId(courseId) {
+  return courseId
     .replace(/[-_.]/g, ' ')
     .replace(/\b\w/g, c => c.toUpperCase());
 }
@@ -23,7 +23,7 @@ function parseJsonArray(jsonStr) {
 }
 
 export default function AdaptiveLearningPage() {
-  const { lessonId } = useParams();
+  const { courseId } = useParams();
   const navigate     = useNavigate();
 
   const [question, setQuestion]    = useState(null);
@@ -48,14 +48,17 @@ export default function AdaptiveLearningPage() {
         // 1. Fetch prior progress to determine starting question number
         let priorCount = 0;
         const progressRes = await fetch(
-          `${API_URL}/api/v1/progress/lesson/${lessonId}`,
+          `${API_URL}/api/v1/quiz-progress/me/${courseId}`,
           { headers }
         );
         if (progressRes.ok) {
-          const progress = await progressRes.json();
-          const correct  = parseJsonArray(progress.correctQuestions);
-          const wrong    = parseJsonArray(progress.wrongQuestions);
-          priorCount = correct.length + wrong.length;
+          const progressList = await progressRes.json();
+          if (progressList.length > 0) {
+            const progress = progressList[0];
+            const correct  = parseJsonArray(progress.correctQuestions);
+            const wrong    = parseJsonArray(progress.wrongQuestions);
+            priorCount = correct.length + wrong.length;
+          }
         }
         // 404 = no prior progress → priorCount stays 0
 
@@ -63,7 +66,7 @@ export default function AdaptiveLearningPage() {
         const res = await fetch(`${API_URL}/api/v1/adaptive/next`, {
           method: 'POST',
           headers: { ...headers, 'Content-Type': 'application/json' },
-          body: JSON.stringify({ lessonId, questionId: null, correct: false }),
+          body: JSON.stringify({ courseId, quizId: null, correct: false }),
         });
         if (!res.ok) throw new Error('Failed to fetch question');
         const data = await res.json();
@@ -87,7 +90,7 @@ export default function AdaptiveLearningPage() {
 
     initPage();
     return () => { cancelled = true; };
-  }, [lessonId]);
+  }, [courseId]);
 
   // ── Advance to next question (user-triggered, not in useEffect) ───────────
   async function advanceQuestion(questionId, wasCorrect) {
@@ -100,7 +103,7 @@ export default function AdaptiveLearningPage() {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${session.access_token}`,
         },
-        body: JSON.stringify({ lessonId, questionId, correct: wasCorrect }),
+        body: JSON.stringify({ courseId, quizId: questionId, correct: wasCorrect }),
       });
       if (!res.ok) throw new Error('Failed to fetch question');
       const data = await res.json();
@@ -121,7 +124,7 @@ export default function AdaptiveLearningPage() {
     }
   }
 
-  const title         = formatLessonId(lessonId);
+  const title         = formatCourseId(courseId);
   const options       = question ? parseOptions(question.options) : [];
   const correctOption = question ? options[parseInt(question.answer, 10)] : null;
 
@@ -136,7 +139,7 @@ export default function AdaptiveLearningPage() {
     return (
       <div className="w-full min-h-screen flex flex-col items-center justify-center px-8 py-12 text-center">
         <div className="mb-5 text-7xl">🏆</div>
-        <h1 className="text-3xl font-extrabold text-[#f0eeff] m-0 mb-2">Lesson Mastered!</h1>
+        <h1 className="text-3xl font-extrabold text-[#f0eeff] m-0 mb-2">Course Mastered!</h1>
         <p className="text-[#9ca3af] text-base m-0 mb-2">{title}</p>
         <p className="text-[#8b5cf6] font-bold text-xl m-0 mb-8">
           Final Score: {Math.round(abilityScore)} / 100
@@ -271,7 +274,7 @@ export default function AdaptiveLearningPage() {
               )}
 
               <button
-                onClick={() => advanceQuestion(question.questionId, correct)}
+                onClick={() => advanceQuestion(question.quizId, correct)}
                 className="px-6 py-2.5 bg-gradient-to-br from-[#8b5cf6] to-[#6d28d9] text-white font-bold text-[0.88rem] rounded-xl border-none cursor-pointer shadow-[0_4px_14px_rgba(139,92,246,0.35)] hover:opacity-90 hover:-translate-y-px active:translate-y-0 transition-all"
               >
                 Next Question →

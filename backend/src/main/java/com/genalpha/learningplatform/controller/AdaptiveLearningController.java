@@ -9,6 +9,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
+import com.genalpha.learningplatform.util.AuthUtils;
+
 import java.util.UUID;
 
 @Tag(name = "Adaptive Learning", description = "Calculates the next adaptive quiz question based on answer history")
@@ -38,7 +40,7 @@ public class AdaptiveLearningController {
             @RequestBody AdaptiveRequest request,
             Authentication authentication) {
 
-        UUID userId = UUID.fromString(authentication.getName());
+        UUID userId = AuthUtils.userId(authentication);
         AdaptiveResponse response = adaptiveLearningService.getNextQuestion(userId, request);
         return ResponseEntity.ok(response);
     }

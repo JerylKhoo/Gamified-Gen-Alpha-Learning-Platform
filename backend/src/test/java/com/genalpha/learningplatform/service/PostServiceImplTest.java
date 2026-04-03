@@ -3,6 +3,7 @@ package com.genalpha.learningplatform.service;
 import com.genalpha.learningplatform.model.Post;
 import com.genalpha.learningplatform.repository.PostRepository;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -14,7 +15,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
-import static org.assertj.core.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
@@ -22,6 +23,7 @@ import static org.mockito.Mockito.*;
  * Unit tests for PostServiceImpl.
  */
 @ExtendWith(MockitoExtension.class)
+@DisplayName("PostServiceImpl Unit Tests")
 class PostServiceImplTest {
 
     @Mock
@@ -49,63 +51,98 @@ class PostServiceImplTest {
     }
 
     @Test
+    @DisplayName("Should return all posts when posts exist")
     void getAll_returnsAllPosts() {
-        when(postRepository.findAll()).thenReturn(List.of(post));
+        // Arrange
+        List<Post> expectedPosts = List.of(post);
+        when(postRepository.findAll()).thenReturn(expectedPosts);
 
+        // Act
         List<Post> result = postService.getAll();
 
-        assertThat(result).hasSize(1);
+        // Assert
+        assertNotNull(result);
+        assertEquals(1, result.size());
+        verify(postRepository, times(1)).findAll();
     }
 
     @Test
+    @DisplayName("Should return post when post exists")
     void getById_returnsPost_whenFound() {
+        // Arrange
         when(postRepository.findById(post.getPostId())).thenReturn(Optional.of(post));
 
+        // Act
         Post result = postService.getById(post.getPostId());
 
-        assertThat(result.getTitle()).isEqualTo("My Post");
+        // Assert
+        assertNotNull(result);
+        assertEquals("My Post", result.getTitle());
+        verify(postRepository, times(1)).findById(post.getPostId());
     }
 
     @Test
+    @DisplayName("Should throw ResponseStatusException when post does not exist")
     void getById_throwsNotFound_whenMissing() {
+        // Arrange
         UUID randomId = UUID.randomUUID();
         when(postRepository.findById(randomId)).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> postService.getById(randomId))
-                .isInstanceOf(ResponseStatusException.class)
-                .hasMessageContaining("Post not found");
+        // Act & Assert
+        ResponseStatusException exception = assertThrows(ResponseStatusException.class,
+                () -> postService.getById(randomId));
+        assertNotNull(exception);
+        verify(postRepository, times(1)).findById(randomId);
     }
 
     @Test
+    @DisplayName("Should save post with requester ID as owner when creating")
     void create_savesPost_withRequesterIdAsOwner() {
+        // Arrange
+        when(userService.isContributorOrAbove(userId)).thenReturn(true);
         when(postRepository.save(any(Post.class))).thenReturn(post);
 
         Post input = new Post();
         input.setTitle("New Post");
+
+        // Act
         postService.create(input, userId);
 
-        verify(postRepository).save(any(Post.class));
+        // Assert
+        verify(postRepository, times(1)).save(any(Post.class));
     }
 
     @Test
+    @DisplayName("Should throw ResponseStatusException when requester is not owner and not admin")
     void delete_throwsForbidden_whenNotOwnerAndNotAdmin() {
+        // Arrange
         UUID otherId = UUID.randomUUID();
         when(postRepository.findById(post.getPostId())).thenReturn(Optional.of(post));
         when(userService.isAdmin(otherId)).thenReturn(false);
 
-        assertThatThrownBy(() -> postService.delete(post.getPostId(), otherId))
-                .isInstanceOf(ResponseStatusException.class)
-                .hasMessageContaining("Cannot delete another user's post");
+        // Act & Assert
+        ResponseStatusException exception = assertThrows(ResponseStatusException.class,
+                () -> postService.delete(post.getPostId(), otherId));
+        assertNotNull(exception);
+        verify(postRepository, times(1)).findById(post.getPostId());
+        verify(userService, times(1)).isAdmin(otherId);
+        verify(postRepository, never()).delete(any());
     }
 
     @Test
+    @DisplayName("Should delete post when requester is admin")
     void delete_succeedsWhenAdmin() {
+        // Arrange
         UUID adminId = UUID.randomUUID();
         when(postRepository.findById(post.getPostId())).thenReturn(Optional.of(post));
         when(userService.isAdmin(adminId)).thenReturn(true);
 
+        // Act
         postService.delete(post.getPostId(), adminId);
 
-        verify(postRepository).delete(post);
+        // Assert
+        verify(postRepository, times(1)).findById(post.getPostId());
+        verify(userService, times(1)).isAdmin(adminId);
+        verify(postRepository, times(1)).delete(post);
     }
 }

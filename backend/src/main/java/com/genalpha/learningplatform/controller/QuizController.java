@@ -9,6 +9,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
+import com.genalpha.learningplatform.util.AuthUtils;
+
 import java.util.List;
 import java.util.UUID;
 
@@ -38,7 +40,7 @@ public class QuizController {
     @Operation(summary = "Create a quiz question (admin)")
     @PostMapping
     public ResponseEntity<Quiz> create(@RequestBody Quiz quiz, Authentication authentication) {
-        UUID requesterId = UUID.fromString(authentication.getName());
+        UUID requesterId = AuthUtils.userId(authentication);
         return ResponseEntity.status(HttpStatus.CREATED).body(quizService.create(quiz, requesterId));
     }
 
@@ -47,14 +49,14 @@ public class QuizController {
     public ResponseEntity<Quiz> update(@PathVariable UUID quizId,
                                        @RequestBody Quiz updates,
                                        Authentication authentication) {
-        UUID requesterId = UUID.fromString(authentication.getName());
+        UUID requesterId = AuthUtils.userId(authentication);
         return ResponseEntity.ok(quizService.update(quizId, updates, requesterId));
     }
 
     @Operation(summary = "Delete a quiz question (admin)")
     @DeleteMapping("/{quizId}")
     public ResponseEntity<Void> delete(@PathVariable UUID quizId, Authentication authentication) {
-        UUID requesterId = UUID.fromString(authentication.getName());
+        UUID requesterId = AuthUtils.userId(authentication);
         quizService.delete(quizId, requesterId);
         return ResponseEntity.noContent().build();
     }

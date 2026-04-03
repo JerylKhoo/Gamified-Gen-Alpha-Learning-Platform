@@ -8,6 +8,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
+import com.genalpha.learningplatform.util.AuthUtils;
+
 import java.util.UUID;
 
 @Tag(name = "User Streaks", description = "Track and update daily learning streaks for the logged-in user")
@@ -24,21 +26,21 @@ public class UserStreakController {
     @Operation(summary = "Get the logged-in user's streak (creates one if it doesn't exist)")
     @GetMapping("/me")
     public ResponseEntity<UserStreak> getMyStreak(Authentication authentication) {
-        UUID userId = UUID.fromString(authentication.getName());
+        UUID userId = AuthUtils.userId(authentication);
         return ResponseEntity.ok(userStreakService.getMyStreak(userId));
     }
 
     @Operation(summary = "Record activity for today (increments or resets streak per rules)")
     @PostMapping("/me/activity")
     public ResponseEntity<UserStreak> recordActivity(Authentication authentication) {
-        UUID userId = UUID.fromString(authentication.getName());
+        UUID userId = AuthUtils.userId(authentication);
         return ResponseEntity.ok(userStreakService.recordActivity(userId));
     }
 
     @Operation(summary = "Delete the logged-in user's streak record")
     @DeleteMapping("/{streakId}")
     public ResponseEntity<Void> delete(@PathVariable UUID streakId, Authentication authentication) {
-        UUID userId = UUID.fromString(authentication.getName());
+        UUID userId = AuthUtils.userId(authentication);
         userStreakService.delete(streakId, userId);
         return ResponseEntity.noContent().build();
     }

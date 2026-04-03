@@ -14,6 +14,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
+import com.genalpha.learningplatform.util.AuthUtils;
+
 import java.util.List;
 import java.util.UUID;
 
@@ -79,7 +81,7 @@ public class UserController {
             @Parameter(description = "UUID of the user to update (must match the authenticated user)") @PathVariable UUID userId,
             @RequestBody User updates,
             Authentication authentication) {
-        UUID requesterId = UUID.fromString(authentication.getName());
+        UUID requesterId = AuthUtils.userId(authentication);
         return ResponseEntity.ok(userService.update(userId, updates, requesterId));
     }
 }

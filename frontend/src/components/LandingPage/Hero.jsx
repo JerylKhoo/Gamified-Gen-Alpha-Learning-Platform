@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
-import heroBg from '../../assets/astronauts.mp4';
+import heroBg from '../../assets/Brainrot & Internet Humour.mp4';
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -71,12 +71,12 @@ export default function Hero({ onSignup }) {
     <section
       ref={sectionRef}
       className="relative flex items-center overflow-hidden bg-[#050508]"
-      style={{ height: 'calc(100vh - 64px)', scrollSnapAlign: 'start' }}
+      style={{ height: 'calc(100vh - 64px)' }}
     >
       {/* Background video */}
       <video
         ref={videoRef}
-        className="absolute inset-0 w-full h-full object-cover object-center pointer-events-none scale-110"
+        className="absolute inset-0 w-full h-full object-contain pointer-events-none"
         autoPlay muted loop playsInline
       >
         <source src={heroBg} type="video/mp4" />

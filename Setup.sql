@@ -18,17 +18,19 @@ ON CONFLICT (id) DO NOTHING;
 
 -- USER
 CREATE TABLE IF NOT EXISTS public."USER" (
-    User_ID     UUID        PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
-    Name        TEXT        NOT NULL,
-    Points      INTEGER     NOT NULL DEFAULT 0,
-    Profile_Pic TEXT,
-    Role        TEXT        NOT NULL DEFAULT 'User' CHECK (Role IN ('Admin', 'User', 'Collaborator'))
+    User_ID      UUID        PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+    Name         TEXT        NOT NULL,
+    Points       INTEGER     NOT NULL DEFAULT 0,
+    Profile_Pic  TEXT,
+    Email        TEXT,
+    Role         TEXT        NOT NULL DEFAULT 'User' CHECK (Role IN ('Admin', 'User', 'Collaborator')),
+    Report_Count INTEGER     NOT NULL DEFAULT 0,
+    Created_At   TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 -- BADGES
 CREATE TABLE IF NOT EXISTS public.BADGES (
     Badge_ID    TEXT        PRIMARY KEY,
-    Name        TEXT        NOT NULL,
     Description TEXT,
     Icon        TEXT
 );
@@ -74,7 +76,8 @@ CREATE TABLE IF NOT EXISTS public.COURSE (
 CREATE TABLE IF NOT EXISTS public.MODULE (
     Module_ID   TEXT    PRIMARY KEY,
     Course_ID   TEXT    NOT NULL REFERENCES public.COURSE(Course_ID) ON DELETE CASCADE,
-    Content     JSONB
+    Content     TEXT,
+    "Order"     INTEGER
 );
 
 -- QUIZ
@@ -141,10 +144,11 @@ BEGIN
         v_avatar_url := 'https://thuyecuhlufqvabzeqlg.supabase.co/storage/v1/object/public/profilepic/' || v_avatar_name;
     END IF;
 
-    INSERT INTO public."USER" (User_ID, Name, Profile_Pic)
+    INSERT INTO public."USER" (User_ID, Name, Email, Profile_Pic)
     VALUES (
         NEW.id,
         split_part(NEW.email, '@', 1),
+        NEW.email,
         v_avatar_url
     );
 
@@ -159,6 +163,36 @@ CREATE TRIGGER on_auth_user_created
     AFTER INSERT ON auth.users
     FOR EACH ROW
     EXECUTE FUNCTION public.handle_new_user();
+
+
+-- ============================================================
+-- POST_UPVOTES TABLE
+-- ============================================================
+CREATE TABLE IF NOT EXISTS public.POST_UPVOTES (
+    ID          UUID    PRIMARY KEY DEFAULT gen_random_uuid(),
+    Post_ID     UUID    NOT NULL REFERENCES public.POSTS(Post_ID) ON DELETE CASCADE,
+    User_ID     UUID    NOT NULL REFERENCES public."USER"(User_ID) ON DELETE CASCADE,
+    UNIQUE(Post_ID, User_ID)
+);
+
+-- COMMENTS
+CREATE TABLE IF NOT EXISTS public.COMMENTS (
+    comment_id  UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+    post_id     UUID        NOT NULL REFERENCES public.POSTS(Post_ID) ON DELETE CASCADE,
+    user_id     UUID        NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+    body        TEXT        NOT NULL,
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- POST_REPORTS
+CREATE TABLE IF NOT EXISTS public.POST_REPORTS (
+    id          UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+    post_id     UUID        NOT NULL REFERENCES public.POSTS(Post_ID) ON DELETE CASCADE,
+    user_id     UUID        NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+    reason      VARCHAR(255) NOT NULL,
+    description TEXT,
+    UNIQUE (post_id, user_id)
+);
 
 
 -- ============================================================
@@ -236,6 +270,54 @@ CREATE TRIGGER on_quiz_progress_change
     AFTER INSERT OR UPDATE ON public.QUIZ_PROGRESS
     FOR EACH ROW
     EXECUTE FUNCTION public.handle_quiz_progress_streak();
+
+
+-- ============================================================
+-- TRIGGER: Award badge when adaptive score >= 80
+-- ============================================================
+CREATE OR REPLACE FUNCTION public.handle_quiz_progress_badge()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+    v_theta         DOUBLE PRECISION;
+    v_display_score DOUBLE PRECISION;
+BEGIN
+    -- Extract theta from adaptive_score JSONB; skip if missing
+    v_theta := (NEW.Adaptive_Score ->> 'theta')::DOUBLE PRECISION;
+
+    IF v_theta IS NULL THEN
+        RETURN NEW;
+    END IF;
+
+    -- Convert IRT theta [-3, 3] to display score [0, 100]
+    v_display_score := (v_theta + 3.0) / 6.0 * 100.0;
+
+    IF v_display_score >= 80 THEN
+        -- Only award if a badge exists for this course and user doesn't already have it
+        INSERT INTO public.USER_BADGES (User_ID, Badge_ID)
+        SELECT NEW.User_ID, NEW.Course_ID
+        WHERE EXISTS (
+            SELECT 1 FROM public.BADGES WHERE Badge_ID = NEW.Course_ID
+        )
+        AND NOT EXISTS (
+            SELECT 1 FROM public.USER_BADGES
+            WHERE User_ID = NEW.User_ID AND Badge_ID = NEW.Course_ID
+        );
+    END IF;
+
+    RETURN NEW;
+END;
+$$;
+
+
+DROP TRIGGER IF EXISTS on_quiz_progress_badge ON public.QUIZ_PROGRESS;
+
+CREATE TRIGGER on_quiz_progress_badge
+    AFTER INSERT OR UPDATE ON public.QUIZ_PROGRESS
+    FOR EACH ROW
+    EXECUTE FUNCTION public.handle_quiz_progress_badge();
 
 
 -- ============================================================
@@ -326,6 +408,9 @@ ALTER TABLE public.QUIZ             ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.QUIZ_PROGRESS    ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.COURSE_PROGRESS  ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.CHAT_BOT         ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.POST_UPVOTES     ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.COMMENTS         ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.POST_REPORTS     ENABLE ROW LEVEL SECURITY;
 
 
 -- ============================================================
@@ -373,6 +458,64 @@ CREATE POLICY "posts_delete_collaborator_or_admin"
         (auth.uid() = User_ID AND public.current_user_role() = 'Collaborator')
         OR public.current_user_role() = 'Admin'
     );
+
+
+-- --------------------------------------------------------
+-- POST_UPVOTES policies
+-- --------------------------------------------------------
+
+CREATE POLICY "post_upvotes_select_public"
+    ON public.POST_UPVOTES FOR SELECT
+    USING (true);
+
+CREATE POLICY "post_upvotes_insert_authenticated"
+    ON public.POST_UPVOTES FOR INSERT
+    WITH CHECK (auth.uid() = User_ID);
+
+CREATE POLICY "post_upvotes_delete_own"
+    ON public.POST_UPVOTES FOR DELETE
+    USING (auth.uid() = User_ID);
+
+
+-- --------------------------------------------------------
+-- COMMENTS policies
+-- --------------------------------------------------------
+
+CREATE POLICY "comments_select_all"
+    ON public.COMMENTS FOR SELECT
+    USING (true);
+
+CREATE POLICY "comments_insert_own"
+    ON public.COMMENTS FOR INSERT
+    WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "comments_delete_own_or_admin"
+    ON public.COMMENTS FOR DELETE
+    USING (
+        auth.uid() = user_id
+        OR public.current_user_role() = 'Admin'
+    );
+
+
+-- --------------------------------------------------------
+-- POST_REPORTS policies
+-- --------------------------------------------------------
+
+CREATE POLICY "post_reports_insert_own"
+    ON public.POST_REPORTS FOR INSERT
+    WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "post_reports_select_own"
+    ON public.POST_REPORTS FOR SELECT
+    USING (auth.uid() = user_id);
+
+CREATE POLICY "post_reports_select_admin"
+    ON public.POST_REPORTS FOR SELECT
+    USING (public.current_user_role() = 'Admin');
+
+CREATE POLICY "post_reports_delete_admin"
+    ON public.POST_REPORTS FOR DELETE
+    USING (public.current_user_role() = 'Admin');
 
 
 -- --------------------------------------------------------
@@ -569,6 +712,11 @@ CREATE POLICY "posts_collaborator_write"
         AND public.current_user_role() IN ('Collaborator', 'Admin')
     );
 
+CREATE POLICY "allow_authenticated_uploads_on_posts"
+    ON storage.objects FOR INSERT
+    TO authenticated
+    WITH CHECK (bucket_id = 'posts');
+
 -- course: authenticated read, admin write
 CREATE POLICY "course_auth_read"
     ON storage.objects FOR SELECT
@@ -577,6 +725,10 @@ CREATE POLICY "course_auth_read"
 CREATE POLICY "course_admin_write"
     ON storage.objects FOR INSERT
     WITH CHECK (bucket_id = 'course' AND public.current_user_role() = 'Admin');
+
+CREATE POLICY "course_admin_delete"
+    ON storage.objects FOR DELETE
+    USING (bucket_id = 'course' AND public.current_user_role() = 'Admin');
 
 -- module: authenticated read, admin write
 CREATE POLICY "module_auth_read"

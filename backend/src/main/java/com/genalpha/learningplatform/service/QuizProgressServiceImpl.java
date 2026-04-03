@@ -2,6 +2,7 @@ package com.genalpha.learningplatform.service;
 
 import com.genalpha.learningplatform.model.QuizProgress;
 import com.genalpha.learningplatform.repository.QuizProgressRepository;
+import com.genalpha.learningplatform.util.AdminGuard;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
@@ -67,9 +68,7 @@ public class QuizProgressServiceImpl implements QuizProgressService {
 
     @Override
     public void delete(UUID quizProgressId, UUID requesterId) {
-        if (!userService.isAdmin(requesterId)) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Admin access required");
-        }
+        AdminGuard.requireAdmin(userService, requesterId);
         QuizProgress progress = quizProgressRepository.findById(quizProgressId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Quiz progress not found"));
         quizProgressRepository.delete(progress);

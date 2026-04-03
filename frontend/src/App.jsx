@@ -9,7 +9,12 @@ import HomePage from './pages/HomePage';
 import LearnPage from './components/HomePage/LearnPage';
 import AdaptiveLearningPage from './pages/AdaptiveLearningPage';
 import CommunityPage from './components/HomePage/CommunityPage';
-import LeaderboardPage from './pages/LeaderboardPage';
+import PostDetailPage from './pages/PostDetailPage';
+import ChallengePage from './pages/ChallengePage';
+import CoursePage from './pages/CoursePage';
+import LessonPage from './pages/LessonPage';
+import AdminDashboardPage from './pages/AdminDashboardPage';
+import ModuleEditorPage from './pages/ModuleEditorPage';
 
 import GradingAgentPage from './pages/GradingAgentPage';
 
@@ -33,12 +38,22 @@ export default function App() {
           <Route element={<ProtectedRoute><HomeLayout /></ProtectedRoute>}>
             <Route path="/home" element={<HomePage />} />
             <Route path="/learn" element={<LearnPage />} />
-            <Route path="/learn/:lessonId" element={<AdaptiveLearningPage />} />
+            <Route path="/learn/:courseId" element={<AdaptiveLearningPage />} />
             <Route path="/community" element={<CommunityPage />} />
+<<<<<<< HEAD
             <Route path="/dashboard" element={<ComingSoon label="Dashboard" />} />
             <Route path="/leaderboard" element={<LeaderboardPage />} />
             <Route path="/agent" element={<GradingAgentPage />} />
+=======
+            <Route path="/community/:postId" element={<PostDetailPage />} />
+            <Route path="/admin" element={<AdminDashboardPage />} />
+            <Route path="/challenge" element={<ChallengePage />} />
+            <Route path="/course/:courseId" element={<CoursePage />} />
+            <Route path="/course/:courseId/module/:moduleId" element={<LessonPage />} />
+>>>>>>> origin/main
           </Route>
+          {/* Full-screen module editor — outside HomeLayout (no navbar) */}
+          <Route path="/admin/module/:moduleId/edit" element={<ProtectedRoute><ModuleEditorPage /></ProtectedRoute>} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </BrowserRouter>
