@@ -34,6 +34,12 @@ public class UserController {
         return ResponseEntity.ok(userService.getLeaderboard());
     }
 
+    @Operation(summary = "Get agent leaderboard — users sorted by their highest chat bot score")
+    @GetMapping("/agent-leaderboard")
+    public ResponseEntity<List<com.genalpha.learningplatform.dto.AgentLeaderboardDTO>> getAgentLeaderboard() {
+        return ResponseEntity.ok(userService.getAgentLeaderboard());
+    }
+
     @Operation(summary = "Get user by ID")
     @ApiResponses({
         @ApiResponse(responseCode = "200", description = "User found"),

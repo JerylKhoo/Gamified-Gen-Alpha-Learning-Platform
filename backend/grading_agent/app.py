@@ -54,6 +54,27 @@ app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 
+QUESTION_BANK = [
+    "If you could only eat one food for the rest of your life, what would it be and why?",
+    "Would you rather be able to fly or be invisible? Walk me through your thinking.",
+    "What's a skill you wish you had but never learned? What stopped you?",
+    "If you woke up tomorrow with no responsibilities, how would you spend your day?",
+    "What's the most controversial opinion you hold that you're willing to defend?",
+    "If you could have dinner with anyone — alive or dead — who would it be and what would you ask?",
+    "What's something most people think is overrated that you actually love?",
+    "If you had to move to a different country tomorrow, where would you go and why?",
+    "What's a piece of advice you've received that you actually ignored — and were you right to?",
+    "If you could go back and change one decision in your life, would you? Why or why not?",
+    "What do you think is the most important invention of the last 50 years?",
+    "If you could master any subject in an instant, what would it be and what would you do with it?",
+    "What's something that used to scare you that you've completely gotten over?",
+    "Would you rather live in the past, present, or future? Defend your answer.",
+    "What's an unpopular hobby or interest you have that people don't expect from you?",
+]
+
+class StartRequest(BaseModel):
+    session_id: str
+
 class ChatRequest(BaseModel):
     user_id: str
     session_id: str
@@ -209,7 +230,7 @@ def role_sanitation(messages_data)-> list:
     if messages_data:
         try:
             messages = json.loads(messages_data)
-            messages = [msg for msg in messages if msg.get("role") != "system" and msg.get("role") != "assistant"]
+            messages = [msg for msg in messages if msg.get("role") != "system"]
         except Exception as e:
             print("No conversation recorded:", e)
 
@@ -235,33 +256,31 @@ SUPABASE_ANON_KEY = os.getenv("SUPABASE_KEY")
 supabase = create_client(SUPABASE_URL, SUPABASE_ANON_KEY)
 from datetime import datetime
 
-#TODO:add in feedback column in supabase website
 def save_conversation_to_supabase(session_id, user_id, chat_history):
     # 1. Get score from Redis
     score_data = redis_client.get(f"chat:{session_id}:score")
-    score_percentage = None
+    final_score = None
+    feedback = "Error loading feedback"
 
     if score_data:
         try:
             score_json = json.loads(score_data)
-            raw_score = score_json.get("score", 0)
-            score_percentage = (raw_score / 40) * 100
-
+            final_score = score_json.get("final_score", 0)
             feedback = score_json.get("feedback", "Error loading feedback")
         except Exception as e:
             print("Error parsing score:", e)
-    
+
     data = {
         "session_id": session_id,
         "user_id": user_id,
         "chat_history": chat_history,
         "created_at": datetime.utcnow().isoformat(),
-        "score": score_percentage,
+        "score": final_score,
         "feedback": feedback
     }
 
     #making retires possible
-    response = supabase.table("conversations").upsert(data, on_conflict="session_id").execute()
+    response = supabase.table("chat_bot").upsert(data, on_conflict="session_id").execute()
 
     # 5. Logging
     if response.data:
@@ -272,6 +291,28 @@ def save_conversation_to_supabase(session_id, user_id, chat_history):
 import time
 import threading
 from datetime import datetime
+
+import random
+
+@app.post("/start")
+@limiter.limit("10/minute")
+def start_session(request: Request, req: StartRequest):
+    # Idempotent: if session already started, return stored question
+    existing = redis_client.get(f"chat:{req.session_id}:question")
+    if existing:
+        return {"question": existing}
+
+    question = random.choice(QUESTION_BANK)
+
+    # Store question for grading context
+    safe_redis_set(f"chat:{req.session_id}:question", question, ex=86400)
+
+    initial_history = [{"role": "assistant", "content": question}]
+    safe_redis_set(f"chat:{req.session_id}:recent", json.dumps(initial_history), ex=86400)
+    safe_redis_set(f"chat:{req.session_id}:voice", question, ex=86200)
+
+    return {"question": question}
+
 
 @app.post("/chat")
 @limiter.limit("20/minute")

@@ -13,4 +13,5 @@ public interface UserService {
     boolean isAdmin(UUID userId);
     boolean isCollaborator(UUID userId);
     List<User> getLeaderboard();
+    List<com.genalpha.learningplatform.dto.AgentLeaderboardDTO> getAgentLeaderboard();
 }
