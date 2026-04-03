@@ -139,12 +139,12 @@ export default function HowItWorks() {
           },
         })
         .fromTo(item,
-          { opacity: 0.35, scale: 0.88 },
+          { opacity: 0.6,  scale: 0.88 },
           { opacity: 1,    scale: 1,    ease: 'power1.inOut', duration: 0.5 / steps.length },
           i / steps.length
         )
         .to(item,
-          { opacity: 0.35, scale: 0.88, ease: 'power1.inOut', duration: 0.5 / steps.length },
+          { opacity: 0.6,  scale: 0.88, ease: 'power1.inOut', duration: 0.5 / steps.length },
           (i + 0.5) / steps.length
         );
       });
@@ -225,7 +225,7 @@ export default function HowItWorks() {
               <h3 className="text-[clamp(2rem,4vw,3.2rem)] font-black text-white m-0 -tracking-[0.5px] leading-tight">
                 {label}
               </h3>
-              <p className="text-[1rem] leading-[1.8] m-0 max-w-[380px]" style={{ color: 'rgba(255,255,255,0.55)' }}>
+              <p className="text-[1rem] leading-[1.8] m-0 max-w-[380px]" style={{ color: 'rgba(255,255,255,0.75)' }}>
                 {description}
               </p>
 
