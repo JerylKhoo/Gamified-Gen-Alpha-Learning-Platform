@@ -11,6 +11,8 @@ import AdaptiveLearningPage from './pages/AdaptiveLearningPage';
 import CommunityPage from './components/HomePage/CommunityPage';
 import LeaderboardPage from './pages/LeaderboardPage';
 
+import GradingAgentPage from './pages/GradingAgentPage';
+
 function ComingSoon({ label }) {
   return (
     <div className="flex flex-col items-center justify-center min-h-screen text-[#6b6490]">
@@ -35,6 +37,7 @@ export default function App() {
             <Route path="/community" element={<CommunityPage />} />
             <Route path="/dashboard" element={<ComingSoon label="Dashboard" />} />
             <Route path="/leaderboard" element={<LeaderboardPage />} />
+            <Route path="/agent" element={<GradingAgentPage />} />
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

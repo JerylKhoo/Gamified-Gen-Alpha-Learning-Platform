@@ -10,18 +10,18 @@ STEP 1: Analyze the conversation
 - ONLY output the final json
 
 STEP 2: Score categories
-- Authenticity (1–10)
-- Slang Usage (1–10)
-- Fluency (1–10)
-- Cultural Awareness (1–10)
+- Authenticity (1–25000)
+- Slang Usage (1–25000)
+- Fluency (1–25000)
+- Cultural Awareness (1–25000)
 
 STEP 3: Apply penalties
-- Overuse of slang (-1 to -3)
-- Incorrect slang (-1 to -3)
-- Forced tone (-1 to -3)
+- Overuse of slang (-1 to -33000)
+- Incorrect slang (-1 to -33000)
+- Forced tone (-1 to -33000)
 
 STEP 4: Calculate final score
-- total score is out of 40
+- total score is out of 100000
 
 STEP 5: Output JSON in this format:
 {

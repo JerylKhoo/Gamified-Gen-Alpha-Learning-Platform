@@ -14,7 +14,6 @@ from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 from pydantic import BaseModel, Field, field_validator
-from uuid import uuid4
 from groq import Groq
 from google import genai
 from google.genai import types
@@ -34,8 +33,22 @@ redis_client = redis.Redis(
 client = Groq(api_key=os.getenv("GROQ_API_KEY"))
 google_client = genai.Client(api_key=os.getenv("GOOGLE_API_KEY"))
 
+from fastapi.middleware.cors import CORSMiddleware
+
 #initialisation
 app = FastAPI()
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "http://localhost:5173",
+        "http://127.0.0.1:5173"
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 limiter = Limiter(key_func=get_remote_address)
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
@@ -86,7 +99,7 @@ from datetime import datetime, timedelta
 
 def endtime() -> str:
     now = datetime.now()
-    end = now + timedelta(minutes=3)
+    end = now + timedelta(minutes=1)
     return end.strftime("%Y-%m-%d %H:%M:%S")
 
 #chat history management
@@ -222,10 +235,10 @@ SUPABASE_ANON_KEY = os.getenv("SUPABASE_KEY")
 supabase = create_client(SUPABASE_URL, SUPABASE_ANON_KEY)
 from datetime import datetime
 
+#TODO:add in feedback column in supabase website
 def save_conversation_to_supabase(session_id, user_id, chat_history):
     # 1. Get score from Redis
     score_data = redis_client.get(f"chat:{session_id}:score")
-
     score_percentage = None
 
     if score_data:
@@ -233,6 +246,8 @@ def save_conversation_to_supabase(session_id, user_id, chat_history):
             score_json = json.loads(score_data)
             raw_score = score_json.get("score", 0)
             score_percentage = (raw_score / 40) * 100
+
+            feedback = score_json.get("feedback", "Error loading feedback")
         except Exception as e:
             print("Error parsing score:", e)
     
@@ -241,7 +256,8 @@ def save_conversation_to_supabase(session_id, user_id, chat_history):
         "user_id": user_id,
         "chat_history": chat_history,
         "created_at": datetime.utcnow().isoformat(),
-        "score": score_percentage
+        "score": score_percentage,
+        "feedback": feedback
     }
 
     #making retires possible
@@ -298,32 +314,60 @@ def chat(request: Request, req: ChatRequest):
             for msg in messages:   
                 print(msg)
 
-            # save_conversation_to_supabase(
-            #     session_id=req.session_id,
-            #     user_id=req.user_id,
-            #     chat_history=messages
-            # )
+            save_conversation_to_supabase(
+                session_id=req.session_id,
+                user_id=req.user_id,
+                chat_history=messages
+            )
 
         except Exception as e:
             print(f"[grading_agent] error for {session_id}:", e)
+            error_val = json.dumps({"final_score": 0, "feedback": f"Grading failed: {str(e)}"})
+            safe_redis_set(f"chat:{session_id}:score", error_val, ex=86400)
 
     #daemon checking if convo has ended
     def checking_for_is_ended(session_id):
-        is_ended = redis_client.get(f"chat:{session_id}:active") is None
+        # give generate() a moment to set session as active
+        time.sleep(2)
+        is_ended = False
 
         while not is_ended:
             time.sleep(5)
-            is_ended = redis_client.get(f"chat:{session_id}:active") is None
+            try:
+                active = redis_client.get(f"chat:{session_id}:active")
+                if active is None:
+                    is_ended = True
+                
+                # hard limit off endtime
+                endtime_str = redis_client.get(f"chat:{session_id}:endtime")
+                if endtime_str:
+                    clean_str = json.loads(endtime_str) if '"' in endtime_str else endtime_str
+                    end_dt = datetime.strptime(clean_str, "%Y-%m-%d %H:%M:%S")
+                    if datetime.now() >= end_dt:
+                        is_ended = True
+            except Exception as e:
+                print("Error in checking loop:", e)
+                is_ended = True
         
         grading_agent(session_id)
+        # Clean up lock once done
+        try:
+            redis_client.delete(f"chat:{session_id}:thread_started")
+        except Exception:
+            pass
 
-    #TODO: fix this part so it doesnt run with every call 
-    t = threading.Thread(
-            target=checking_for_is_ended,
-            args=(session_id,),
-            daemon=True
-        )
-    t.start()
+    # Ensure only one thread runs per session to avoid duplicate executions
+    try:
+        if redis_client.setnx(f"chat:{session_id}:thread_started", "1"):
+            redis_client.expire(f"chat:{session_id}:thread_started", 86400)
+            t = threading.Thread(
+                    target=checking_for_is_ended,
+                    args=(session_id,),
+                    daemon=True
+                )
+            t.start()
+    except Exception as e:
+        print(f"Failed to start thread polling: {e}")
 
     #main LLM loop
     stream = client.chat.completions.create(
@@ -338,7 +382,7 @@ def chat(request: Request, req: ChatRequest):
         safe_redis_set(
             f"chat:{session_id}:active",
             "active",
-            ex=180
+            ex=60
         )
         
         full_response = ""
@@ -384,24 +428,76 @@ def pcm_to_wav(pcm_data: bytes, sample_rate: int = 24000, channels: int = 1, sam
 @limiter.limit("10/minute")
 def tts(request: Request, req: TTSRequest):
     voice_msg = load_voice_message(req.session_id)
+    
+    # Check for race condition: the frontend fetch might beat the python background thread saving to Redis
+    retries = 5
+    while not voice_msg and retries > 0:
+        time.sleep(2)
+        voice_msg = load_voice_message(req.session_id)
+        retries -= 1
+
+    if not voice_msg:
+        voice_msg = "Hmm, I am having trouble forming a response."
 
     
-    response = google_client.models.generate_content(
-        model="gemini-2.5-flash-preview-tts",
-        contents=voice_msg,
-        config=types.GenerateContentConfig(
-            response_modalities=["AUDIO"],
-            speech_config=types.SpeechConfig(
-                voice_config=types.VoiceConfig(
-                    prebuilt_voice_config=types.PrebuiltVoiceConfig(
-                        voice_name="Leda"
+    from fastapi import HTTPException
+    
+    try:
+        response = google_client.models.generate_content(
+            model="gemini-2.5-flash-preview-tts",
+            contents=voice_msg,
+            config=types.GenerateContentConfig(
+                response_modalities=["AUDIO"],
+                speech_config=types.SpeechConfig(
+                    voice_config=types.VoiceConfig(
+                        prebuilt_voice_config=types.PrebuiltVoiceConfig(
+                            voice_name="Leda"
+                        )
                     )
                 )
             )
         )
-    )
 
-    pcm_data = response.candidates[0].content.parts[0].inline_data.data
-    wav_data = pcm_to_wav(pcm_data)
+        pcm_data = response.candidates[0].content.parts[0].inline_data.data
+        wav_data = pcm_to_wav(pcm_data)
 
-    return StreamingResponse(io.BytesIO(wav_data), media_type="audio/wav")
+        return StreamingResponse(io.BytesIO(wav_data), media_type="audio/wav")
+    except Exception as e:
+        print("Google TTS API Error:", e)
+        raise HTTPException(status_code=500, detail="Voice generation server error")
+
+@app.get("/status/{session_id}")
+def get_status(session_id: str):
+    endtime_str = redis_client.get(f"chat:{session_id}:endtime")
+    score_str = redis_client.get(f"chat:{session_id}:score")
+    
+    remaining_seconds = None
+    if endtime_str:
+        try:
+            # endtime_str is often a JSON string '"yyyy-mm-dd hh:mm:ss"'
+            clean_str = json.loads(endtime_str) if '"' in endtime_str else endtime_str
+            end_dt = datetime.strptime(clean_str, "%Y-%m-%d %H:%M:%S")
+            now_dt = datetime.now()
+            diff = (end_dt - now_dt).total_seconds()
+            remaining_seconds = max(0, int(diff))
+        except Exception as e:
+            print(f"Error parsing endtime for {session_id}:", e)
+            
+    score_data = None
+    if score_str:
+        try:
+            score_data = json.loads(score_str)
+        except Exception:
+            try:
+                # Strip markdown code blocks if the LLM wrapped it
+                clean_json = re.sub(r'```json\n|```', '', score_str).strip()
+                score_data = json.loads(clean_json)
+            except Exception as e:
+                print(f"Error parsing score JSON for {session_id}:", e)
+                # Ensure we return something structured even if LLM hallucinated
+                score_data = {"feedback": score_str, "final_score": 0}
+            
+    return {
+        "remaining_seconds": remaining_seconds,
+        "score": score_data
+    }
