@@ -23,6 +23,7 @@ import com.genalpha.learningplatform.repository.UserRepository;
 public class UserServiceImpl implements UserService {
 
     private final UserRepository userRepository;
+    private final com.genalpha.learningplatform.repository.ChatBotRepository chatBotRepository;
     private final RestTemplate restTemplate = new RestTemplate();
 
     @Value("${supabase.url}")
@@ -31,8 +32,10 @@ public class UserServiceImpl implements UserService {
     @Value("${supabase.service.key}")
     private String supabaseServiceKey;
 
-    public UserServiceImpl(UserRepository userRepository) {
+    public UserServiceImpl(UserRepository userRepository,
+            com.genalpha.learningplatform.repository.ChatBotRepository chatBotRepository) {
         this.userRepository = userRepository;
+        this.chatBotRepository = chatBotRepository;
     }
 
     @Override
@@ -53,8 +56,7 @@ public class UserServiceImpl implements UserService {
         userRepository.updateProfile(
                 userId,
                 updates.getName(),
-                updates.getProfilePic()
-        );
+                updates.getProfilePic());
         return getById(userId);
     }
 
@@ -130,13 +132,13 @@ public class UserServiceImpl implements UserService {
         headers.set("Authorization", "Bearer " + supabaseServiceKey);
         try {
             restTemplate.exchange(
-                supabaseUrl + "/auth/v1/admin/users/" + userId,
-                HttpMethod.DELETE,
-                new HttpEntity<>(headers),
-                Void.class
-            );
+                    supabaseUrl + "/auth/v1/admin/users/" + userId,
+                    HttpMethod.DELETE,
+                    new HttpEntity<>(headers),
+                    Void.class);
         } catch (Exception e) {
-            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to delete Supabase auth user: " + e.getMessage());
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR,
+                    "Failed to delete Supabase auth user: " + e.getMessage());
         }
 
         // DB row will cascade-delete via FK constraints
@@ -152,5 +154,32 @@ public class UserServiceImpl implements UserService {
             return Integer.compare(pb, pa);
         });
         return users;
+    }
+
+    @Override
+    public List<com.genalpha.learningplatform.dto.AgentLeaderboardDTO> getAgentLeaderboard() {
+        java.util.List<com.genalpha.learningplatform.model.ChatBot> chatBots = chatBotRepository.findAll();
+        java.util.Map<UUID, Integer> maxScores = new java.util.HashMap<>();
+
+        for (com.genalpha.learningplatform.model.ChatBot cb : chatBots) {
+            int score = cb.getScore() != null ? cb.getScore() : 0;
+            if (!maxScores.containsKey(cb.getUserId()) || score > maxScores.get(cb.getUserId())) {
+                maxScores.put(cb.getUserId(), score);
+            }
+        }
+
+        java.util.List<User> allUsers = userRepository.findAll();
+        java.util.List<com.genalpha.learningplatform.dto.AgentLeaderboardDTO> results = new java.util.ArrayList<>();
+
+        for (User u : allUsers) {
+            int agentScore = maxScores.getOrDefault(u.getUserId(), 0);
+            if (agentScore > 0) {
+                results.add(new com.genalpha.learningplatform.dto.AgentLeaderboardDTO(
+                        u.getUserId(), u.getName(), u.getProfilePic(), agentScore));
+            }
+        }
+
+        results.sort((a, b) -> Integer.compare(b.getAgentScore(), a.getAgentScore()));
+        return results;
     }
 }

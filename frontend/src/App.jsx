@@ -16,6 +16,8 @@ import LessonPage from './pages/LessonPage';
 import AdminDashboardPage from './pages/AdminDashboardPage';
 import ModuleEditorPage from './pages/ModuleEditorPage';
 
+import GradingAgentPage from './pages/GradingAgentPage';
+
 function ComingSoon({ label }) {
   return (
     <div className="flex flex-col items-center justify-center min-h-screen text-[#6b6490]">
@@ -38,11 +40,17 @@ export default function App() {
             <Route path="/learn" element={<LearnPage />} />
             <Route path="/learn/:courseId" element={<AdaptiveLearningPage />} />
             <Route path="/community" element={<CommunityPage />} />
+<<<<<<< HEAD
+            <Route path="/dashboard" element={<ComingSoon label="Dashboard" />} />
+            <Route path="/leaderboard" element={<LeaderboardPage />} />
+            <Route path="/agent" element={<GradingAgentPage />} />
+=======
             <Route path="/community/:postId" element={<PostDetailPage />} />
             <Route path="/admin" element={<AdminDashboardPage />} />
             <Route path="/challenge" element={<ChallengePage />} />
             <Route path="/course/:courseId" element={<CoursePage />} />
             <Route path="/course/:courseId/module/:moduleId" element={<LessonPage />} />
+>>>>>>> origin/main
           </Route>
           {/* Full-screen module editor — outside HomeLayout (no navbar) */}
           <Route path="/admin/module/:moduleId/edit" element={<ProtectedRoute><ModuleEditorPage /></ProtectedRoute>} />
