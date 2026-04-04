@@ -1,15 +1,15 @@
 package com.genalpha.learningplatform.controller;
 
+import com.genalpha.learningplatform.dto.ApiResponse;
 import com.genalpha.learningplatform.model.Badge;
 import com.genalpha.learningplatform.service.BadgeService;
+import com.genalpha.learningplatform.util.AuthUtils;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
-
-import com.genalpha.learningplatform.util.AuthUtils;
 
 import java.util.List;
 import java.util.UUID;
@@ -27,30 +27,30 @@ public class BadgeController {
 
     @Operation(summary = "List all badges")
     @GetMapping
-    public ResponseEntity<List<Badge>> getAll() {
-        return ResponseEntity.ok(badgeService.getAll());
+    public ResponseEntity<ApiResponse<List<Badge>>> getAll() {
+        return ResponseEntity.ok(ApiResponse.ok(badgeService.getAll()));
     }
 
     @Operation(summary = "Get badge by ID")
     @GetMapping("/{badgeId}")
-    public ResponseEntity<Badge> getById(@PathVariable String badgeId) {
-        return ResponseEntity.ok(badgeService.getById(badgeId));
+    public ResponseEntity<ApiResponse<Badge>> getById(@PathVariable String badgeId) {
+        return ResponseEntity.ok(ApiResponse.ok(badgeService.getById(badgeId)));
     }
 
     @Operation(summary = "Create a badge (admin)")
     @PostMapping
-    public ResponseEntity<Badge> create(@RequestBody Badge badge, Authentication authentication) {
+    public ResponseEntity<ApiResponse<Badge>> create(@RequestBody Badge badge, Authentication authentication) {
         UUID requesterId = AuthUtils.userId(authentication);
-        return ResponseEntity.status(HttpStatus.CREATED).body(badgeService.create(badge, requesterId));
+        return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.ok(badgeService.create(badge, requesterId)));
     }
 
     @Operation(summary = "Update a badge (admin)")
     @PutMapping("/{badgeId}")
-    public ResponseEntity<Badge> update(@PathVariable String badgeId,
-                                        @RequestBody Badge updates,
-                                        Authentication authentication) {
+    public ResponseEntity<ApiResponse<Badge>> update(@PathVariable String badgeId,
+                                                     @RequestBody Badge updates,
+                                                     Authentication authentication) {
         UUID requesterId = AuthUtils.userId(authentication);
-        return ResponseEntity.ok(badgeService.update(badgeId, updates, requesterId));
+        return ResponseEntity.ok(ApiResponse.ok(badgeService.update(badgeId, updates, requesterId)));
     }
 
     @Operation(summary = "Delete a badge (admin)")

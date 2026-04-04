@@ -1,5 +1,6 @@
 package com.genalpha.learningplatform.controller;
 
+import com.genalpha.learningplatform.dto.ApiResponse;
 import com.genalpha.learningplatform.dto.BadgeSummary;
 import com.genalpha.learningplatform.dto.CourseProgressSummary;
 import com.genalpha.learningplatform.dto.DashboardResponse;
@@ -61,10 +62,9 @@ public class DashboardController {
 
     @Operation(summary = "Get all dashboard data for the authenticated user")
     @GetMapping
-    public ResponseEntity<DashboardResponse> getDashboard(Authentication authentication) {
+    public ResponseEntity<ApiResponse<DashboardResponse>> getDashboard(Authentication authentication) {
         UUID userId = AuthUtils.userId(authentication);
 
-        // Course progress
         List<CourseProgress> allProgress = courseProgressService.getByUserId(userId);
         Map<String, List<CourseProgress>> byCourse = allProgress.stream()
                 .collect(Collectors.groupingBy(CourseProgress::getCourseId));
@@ -81,7 +81,6 @@ public class DashboardController {
                 })
                 .collect(Collectors.toList());
 
-        // Quiz progress
         List<QuizProgress> allQuizProgress = quizProgressService.getByUserId(userId);
         Map<String, QuizProgress> quizByCourse = allQuizProgress.stream()
                 .collect(Collectors.toMap(QuizProgress::getCourseId, qp -> qp));
@@ -104,7 +103,6 @@ public class DashboardController {
                 })
                 .collect(Collectors.toList());
 
-        // Badges
         List<UserBadge> earnedBadges = userBadgeService.getMyBadges(userId);
         Map<String, UserBadge> earnedByBadgeId = earnedBadges.stream()
                 .collect(Collectors.toMap(UserBadge::getBadgeId, ub -> ub));
@@ -116,12 +114,12 @@ public class DashboardController {
                 })
                 .collect(Collectors.toList());
 
-        return ResponseEntity.ok(new DashboardResponse(
+        return ResponseEntity.ok(ApiResponse.ok(new DashboardResponse(
                 userService.getById(userId),
                 courseProgressSummaries,
                 quizProgressSummaries,
                 badgeSummaries,
                 userStreakService.getMyStreak(userId)
-        ));
+        )));
     }
 }

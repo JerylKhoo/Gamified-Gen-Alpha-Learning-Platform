@@ -33,8 +33,9 @@ export default function Footer() {
 
   useEffect(() => {
     fetch(`${API_URL}/api/v1/questions`)
-      .then(r => r.ok ? r.json() : [])
-      .then(data => {
+      .then(r => r.ok ? r.json() : null)
+      .then(json => {
+        const data = json?.data ?? [];
         if (Array.isArray(data) && data.length > 0) {
           const q = data[Math.floor(Math.random() * data.length)];
           let answerText = q.explanation || q.answer || 'Think about it...';

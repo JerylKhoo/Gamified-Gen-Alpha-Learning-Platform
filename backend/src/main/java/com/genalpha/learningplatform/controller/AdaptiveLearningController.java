@@ -2,14 +2,14 @@ package com.genalpha.learningplatform.controller;
 
 import com.genalpha.learningplatform.dto.AdaptiveRequest;
 import com.genalpha.learningplatform.dto.AdaptiveResponse;
+import com.genalpha.learningplatform.dto.ApiResponse;
 import com.genalpha.learningplatform.service.AdaptiveLearningService;
+import com.genalpha.learningplatform.util.AuthUtils;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
-
-import com.genalpha.learningplatform.util.AuthUtils;
 
 import java.util.UUID;
 
@@ -36,12 +36,10 @@ public class AdaptiveLearningController {
             """
     )
     @PostMapping("/next")
-    public ResponseEntity<AdaptiveResponse> getNextQuestion(
+    public ResponseEntity<ApiResponse<AdaptiveResponse>> getNextQuestion(
             @RequestBody AdaptiveRequest request,
             Authentication authentication) {
-
         UUID userId = AuthUtils.userId(authentication);
-        AdaptiveResponse response = adaptiveLearningService.getNextQuestion(userId, request);
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(ApiResponse.ok(adaptiveLearningService.getNextQuestion(userId, request)));
     }
 }

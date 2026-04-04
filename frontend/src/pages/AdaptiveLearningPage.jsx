@@ -52,7 +52,8 @@ export default function AdaptiveLearningPage() {
           { headers }
         );
         if (progressRes.ok) {
-          const progressList = await progressRes.json();
+          const progressJson = await progressRes.json();
+          const progressList = progressJson.data ?? [];
           if (progressList.length > 0) {
             const progress = progressList[0];
             const correct  = parseJsonArray(progress.correctQuestions);
@@ -69,7 +70,8 @@ export default function AdaptiveLearningPage() {
           body: JSON.stringify({ courseId, quizId: null, correct: false }),
         });
         if (!res.ok) throw new Error('Failed to fetch question');
-        const data = await res.json();
+        const json = await res.json();
+        const data = json.data;
 
         if (cancelled) return;
 
@@ -106,7 +108,8 @@ export default function AdaptiveLearningPage() {
         body: JSON.stringify({ courseId, quizId: questionId, correct: wasCorrect }),
       });
       if (!res.ok) throw new Error('Failed to fetch question');
-      const data = await res.json();
+      const json = await res.json();
+      const data = json.data;
       setAbility(data.abilityScore);
       if (!data.nextQuestion) {
         setMastered(true);

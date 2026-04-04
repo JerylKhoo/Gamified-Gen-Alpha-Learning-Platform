@@ -418,11 +418,12 @@ export default function CommunityPage() {
         fetch(`${API_URL}/api/v1/posts/upvotes/me`, { headers }),
       ]);
       if (postsRes.ok) {
-        setPosts(await postsRes.json());
+        const postsJson = await postsRes.json();
+        setPosts(postsJson.data ?? []);
       }
       if (upvotesRes.ok) {
-        const ids = await upvotesRes.json();
-        setUpvotedIds(new Set(ids));
+        const upvotesJson = await upvotesRes.json();
+        setUpvotedIds(new Set(upvotesJson.data ?? []));
       }
     } catch { /* keep empty */ }
     finally { setLoading(false); }
@@ -454,7 +455,8 @@ export default function CommunityPage() {
       });
       if (res.ok) {
         // Sync with server's actual count
-        const updated = await res.json();
+        const json = await res.json();
+        const updated = json.data;
         setPosts(prev => prev.map(p =>
           p.postId === postId ? { ...p, upvote: updated.upvote } : p
         ));

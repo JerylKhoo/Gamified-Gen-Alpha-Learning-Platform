@@ -1,15 +1,15 @@
 package com.genalpha.learningplatform.controller;
 
+import com.genalpha.learningplatform.dto.ApiResponse;
 import com.genalpha.learningplatform.model.Module;
 import com.genalpha.learningplatform.service.ModuleService;
+import com.genalpha.learningplatform.util.AuthUtils;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
-
-import com.genalpha.learningplatform.util.AuthUtils;
 
 import java.util.List;
 import java.util.Map;
@@ -28,30 +28,30 @@ public class ModuleController {
 
     @Operation(summary = "List modules by course")
     @GetMapping("/course/{courseId}")
-    public ResponseEntity<List<Module>> getByCourseId(@PathVariable String courseId) {
-        return ResponseEntity.ok(moduleService.getByCourseId(courseId));
+    public ResponseEntity<ApiResponse<List<Module>>> getByCourseId(@PathVariable String courseId) {
+        return ResponseEntity.ok(ApiResponse.ok(moduleService.getByCourseId(courseId)));
     }
 
     @Operation(summary = "Get module by ID")
     @GetMapping("/{moduleId}")
-    public ResponseEntity<Module> getById(@PathVariable String moduleId) {
-        return ResponseEntity.ok(moduleService.getById(moduleId));
+    public ResponseEntity<ApiResponse<Module>> getById(@PathVariable String moduleId) {
+        return ResponseEntity.ok(ApiResponse.ok(moduleService.getById(moduleId)));
     }
 
     @Operation(summary = "Create a module (admin)")
     @PostMapping
-    public ResponseEntity<Module> create(@RequestBody Module module, Authentication authentication) {
+    public ResponseEntity<ApiResponse<Module>> create(@RequestBody Module module, Authentication authentication) {
         UUID requesterId = AuthUtils.userId(authentication);
-        return ResponseEntity.status(HttpStatus.CREATED).body(moduleService.create(module, requesterId));
+        return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.ok(moduleService.create(module, requesterId)));
     }
 
     @Operation(summary = "Update a module (admin)")
     @PutMapping("/{moduleId}")
-    public ResponseEntity<Module> update(@PathVariable String moduleId,
-                                         @RequestBody Module updates,
-                                         Authentication authentication) {
+    public ResponseEntity<ApiResponse<Module>> update(@PathVariable String moduleId,
+                                                      @RequestBody Module updates,
+                                                      Authentication authentication) {
         UUID requesterId = AuthUtils.userId(authentication);
-        return ResponseEntity.ok(moduleService.update(moduleId, updates, requesterId));
+        return ResponseEntity.ok(ApiResponse.ok(moduleService.update(moduleId, updates, requesterId)));
     }
 
     @Operation(summary = "Reorder modules (admin) — body: { moduleIds: [id1, id2, ...] }")

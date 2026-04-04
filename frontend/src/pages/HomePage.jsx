@@ -51,7 +51,8 @@ function EditProfileModal({ userData, onClose, onSave }) {
         headers: { Authorization: `Bearer ${session?.access_token}` },
       });
       if (res.ok) {
-        const urls = await res.json();
+        const json = await res.json();
+        const urls = json.data ?? [];
         setCharacters(urls.map(url => ({ name: url.split('/').pop(), url })));
       }
       setLoadingChars(false);
@@ -84,7 +85,8 @@ function EditProfileModal({ userData, onClose, onSave }) {
       });
 
       if (res.ok) {
-        const saved = await res.json();
+        const json = await res.json();
+        const saved = json.data;
         onSave({
           ...saved,
           ...(name.trim() && { name: name.trim() }),
@@ -254,7 +256,8 @@ function BadgesSection() {
         // Step 1: get earned badge IDs for the user
         const earnedRes = await fetch(`${API_URL}/api/v1/user-badges/me`, { headers });
         if (!earnedRes.ok) return;
-        const userBadges = await earnedRes.json();
+        const earnedJson = await earnedRes.json();
+        const userBadges = earnedJson.data ?? [];
         if (userBadges.length === 0) return;
 
         const uniqueIds = [...new Set(userBadges.map(ub => ub.badgeId))];
@@ -263,7 +266,7 @@ function BadgesSection() {
         const results = await Promise.allSettled(
           uniqueIds.map(badgeId =>
             fetch(`${API_URL}/api/v1/badges/${encodeURIComponent(badgeId)}`, { headers })
-              .then(r => r.ok ? r.json() : null)
+              .then(r => r.ok ? r.json().then(j => j.data) : null)
           )
         );
 
@@ -533,14 +536,14 @@ export default function HomePage() {
           fetch(`${API_URL}/api/v1/courses-with-modules`,   { headers }),
         ]);
 
-        const user               = userRes.ok               ? await userRes.json()               : null;
-        const allCourses         = coursesRes.ok            ? await coursesRes.json()            : [];
-        const progress           = progressRes.ok           ? await progressRes.json()           : [];
-        const streak             = streakRes.ok             ? await streakRes.json()             : null;
-        const allBadges          = badgesRes.ok             ? await badgesRes.json()             : [];
-        const userBadges         = userBadgesRes.ok         ? await userBadgesRes.json()         : [];
-        const courseProgress     = courseProgressRes.ok     ? await courseProgressRes.json()     : [];
-        const coursesWithModules = coursesWithModulesRes.ok ? await coursesWithModulesRes.json() : [];
+        const user               = userRes.ok               ? (await userRes.json()).data               : null;
+        const allCourses         = coursesRes.ok            ? (await coursesRes.json()).data            ?? [] : [];
+        const progress           = progressRes.ok           ? (await progressRes.json()).data           ?? [] : [];
+        const streak             = streakRes.ok             ? (await streakRes.json()).data             : null;
+        const allBadges          = badgesRes.ok             ? (await badgesRes.json()).data             ?? [] : [];
+        const userBadges         = userBadgesRes.ok         ? (await userBadgesRes.json()).data         ?? [] : [];
+        const courseProgress     = courseProgressRes.ok     ? (await courseProgressRes.json()).data     ?? [] : [];
+        const coursesWithModules = coursesWithModulesRes.ok ? (await coursesWithModulesRes.json()).data ?? [] : [];
 
         // badgeId → full badge details, filtered to only earned ones
         const badgeDetailsMap = Object.fromEntries(allBadges.map(b => [b.badgeId, b]));

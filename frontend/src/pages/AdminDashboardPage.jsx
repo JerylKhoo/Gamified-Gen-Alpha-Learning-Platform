@@ -58,7 +58,8 @@ export default function AdminDashboardPage() {
         });
         if (res.status === 403) { navigate('/home'); return; }
         if (!res.ok) throw new Error('Failed to load users');
-        setUsers(await res.json());
+        const json = await res.json();
+        setUsers(json.data ?? []);
       } catch (e) {
         setError(e.message);
       } finally {
@@ -78,7 +79,8 @@ export default function AdminDashboardPage() {
           headers: { Authorization: `Bearer ${session.access_token}` },
         });
         if (!res.ok) throw new Error('Failed to load reports');
-        setReports(await res.json());
+        const json = await res.json();
+        setReports(json.data ?? []);
       } catch (e) {
         setReportsError(e.message);
       } finally {
@@ -102,7 +104,8 @@ export default function AdminDashboardPage() {
         body: JSON.stringify({ role: newRole }),
       });
       if (res.ok) {
-        const updated = await res.json();
+        const json = await res.json();
+        const updated = json.data;
         setUsers(prev => prev.map(u => u.userId === userId ? updated : u));
       }
     } catch { /* silent */ } finally {

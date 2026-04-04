@@ -1,5 +1,6 @@
 package com.genalpha.learningplatform.controller;
 
+import com.genalpha.learningplatform.dto.ApiResponse;
 import com.genalpha.learningplatform.dto.CourseWithModulesResponse;
 import com.genalpha.learningplatform.service.CourseWithModulesService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -22,13 +23,13 @@ public class CourseWithModulesController {
 
     @Operation(summary = "Get all courses with their modules")
     @GetMapping
-    public ResponseEntity<List<CourseWithModulesResponse>> getAllCoursesWithModules() {
-        return ResponseEntity.ok(courseWithModulesService.getAllCoursesWithModules());
+    public ResponseEntity<ApiResponse<List<CourseWithModulesResponse>>> getAllCoursesWithModules() {
+        return ResponseEntity.ok(ApiResponse.ok(courseWithModulesService.getAllCoursesWithModules()));
     }
 
     @Operation(summary = "Get a single course with its modules")
     @GetMapping("/{courseId}")
-    public ResponseEntity<CourseWithModulesResponse> getCourseWithModules(@PathVariable String courseId) {
-        return ResponseEntity.ok(courseWithModulesService.getCourseWithModules(courseId));
+    public ResponseEntity<ApiResponse<CourseWithModulesResponse>> getCourseWithModules(@PathVariable String courseId) {
+        return ResponseEntity.ok(ApiResponse.ok(courseWithModulesService.getCourseWithModules(courseId)));
     }
 }

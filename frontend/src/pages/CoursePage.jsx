@@ -37,7 +37,8 @@ function CreateModuleModal({ courseId, nextOrder, onClose, onCreated, onOpenEdit
         body: JSON.stringify({ moduleId: moduleId.trim(), courseId, content: null, order: nextOrder }),
       });
       if (!res.ok) throw new Error((await res.text()) || 'Failed to create module');
-      const mod = await res.json();
+      const json = await res.json();
+      const mod = json.data;
       onCreated(mod);
       onClose();
       onOpenEditor(mod.moduleId);
@@ -178,8 +179,10 @@ export default function CoursePage() {
         ]);
         if (!courseRes.ok) throw new Error(`Failed to load course (${courseRes.status})`);
         if (!modulesRes.ok) throw new Error(`Failed to load modules (${modulesRes.status})`);
-        setCourse(await courseRes.json());
-        const data = await modulesRes.json();
+        const courseJson = await courseRes.json();
+        setCourse(courseJson.data);
+        const modulesJson = await modulesRes.json();
+        const data = modulesJson.data ?? [];
         setModules(data.sort((a, b) => (a.order ?? 0) - (b.order ?? 0)));
       } catch (err) { setError(err.message); }
       finally { setLoading(false); }
@@ -195,7 +198,8 @@ export default function CoursePage() {
           headers: { Authorization: `Bearer ${session.access_token}` },
         });
         if (res.ok) {
-          const data = await res.json();
+          const json = await res.json();
+          const data = json.data ?? [];
           setCompleted(new Set(data.map(p => p.moduleId)));
         }
       } catch { /* non-critical */ }

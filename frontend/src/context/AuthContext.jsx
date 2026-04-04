@@ -36,7 +36,8 @@ export function AuthProvider({ children }) {
           headers: { Authorization: `Bearer ${session.access_token}` },
         });
         if (res.ok) {
-          const user = await res.json();
+          const json = await res.json();
+          const user = json.data;
           setUserRole(user.role || 'User');
         }
       } catch {

@@ -41,7 +41,8 @@ export default function ModuleEditorPage() {
           headers: { Authorization: `Bearer ${session.access_token}` },
         });
         if (res.ok) {
-          const mod = await res.json();
+          const json = await res.json();
+          const mod = json.data;
           if (mod.content) {
             const blocks = await editor.tryParseHTMLToBlocks(mod.content);
             editor.replaceBlocks(editor.document, blocks);

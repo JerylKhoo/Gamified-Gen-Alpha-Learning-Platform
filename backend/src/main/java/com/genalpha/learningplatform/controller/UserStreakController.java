@@ -1,14 +1,14 @@
 package com.genalpha.learningplatform.controller;
 
+import com.genalpha.learningplatform.dto.ApiResponse;
 import com.genalpha.learningplatform.model.UserStreak;
 import com.genalpha.learningplatform.service.UserStreakService;
+import com.genalpha.learningplatform.util.AuthUtils;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
-
-import com.genalpha.learningplatform.util.AuthUtils;
 
 import java.util.UUID;
 
@@ -25,16 +25,16 @@ public class UserStreakController {
 
     @Operation(summary = "Get the logged-in user's streak (creates one if it doesn't exist)")
     @GetMapping("/me")
-    public ResponseEntity<UserStreak> getMyStreak(Authentication authentication) {
+    public ResponseEntity<ApiResponse<UserStreak>> getMyStreak(Authentication authentication) {
         UUID userId = AuthUtils.userId(authentication);
-        return ResponseEntity.ok(userStreakService.getMyStreak(userId));
+        return ResponseEntity.ok(ApiResponse.ok(userStreakService.getMyStreak(userId)));
     }
 
     @Operation(summary = "Record activity for today (increments or resets streak per rules)")
     @PostMapping("/me/activity")
-    public ResponseEntity<UserStreak> recordActivity(Authentication authentication) {
+    public ResponseEntity<ApiResponse<UserStreak>> recordActivity(Authentication authentication) {
         UUID userId = AuthUtils.userId(authentication);
-        return ResponseEntity.ok(userStreakService.recordActivity(userId));
+        return ResponseEntity.ok(ApiResponse.ok(userStreakService.recordActivity(userId)));
     }
 
     @Operation(summary = "Delete the logged-in user's streak record")

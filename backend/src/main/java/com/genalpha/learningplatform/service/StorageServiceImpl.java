@@ -21,7 +21,11 @@ public class StorageServiceImpl implements StorageService {
     @Value("${supabase.anon.key}")
     private String supabaseAnonKey;
 
-    private final RestTemplate restTemplate = new RestTemplate();
+    private final RestTemplate restTemplate;
+
+    public StorageServiceImpl(RestTemplate restTemplate) {
+        this.restTemplate = restTemplate;
+    }
 
     @Override
     public List<String> listProfilePicUrls() {

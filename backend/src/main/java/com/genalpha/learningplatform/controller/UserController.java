@@ -1,20 +1,19 @@
 package com.genalpha.learningplatform.controller;
 
+import com.genalpha.learningplatform.dto.ApiResponse;
 import com.genalpha.learningplatform.model.User;
 import com.genalpha.learningplatform.service.UserService;
+import com.genalpha.learningplatform.util.AuthUtils;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.ExampleObject;
 import io.swagger.v3.oas.annotations.media.Schema;
-import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
-
-import com.genalpha.learningplatform.util.AuthUtils;
 
 import java.util.List;
 import java.util.UUID;
@@ -32,8 +31,8 @@ public class UserController {
 
     @Operation(summary = "Get leaderboard — all users sorted by points descending")
     @GetMapping("/leaderboard")
-    public ResponseEntity<List<User>> getLeaderboard() {
-        return ResponseEntity.ok(userService.getLeaderboard());
+    public ResponseEntity<ApiResponse<List<User>>> getLeaderboard() {
+        return ResponseEntity.ok(ApiResponse.ok(userService.getLeaderboard()));
     }
 
     @Operation(summary = "Get agent leaderboard — users sorted by their highest chat bot score")
@@ -44,13 +43,13 @@ public class UserController {
 
     @Operation(summary = "Get user by ID")
     @ApiResponses({
-        @ApiResponse(responseCode = "200", description = "User found"),
-        @ApiResponse(responseCode = "404", description = "User not found", content = @Content)
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "User found"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "User not found", content = @Content)
     })
     @GetMapping("/{userId}")
-    public ResponseEntity<User> getById(
+    public ResponseEntity<ApiResponse<User>> getById(
             @Parameter(description = "UUID of the user to retrieve") @PathVariable UUID userId) {
-        return ResponseEntity.ok(userService.getById(userId));
+        return ResponseEntity.ok(ApiResponse.ok(userService.getById(userId)));
     }
 
     @Operation(
@@ -60,9 +59,9 @@ public class UserController {
                       "Users may only update their own profile."
     )
     @ApiResponses({
-        @ApiResponse(responseCode = "200", description = "Profile updated successfully"),
-        @ApiResponse(responseCode = "403", description = "Cannot update another user's profile", content = @Content),
-        @ApiResponse(responseCode = "404", description = "User not found", content = @Content)
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Profile updated successfully"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Cannot update another user's profile", content = @Content),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "User not found", content = @Content)
     })
     @io.swagger.v3.oas.annotations.parameters.RequestBody(
         description = "Only `name` and `profilePic` are applied. All other fields are ignored.",
@@ -77,11 +76,11 @@ public class UserController {
         )
     )
     @PutMapping("/{userId}")
-    public ResponseEntity<User> update(
+    public ResponseEntity<ApiResponse<User>> update(
             @Parameter(description = "UUID of the user to update (must match the authenticated user)") @PathVariable UUID userId,
             @RequestBody User updates,
             Authentication authentication) {
         UUID requesterId = AuthUtils.userId(authentication);
-        return ResponseEntity.ok(userService.update(userId, updates, requesterId));
+        return ResponseEntity.ok(ApiResponse.ok(userService.update(userId, updates, requesterId)));
     }
 }

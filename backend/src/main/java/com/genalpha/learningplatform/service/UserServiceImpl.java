@@ -1,5 +1,6 @@
 package com.genalpha.learningplatform.service;
 
+import java.util.Comparator;
 import java.util.List;
 import java.util.UUID;
 
@@ -13,6 +14,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.server.ResponseStatusException;
 
+import com.genalpha.learningplatform.model.Role;
 import com.genalpha.learningplatform.model.User;
 import com.genalpha.learningplatform.repository.UserRepository;
 
@@ -63,21 +65,21 @@ public class UserServiceImpl implements UserService {
     @Override
     public boolean isAdmin(UUID userId) {
         return userRepository.findById(userId)
-                .map(u -> "Admin".equals(u.getRole()))
+                .map(u -> Role.Admin.name().equals(u.getRole()))
                 .orElse(false);
     }
 
     @Override
     public boolean isCollaborator(UUID userId) {
         return userRepository.findById(userId)
-                .map(u -> "Collaborator".equals(u.getRole()))
+                .map(u -> Role.Collaborator.name().equals(u.getRole()))
                 .orElse(false);
     }
 
     @Override
     public boolean isContributorOrAbove(UUID userId) {
         return userRepository.findById(userId)
-                .map(u -> "Collaborator".equals(u.getRole()) || "Admin".equals(u.getRole()))
+                .map(u -> Role.Collaborator.name().equals(u.getRole()) || Role.Admin.name().equals(u.getRole()))
                 .orElse(false);
     }
 
@@ -92,11 +94,11 @@ public class UserServiceImpl implements UserService {
         if (!isAdmin(requesterId)) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only admins can change user roles");
         }
-        if (!List.of("User", "Collaborator", "Admin").contains(role)) {
+        if (!Role.isValid(role)) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid role: " + role);
         }
         User target = getById(userId);
-        if ("Admin".equals(target.getRole()) && !userId.equals(requesterId)) {
+        if (Role.Admin.name().equals(target.getRole()) && !userId.equals(requesterId)) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Cannot modify another admin's role");
         }
         userRepository.updateRole(userId, role);
@@ -122,7 +124,7 @@ public class UserServiceImpl implements UserService {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only admins can delete users");
         }
         User target = getById(userId);
-        if ("Admin".equals(target.getRole()) && !userId.equals(requesterId)) {
+        if (Role.Admin.name().equals(target.getRole()) && !userId.equals(requesterId)) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Cannot delete another admin's account");
         }
 
@@ -147,13 +149,9 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public List<User> getLeaderboard() {
-        List<User> users = new java.util.ArrayList<>(userRepository.findAll());
-        users.sort((User a, User b) -> {
-            int pa = a.getPoints() != null ? a.getPoints() : 0;
-            int pb = b.getPoints() != null ? b.getPoints() : 0;
-            return Integer.compare(pb, pa);
-        });
-        return users;
+        return userRepository.findAll().stream()
+                .sorted(Comparator.comparingInt((User u) -> u.getPoints() != null ? u.getPoints() : 0).reversed())
+                .toList();
     }
 
     @Override
