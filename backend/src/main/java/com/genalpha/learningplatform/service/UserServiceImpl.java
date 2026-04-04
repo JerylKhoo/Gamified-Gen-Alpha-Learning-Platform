@@ -26,7 +26,7 @@ public class UserServiceImpl implements UserService {
 
     private final UserRepository userRepository;
     private final com.genalpha.learningplatform.repository.ChatBotRepository chatBotRepository;
-    private final RestTemplate restTemplate = new RestTemplate();
+    private final RestTemplate restTemplate;
 
     @Value("${supabase.url}")
     private String supabaseUrl;
@@ -35,9 +35,11 @@ public class UserServiceImpl implements UserService {
     private String supabaseServiceKey;
 
     public UserServiceImpl(UserRepository userRepository,
-            com.genalpha.learningplatform.repository.ChatBotRepository chatBotRepository) {
+            com.genalpha.learningplatform.repository.ChatBotRepository chatBotRepository,
+            RestTemplate restTemplate) {
         this.userRepository = userRepository;
         this.chatBotRepository = chatBotRepository;
+        this.restTemplate = restTemplate;
     }
 
     @Override
