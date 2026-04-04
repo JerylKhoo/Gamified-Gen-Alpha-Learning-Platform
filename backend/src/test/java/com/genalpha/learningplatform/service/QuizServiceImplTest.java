@@ -47,7 +47,7 @@ class QuizServiceImplTest {
         quiz.setQuizId(quizId);
         quiz.setCourseId("cs101");
         quiz.setQuestion("What is 2+2?");
-        quiz.setAnswer("4");
+        quiz.setAnswer(List.of("3"));
         quiz.setScore(50);
     }
 
@@ -109,7 +109,7 @@ class QuizServiceImplTest {
 
         // Assert
         assertNotNull(result);
-        assertEquals("4", result.getAnswer());
+        assertEquals(List.of("3"), result.getAnswer());
         verify(userService, times(1)).isAdmin(adminId);
         verify(quizRepository, times(1)).save(quiz);
     }
@@ -136,7 +136,7 @@ class QuizServiceImplTest {
         when(quizRepository.findById(quizId)).thenReturn(Optional.of(quiz));
         Quiz updates = new Quiz();
         updates.setQuestion("What is 3+3?");
-        updates.setAnswer("6");
+        updates.setAnswer(List.of("5"));
         when(quizRepository.save(quiz)).thenReturn(quiz);
 
         // Act
@@ -145,7 +145,7 @@ class QuizServiceImplTest {
         // Assert
         assertNotNull(result);
         assertEquals("What is 3+3?", result.getQuestion());
-        assertEquals("6", result.getAnswer());
+        assertEquals(List.of("5"), result.getAnswer());
         verify(userService, times(1)).isAdmin(adminId);
         verify(quizRepository, times(1)).findById(quizId);
         verify(quizRepository, times(1)).save(quiz);
