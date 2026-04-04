@@ -1,9 +1,9 @@
 fastapi[standard]
-BaseModel
-Groq
+groq
 redis
 python-dotenv
 slowapi
 pyjwt
 google-genai
+supabase
 #work in progress
