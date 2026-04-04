@@ -36,6 +36,13 @@ const navItems = [
       <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></svg>
     ),
   },
+  {
+    label: 'Grading Agent',
+    to: '/agent',
+    icon: (
+      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 8V4H8"/><rect width="16" height="12" x="4" y="8" rx="2"/><path d="M2 14h2"/><path d="M20 14h2"/><path d="M15 13v2"/><path d="M9 13v2"/></svg>
+    ),
+  },
 ];
 
 const ToggleIcon = () => (
@@ -135,7 +142,7 @@ export default function Sidebar() {
             </button>
             <button
               className="flex items-center gap-[0.6rem] w-full px-4 py-[0.7rem] border-t border-[rgba(139,92,246,0.15)] bg-transparent text-[#e57373] text-[0.9rem] font-medium cursor-pointer transition-all text-left hover:bg-[rgba(229,115,115,0.1)] hover:text-[#ef9a9a]"
-              onClick={async () => { await supabase.auth.signOut(); setProfileOpen(false); }}
+              onClick={async () => { setProfileOpen(false); navigate('/'); await supabase.auth.signOut(); }}
             >
               <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"><path fill="currentColor" d="M5 21q-.825 0-1.412-.587T3 19V5q0-.825.588-1.412T5 3h7v2H5v14h7v2zm11-4l-1.375-1.45l2.55-2.55H9v-2h8.175l-2.55-2.55L16 7l5 5z"/></svg>
               Log Out

@@ -1,0 +1,9 @@
+fastapi[standard]
+BaseModel
+Groq
+redis
+python-dotenv
+slowapi
+pyjwt
+google-genai
+#work in progress
