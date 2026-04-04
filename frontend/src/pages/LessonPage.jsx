@@ -33,11 +33,15 @@ export default function LessonPage() {
 
         if (!moduleRes.ok) throw new Error('Failed to load lesson');
 
-        const [moduleData, allModulesData, progressData] = await Promise.all([
+        const [moduleJson, allModulesJson, progressJson] = await Promise.all([
           moduleRes.json(),
-          allModulesRes.ok ? allModulesRes.json() : Promise.resolve([]),
-          progressRes.ok  ? progressRes.json()   : Promise.resolve([]),
+          allModulesRes.ok ? allModulesRes.json() : Promise.resolve(null),
+          progressRes.ok  ? progressRes.json()   : Promise.resolve(null),
         ]);
+
+        const moduleData     = moduleJson.data;
+        const allModulesData = allModulesJson?.data ?? [];
+        const progressData   = progressJson?.data ?? [];
 
         setMod(moduleData);
         setAllModules(allModulesData.sort((a, b) => (a.order ?? 0) - (b.order ?? 0)));

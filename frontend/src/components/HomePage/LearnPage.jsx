@@ -166,7 +166,8 @@ function EditCourseModal({ course, onClose, onUpdated, onDeleted }) {
         body: JSON.stringify({ description: description.trim() || null, image: imageUrl }),
       });
       if (!res.ok) throw new Error((await res.text()) || 'Failed to update course');
-      onUpdated(await res.json());
+      const json = await res.json();
+      onUpdated(json.data);
       onClose();
     } catch (e) {
       setErr(e.message);
@@ -478,7 +479,8 @@ function CreateCourseModal({ onClose, onCreated }) {
         const msg = await res.text();
         throw new Error(msg || 'Failed to create course');
       }
-      const created = await res.json();
+      const json = await res.json();
+      const created = json.data;
       onCreated(created);
       onClose();
     } catch (e) {
@@ -627,10 +629,12 @@ export default function LearnPage() {
           }
           throw new Error('Failed to load courses');
         }
-        setCourses(await coursesRes.json());
+        const coursesJson = await coursesRes.json();
+        setCourses(coursesJson.data ?? []);
 
         if (progressRes.ok) {
-          const progressData = await progressRes.json();
+          const progressJson = await progressRes.json();
+          const progressData = progressJson.data ?? [];
           setStarted(new Set(progressData.map(p => p.courseId)));
         }
       } catch (err) {

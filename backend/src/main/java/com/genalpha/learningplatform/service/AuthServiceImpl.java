@@ -23,7 +23,11 @@ public class AuthServiceImpl implements AuthService {
     @Value("${supabase.anon.key}")
     private String supabaseAnonKey;
 
-    private final RestTemplate restTemplate = new RestTemplate();
+    private final RestTemplate restTemplate;
+
+    public AuthServiceImpl(RestTemplate restTemplate) {
+        this.restTemplate = restTemplate;
+    }
 
     @Override
     public AuthResponse login(AuthRequest request) {

@@ -27,7 +27,8 @@ export default function LeaderboardPage() {
           headers: { Authorization: `Bearer ${session.access_token}` },
         });
         if (!res.ok) throw new Error('Failed to load leaderboard');
-        setUsers(await res.json());
+        const json = await res.json();
+        setUsers(json.data ?? []);
       } catch (e) {
         setError(e.message);
       } finally {

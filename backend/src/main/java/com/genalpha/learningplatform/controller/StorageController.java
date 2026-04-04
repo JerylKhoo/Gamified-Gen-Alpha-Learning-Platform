@@ -1,5 +1,6 @@
 package com.genalpha.learningplatform.controller;
 
+import com.genalpha.learningplatform.dto.ApiResponse;
 import com.genalpha.learningplatform.service.StorageService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -21,7 +22,7 @@ public class StorageController {
 
     @Operation(summary = "List all profile picture URLs")
     @GetMapping
-    public ResponseEntity<List<String>> listProfilePics() {
-        return ResponseEntity.ok(storageService.listProfilePicUrls());
+    public ResponseEntity<ApiResponse<List<String>>> listProfilePics() {
+        return ResponseEntity.ok(ApiResponse.ok(storageService.listProfilePicUrls()));
     }
 }

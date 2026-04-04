@@ -87,18 +87,22 @@ export default function PostDetailPage() {
         ]);
 
         if (!postRes.ok) throw new Error('Post not found');
-        setPost(await postRes.json());
+        const postJson = await postRes.json();
+        setPost(postJson.data);
 
         if (upvotesRes.ok) {
-          const ids = await upvotesRes.json();
+          const upvotesJson = await upvotesRes.json();
+          const ids = upvotesJson.data ?? [];
           setUpvoted(ids.includes(postId));
         }
         if (reportsRes.ok) {
-          const ids = await reportsRes.json();
+          const reportsJson = await reportsRes.json();
+          const ids = reportsJson.data ?? [];
           setReported(ids.includes(postId));
         }
         if (commentsRes.ok) {
-          setComments(await commentsRes.json());
+          const commentsJson = await commentsRes.json();
+          setComments(commentsJson.data ?? []);
         }
       } catch (err) {
         setError(err.message);
@@ -125,7 +129,8 @@ export default function PostDetailPage() {
         headers: { Authorization: `Bearer ${session.access_token}` },
       });
       if (res.ok) {
-        const updated = await res.json();
+        const json = await res.json();
+        const updated = json.data;
         setPost(prev => prev ? { ...prev, upvote: updated.upvote } : prev);
       } else {
         setUpvoted(wasUpvoted);
@@ -158,7 +163,8 @@ export default function PostDetailPage() {
         body: JSON.stringify({ reason: reportReason, description: reportDescription }),
       });
       if (res.ok) {
-        const updated = await res.json();
+        const json = await res.json();
+        const updated = json.data;
         setPost(prev => prev ? { ...prev, reportCount: updated.reportCount } : prev);
         setReported(true);
         setShowReportModal(false);
@@ -197,7 +203,10 @@ export default function PostDetailPage() {
         const commentsRes = await fetch(`${API_URL}/api/v1/posts/${postId}/comments`, {
           headers: { Authorization: `Bearer ${session.access_token}` },
         });
-        if (commentsRes.ok) setComments(await commentsRes.json());
+        if (commentsRes.ok) {
+          const commentsJson = await commentsRes.json();
+          setComments(commentsJson.data ?? []);
+        }
       }
     } catch { /* silent */ } finally {
       setSubmitting(false);
@@ -244,7 +253,8 @@ export default function PostDetailPage() {
         body: JSON.stringify({ title: editTitle, description: editDescription }),
       });
       if (res.ok) {
-        const updated = await res.json();
+        const json = await res.json();
+        const updated = json.data;
         setPost(prev => ({ ...prev, title: updated.title, description: updated.description }));
         setEditing(false);
       }

@@ -14,16 +14,20 @@ import org.springframework.web.server.ResponseStatusException;
 import java.util.List;
 import java.util.UUID;
 
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 import static org.springframework.http.HttpStatus.NOT_FOUND;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 /**
- * Controller tests for QuizController using MockMvc.
+ * Black-box controller tests for QuizController.
+ * Tests HTTP inputs and outputs only; service internals are mocked.
  */
 @WebMvcTest(QuizController.class)
-@DisplayName("QuizController Unit Tests")
+@DisplayName("QuizController Black-Box Tests")
 class QuizControllerTest {
 
     @Autowired
@@ -32,11 +36,12 @@ class QuizControllerTest {
     @MockitoBean
     private QuizService quizService;
 
+    // ── GET /api/v1/quizzes/course/{courseId} ─────────────────────────────────
+
     @Test
     @WithMockUser
-    @DisplayName("Should return 200 with quiz list when quizzes exist for course")
-    void getByCourseId_returns200WithQuizList() throws Exception {
-        // Arrange
+    @DisplayName("GET /quizzes/course/{courseId} → 200 with ApiResponse envelope containing quiz list")
+    void getByCourseId_returns200WithEnvelopedQuizList() throws Exception {
         Quiz quiz = new Quiz();
         quiz.setQuizId(UUID.randomUUID());
         quiz.setCourseId("cs101");
@@ -45,19 +50,20 @@ class QuizControllerTest {
 
         when(quizService.getByCourseId("cs101")).thenReturn(List.of(quiz));
 
-        // Act & Assert
         mockMvc.perform(get("/api/v1/quizzes/course/cs101"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$[0].question").value("What is 2+2?"));
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data[0].question").value("What is 2+2?"));
 
         verify(quizService, times(1)).getByCourseId("cs101");
     }
 
+    // ── GET /api/v1/quizzes/{quizId} ─────────────────────────────────────────
+
     @Test
     @WithMockUser
-    @DisplayName("Should return 200 with quiz when quiz exists")
-    void getById_returns200_whenQuizExists() throws Exception {
-        // Arrange
+    @DisplayName("GET /quizzes/{quizId} → 200 with ApiResponse envelope when quiz exists")
+    void getById_returns200WithEnvelopedQuiz() throws Exception {
         UUID quizId = UUID.randomUUID();
         Quiz quiz = new Quiz();
         quiz.setQuizId(quizId);
@@ -66,27 +72,64 @@ class QuizControllerTest {
 
         when(quizService.getById(quizId)).thenReturn(quiz);
 
-        // Act & Assert
         mockMvc.perform(get("/api/v1/quizzes/{quizId}", quizId))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.courseId").value("cs101"));
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.courseId").value("cs101"));
 
         verify(quizService, times(1)).getById(quizId);
     }
 
     @Test
     @WithMockUser
-    @DisplayName("Should return 404 when quiz does not exist")
+    @DisplayName("GET /quizzes/{quizId} → 404 when quiz does not exist")
     void getById_returns404_whenQuizNotFound() throws Exception {
-        // Arrange
         UUID quizId = UUID.randomUUID();
         when(quizService.getById(quizId))
                 .thenThrow(new ResponseStatusException(NOT_FOUND, "Quiz not found"));
 
-        // Act & Assert
         mockMvc.perform(get("/api/v1/quizzes/{quizId}", quizId))
                 .andExpect(status().isNotFound());
 
         verify(quizService, times(1)).getById(quizId);
+    }
+
+    // ── POST /api/v1/quizzes ──────────────────────────────────────────────────
+
+    @Test
+    @WithMockUser(username = "00000000-0000-0000-0000-000000000001")
+    @DisplayName("POST /quizzes → 201 with created quiz")
+    void create_returns201WithCreatedQuiz() throws Exception {
+        UUID quizId = UUID.randomUUID();
+        Quiz quiz = new Quiz();
+        quiz.setQuizId(quizId);
+        quiz.setCourseId("cs101");
+        quiz.setQuestion("New question?");
+
+        when(quizService.create(any(Quiz.class), any())).thenReturn(quiz);
+
+        mockMvc.perform(post("/api/v1/quizzes").with(csrf())
+                        .contentType("application/json")
+                        .content("{\"courseId\":\"cs101\",\"question\":\"New question?\",\"score\":50}"))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.question").value("New question?"));
+
+        verify(quizService, times(1)).create(any(Quiz.class), any());
+    }
+
+    // ── DELETE /api/v1/quizzes/{quizId} ──────────────────────────────────────
+
+    @Test
+    @WithMockUser(username = "00000000-0000-0000-0000-000000000001")
+    @DisplayName("DELETE /quizzes/{quizId} → 204 when quiz deleted successfully")
+    void delete_returns204_whenDeleted() throws Exception {
+        UUID quizId = UUID.randomUUID();
+        doNothing().when(quizService).delete(eq(quizId), any());
+
+        mockMvc.perform(delete("/api/v1/quizzes/{quizId}", quizId).with(csrf()))
+                .andExpect(status().isNoContent());
+
+        verify(quizService, times(1)).delete(eq(quizId), any());
     }
 }

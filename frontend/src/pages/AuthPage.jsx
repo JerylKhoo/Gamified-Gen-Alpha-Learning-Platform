@@ -59,7 +59,8 @@ export default function AuthPage() {
         body: JSON.stringify({ email: registerForm.email, password: registerForm.password }),
       });
       if (!res.ok) throw new Error('Registration failed');
-      const { access_token, refresh_token } = await res.json();
+      const json = await res.json();
+      const { access_token, refresh_token } = json.data;
       await supabase.auth.setSession({ access_token, refresh_token });
       navigate(redirectTo, { replace: true });
     } catch (err) {
@@ -79,7 +80,8 @@ export default function AuthPage() {
         body: JSON.stringify({ email: loginForm.email, password: loginForm.password }),
       });
       if (!res.ok) throw new Error('Invalid email or password');
-      const { access_token, refresh_token } = await res.json();
+      const json = await res.json();
+      const { access_token, refresh_token } = json.data;
       await supabase.auth.setSession({ access_token, refresh_token });
       navigate(redirectTo, { replace: true });
     } catch (err) {

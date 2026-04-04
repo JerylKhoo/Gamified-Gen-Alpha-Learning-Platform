@@ -1,10 +1,8 @@
 package com.genalpha.learningplatform.service;
 
-import com.genalpha.learningplatform.dto.CommentResponse;
 import com.genalpha.learningplatform.dto.PostResponse;
-import com.genalpha.learningplatform.dto.ReportedPostResponse;
-import com.genalpha.learningplatform.model.Comment;
 import com.genalpha.learningplatform.model.Post;
+
 import java.util.List;
 import java.util.UUID;
 
@@ -24,12 +22,4 @@ public interface PostService {
     Post report(UUID postId, UUID requesterId, String reason, String description);
     List<UUID> getReportedPostIds(UUID userId);
     void delete(UUID postId, UUID requesterId);
-    List<CommentResponse> getComments(UUID postId);
-    Comment addComment(UUID postId, UUID requesterId, String body);
-    Comment updateComment(UUID commentId, String body, UUID requesterId);
-    void deleteComment(UUID commentId, UUID requesterId);
-    List<ReportedPostResponse> getReportedPosts();
-    void approvePost(UUID postId, UUID requesterId);
-    void dismissReports(UUID postId, UUID requesterId);
-    void deleteReportedPost(UUID postId, UUID requesterId);
 }

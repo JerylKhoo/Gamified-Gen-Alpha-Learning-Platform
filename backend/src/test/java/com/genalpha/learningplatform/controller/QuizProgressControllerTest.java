@@ -22,10 +22,11 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 /**
- * Controller tests for QuizProgressController using MockMvc.
+ * Black-box controller tests for QuizProgressController.
+ * Tests HTTP inputs and outputs only; service internals are mocked.
  */
 @WebMvcTest(QuizProgressController.class)
-@DisplayName("QuizProgressController Unit Tests")
+@DisplayName("QuizProgressController Black-Box Tests")
 class QuizProgressControllerTest {
 
     @Autowired
@@ -34,11 +35,12 @@ class QuizProgressControllerTest {
     @MockitoBean
     private QuizProgressService quizProgressService;
 
+    // ── GET /api/v1/quiz-progress/me ─────────────────────────────────────────
+
     @Test
     @WithMockUser(username = "00000000-0000-0000-0000-000000000001")
-    @DisplayName("Should return 200 with progress list when progress exists for user")
-    void getMyProgress_returns200WithProgressList() throws Exception {
-        // Arrange
+    @DisplayName("GET /quiz-progress/me → 200 with ApiResponse envelope containing progress list")
+    void getMyProgress_returns200WithEnvelopedProgressList() throws Exception {
         QuizProgress progress = new QuizProgress();
         progress.setQuizProgressId(UUID.randomUUID());
         progress.setCourseId("cs101");
@@ -46,19 +48,20 @@ class QuizProgressControllerTest {
 
         when(quizProgressService.getByUserId(any(UUID.class))).thenReturn(List.of(progress));
 
-        // Act & Assert
         mockMvc.perform(get("/api/v1/quiz-progress/me"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$[0].courseId").value("cs101"));
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data[0].courseId").value("cs101"));
 
         verify(quizProgressService, times(1)).getByUserId(any(UUID.class));
     }
 
+    // ── GET /api/v1/quiz-progress/me/{courseId} ───────────────────────────────
+
     @Test
     @WithMockUser(username = "00000000-0000-0000-0000-000000000001")
-    @DisplayName("Should return 200 with progress when progress exists for user and course")
-    void getMyCourseProgress_returns200_whenFound() throws Exception {
-        // Arrange
+    @DisplayName("GET /quiz-progress/me/{courseId} → 200 with ApiResponse envelope when progress found")
+    void getMyCourseProgress_returns200WithEnvelopedProgress() throws Exception {
         QuizProgress progress = new QuizProgress();
         progress.setQuizProgressId(UUID.randomUUID());
         progress.setCourseId("cs101");
@@ -66,34 +69,33 @@ class QuizProgressControllerTest {
         when(quizProgressService.getByUserIdAndCourseId(any(UUID.class), eq("cs101")))
                 .thenReturn(progress);
 
-        // Act & Assert
         mockMvc.perform(get("/api/v1/quiz-progress/me/cs101"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.courseId").value("cs101"));
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.courseId").value("cs101"));
 
         verify(quizProgressService, times(1)).getByUserIdAndCourseId(any(UUID.class), eq("cs101"));
     }
 
     @Test
     @WithMockUser(username = "00000000-0000-0000-0000-000000000001")
-    @DisplayName("Should return 404 when quiz progress does not exist for user and course")
+    @DisplayName("GET /quiz-progress/me/{courseId} → 404 when no progress for that course")
     void getMyCourseProgress_returns404_whenNotFound() throws Exception {
-        // Arrange
         when(quizProgressService.getByUserIdAndCourseId(any(UUID.class), eq("missing")))
                 .thenThrow(new ResponseStatusException(NOT_FOUND, "Quiz progress not found"));
 
-        // Act & Assert
         mockMvc.perform(get("/api/v1/quiz-progress/me/missing"))
                 .andExpect(status().isNotFound());
 
         verify(quizProgressService, times(1)).getByUserIdAndCourseId(any(UUID.class), eq("missing"));
     }
 
+    // ── GET /api/v1/quiz-progress/{quizProgressId} ───────────────────────────
+
     @Test
     @WithMockUser(username = "00000000-0000-0000-0000-000000000001")
-    @DisplayName("Should return 200 with progress when progress ID exists")
-    void getById_returns200_whenFound() throws Exception {
-        // Arrange
+    @DisplayName("GET /quiz-progress/{quizProgressId} → 200 with ApiResponse envelope when found")
+    void getById_returns200WithEnvelopedProgress() throws Exception {
         UUID progressId = UUID.randomUUID();
         QuizProgress progress = new QuizProgress();
         progress.setQuizProgressId(progressId);
@@ -101,10 +103,10 @@ class QuizProgressControllerTest {
 
         when(quizProgressService.getById(eq(progressId), any(UUID.class))).thenReturn(progress);
 
-        // Act & Assert
         mockMvc.perform(get("/api/v1/quiz-progress/{quizProgressId}", progressId))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.courseId").value("cs101"));
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.courseId").value("cs101"));
 
         verify(quizProgressService, times(1)).getById(eq(progressId), any(UUID.class));
     }

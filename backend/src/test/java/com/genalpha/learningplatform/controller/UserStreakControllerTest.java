@@ -20,10 +20,11 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 /**
- * Controller tests for UserStreakController using MockMvc.
+ * Black-box controller tests for UserStreakController.
+ * Tests HTTP inputs and outputs only; service internals are mocked.
  */
 @WebMvcTest(UserStreakController.class)
-@DisplayName("UserStreakController Unit Tests")
+@DisplayName("UserStreakController Black-Box Tests")
 class UserStreakControllerTest {
 
     @Autowired
@@ -32,11 +33,12 @@ class UserStreakControllerTest {
     @MockitoBean
     private UserStreakService userStreakService;
 
+    // ── GET /api/v1/streaks/me ────────────────────────────────────────────────
+
     @Test
     @WithMockUser(username = "00000000-0000-0000-0000-000000000001")
-    @DisplayName("Should return 200 with streak when user streak exists")
-    void getMyStreak_returns200WithStreak() throws Exception {
-        // Arrange
+    @DisplayName("GET /streaks/me → 200 with ApiResponse envelope containing streak")
+    void getMyStreak_returns200WithEnvelopedStreak() throws Exception {
         UserStreak streak = new UserStreak();
         streak.setCurrentStreak(5);
         streak.setLongestStreak(10);
@@ -44,31 +46,47 @@ class UserStreakControllerTest {
 
         when(userStreakService.getMyStreak(any(UUID.class))).thenReturn(streak);
 
-        // Act & Assert
         mockMvc.perform(get("/api/v1/streaks/me"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.currentStreak").value(5))
-                .andExpect(jsonPath("$.longestStreak").value(10));
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.currentStreak").value(5))
+                .andExpect(jsonPath("$.data.longestStreak").value(10));
 
         verify(userStreakService, times(1)).getMyStreak(any(UUID.class));
     }
 
+    // ── POST /api/v1/streaks/me/activity ─────────────────────────────────────
+
     @Test
     @WithMockUser(username = "00000000-0000-0000-0000-000000000001")
-    @DisplayName("Should return 200 with updated streak after recording activity")
-    void recordActivity_returns200WithUpdatedStreak() throws Exception {
-        // Arrange
+    @DisplayName("POST /streaks/me/activity → 200 with ApiResponse envelope containing updated streak")
+    void recordActivity_returns200WithEnvelopedUpdatedStreak() throws Exception {
         UserStreak streak = new UserStreak();
         streak.setCurrentStreak(6);
         streak.setLongestStreak(10);
 
         when(userStreakService.recordActivity(any(UUID.class))).thenReturn(streak);
 
-        // Act & Assert
         mockMvc.perform(post("/api/v1/streaks/me/activity").with(csrf()))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.currentStreak").value(6));
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.currentStreak").value(6));
 
         verify(userStreakService, times(1)).recordActivity(any(UUID.class));
+    }
+
+    // ── DELETE /api/v1/streaks/{streakId} ─────────────────────────────────────
+
+    @Test
+    @WithMockUser(username = "00000000-0000-0000-0000-000000000001")
+    @DisplayName("DELETE /streaks/{streakId} → 204 when streak deleted successfully")
+    void delete_returns204_whenDeleted() throws Exception {
+        UUID streakId = UUID.randomUUID();
+        doNothing().when(userStreakService).delete(eq(streakId), any(UUID.class));
+
+        mockMvc.perform(delete("/api/v1/streaks/{streakId}", streakId).with(csrf()))
+                .andExpect(status().isNoContent());
+
+        verify(userStreakService, times(1)).delete(eq(streakId), any(UUID.class));
     }
 }

@@ -27,7 +27,8 @@ function Leaderboard() {
           headers: { Authorization: `Bearer ${session.access_token}` },
         });
         if (!res.ok) throw new Error('Failed to load leaderboard');
-        setUsers(await res.json());
+        const json = await res.json();
+        setUsers(json.data ?? []);
       } catch (e) {
         setError(e.message);
       } finally {
@@ -135,7 +136,8 @@ function AIChatbot() {
       });
 
       if (!res.ok) throw new Error('Failed to get response');
-      const data = await res.json();
+      const json = await res.json();
+      const data = json.data;
       setMessages(prev => [...prev, { role: 'assistant', text: data.reply || data.message || 'Hmm, I didn\'t get that. Try again!' }]);
     } catch {
       setMessages(prev => [...prev, { role: 'assistant', text: 'Oops, something went wrong. Try again!' }]);

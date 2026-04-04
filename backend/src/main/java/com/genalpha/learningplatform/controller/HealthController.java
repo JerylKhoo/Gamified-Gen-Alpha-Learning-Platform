@@ -1,5 +1,6 @@
 package com.genalpha.learningplatform.controller;
 
+import com.genalpha.learningplatform.dto.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.http.ResponseEntity;
@@ -16,10 +17,10 @@ public class HealthController {
 
     @Operation(summary = "Health check", description = "Returns OK when the service is running")
     @GetMapping("/health")
-    public ResponseEntity<Map<String, String>> health() {
-        return ResponseEntity.ok(Map.of(
+    public ResponseEntity<ApiResponse<Map<String, String>>> health() {
+        return ResponseEntity.ok(ApiResponse.ok(Map.of(
                 "status", "UP",
                 "service", "Gamified Gen Alpha Learning Platform"
-        ));
+        )));
     }
 }
