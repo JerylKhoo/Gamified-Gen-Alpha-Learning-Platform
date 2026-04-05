@@ -249,7 +249,6 @@ def grading_conversation(session_id):
 
 #supabase client
 from supabase import create_client
-import datetime
 
 SUPABASE_URL = os.getenv("SUPABASE_URL")
 SUPABASE_ANON_KEY = os.getenv("SUPABASE_SERVICE_KEY")
