@@ -1,9 +1,7 @@
 services:
 
   springboot:
-    build:
-      context: .
-      dockerfile: Dockerfile
+    image: galplatform.azurecr.io/backend:latest
     ports:
       - "8080:8080"
     environment:
@@ -17,9 +15,7 @@ services:
     restart: unless-stopped
 
   grading-agent:
-    build:
-      context: ./grading_agent
-      dockerfile: Dockerfile
+    image: galplatform.azurecr.io/grading-agent:latest
     ports:
       - "8000:8000"
     environment:
@@ -30,4 +26,12 @@ services:
       redis_host: ${redis_host}
       redis_port: ${redis_port}
       redis_password: ${redis_password}
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-http://localhost:80,http://localhost:5173}
     restart: unless-stopped
+
+  frontend:
+    image: galplatform.azurecr.io/frontend:latest
+    ports:
+      - "80:80"
+    restart: unless-stopped
+
