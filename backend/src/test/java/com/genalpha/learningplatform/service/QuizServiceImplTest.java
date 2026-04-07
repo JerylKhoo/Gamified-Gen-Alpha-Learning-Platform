@@ -47,7 +47,7 @@ class QuizServiceImplTest {
         quiz.setQuizId(quizId);
         quiz.setCourseId("cs101");
         quiz.setQuestion("What is 2+2?");
-        quiz.setAnswer(List.of("3"));
+        quiz.setAnswer("[\"3\"]");
         quiz.setScore(50);
     }
 
@@ -136,7 +136,7 @@ class QuizServiceImplTest {
         when(quizRepository.findById(quizId)).thenReturn(Optional.of(quiz));
         Quiz updates = new Quiz();
         updates.setQuestion("What is 3+3?");
-        updates.setAnswer(List.of("5"));
+        updates.setAnswer("[\"5\"]");
         when(quizRepository.save(quiz)).thenReturn(quiz);
 
         // Act

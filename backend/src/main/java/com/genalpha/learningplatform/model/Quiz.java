@@ -5,7 +5,6 @@ import lombok.Getter;
 import lombok.Setter;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
-import java.util.List;
 import java.util.UUID;
 
 /**
@@ -34,7 +33,8 @@ public class Quiz {
 
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(columnDefinition = "jsonb")
-    private List<String> answer;
+    private String answer;
+
     private String explanation;
     private Integer score;
 
