@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
+import { useToast } from '../context/ToastContext';
 import characterImg from '../assets/trippiTroppi.png';
 
 const API_URL = import.meta.env.VITE_API_URL;
@@ -243,44 +244,8 @@ function resolveBadgeIcon(icon) {
   return `${SUPABASE_URL}/storage/v1/object/public/badges/${icon}`;
 }
 
-function BadgesSection() {
-  const [badges, setBadges] = useState([]);
+function BadgesSection({ badges = [] }) {
   const [hoveredBadge, setHoveredBadge] = useState(null); // { badge, x, y }
-
-  useEffect(() => {
-    async function fetchBadges() {
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
-        const headers = { Authorization: `Bearer ${session.access_token}` };
-
-        // Step 1: get earned badge IDs for the user
-        const earnedRes = await fetch(`${API_URL}/api/v1/user-badges/me`, { headers });
-        if (!earnedRes.ok) return;
-        const earnedJson = await earnedRes.json();
-        const userBadges = earnedJson.data ?? [];
-        if (userBadges.length === 0) return;
-
-        const uniqueIds = [...new Set(userBadges.map(ub => ub.badgeId))];
-
-        // Step 2: fetch full badge details (icon, name) for each earned badge
-        const results = await Promise.allSettled(
-          uniqueIds.map(badgeId =>
-            fetch(`${API_URL}/api/v1/badges/${encodeURIComponent(badgeId)}`, { headers })
-              .then(r => r.ok ? r.json().then(j => j.data) : null)
-          )
-        );
-
-        const earned = results
-          .filter(r => r.status === 'fulfilled' && r.value)
-          .map(r => r.value);
-
-        setBadges(earned);
-      } catch (err) {
-        console.error('BadgesSection fetch error:', err);
-      }
-    }
-    fetchBadges();
-  }, []);
 
   return (
     <div className="w-full flex-1 flex flex-col">
@@ -304,13 +269,13 @@ function BadgesSection() {
               onMouseLeave={() => setHoveredBadge(null)}
             >
               {b.icon ? (
-                <img src={resolveBadgeIcon(b.icon)} alt={b.name} className="w-14 h-14 object-contain drop-shadow-md" />
+                <img src={resolveBadgeIcon(b.icon)} alt={b.badgeId} className="w-14 h-14 object-contain drop-shadow-md" />
               ) : (
                 <div className="w-14 h-14 rounded-full bg-gradient-to-br from-[#7c3aed] to-[#a78bfa] flex items-center justify-center text-2xl">
                   🏅
                 </div>
               )}
-              <span className="text-[0.65rem] text-[#a78bfa] font-semibold text-center leading-tight line-clamp-2">{b.name}</span>
+              <span className="text-[0.65rem] text-[#a78bfa] font-semibold text-center leading-tight line-clamp-2">{b.badgeId}</span>
             </div>
           ))}
         </div>
@@ -322,11 +287,11 @@ function BadgesSection() {
           >
             <div className="bg-[#1a1530] border border-[rgba(139,92,246,0.3)] rounded-[14px] p-4 shadow-[0_8px_32px_rgba(0,0,0,0.7)] flex flex-col items-center gap-3">
               {hoveredBadge.badge.icon ? (
-                <img src={resolveBadgeIcon(hoveredBadge.badge.icon)} alt={hoveredBadge.badge.name} className="w-48 h-48 object-contain drop-shadow-lg" />
+                <img src={resolveBadgeIcon(hoveredBadge.badge.icon)} alt={hoveredBadge.badge.badgeId} className="w-48 h-48 object-contain drop-shadow-lg" />
               ) : (
                 <div className="w-48 h-48 rounded-full bg-gradient-to-br from-[#7c3aed] to-[#a78bfa] flex items-center justify-center text-8xl">🏅</div>
               )}
-              <span className="text-[0.85rem] text-[#e0d9ff] font-semibold text-center max-w-[160px]">{hoveredBadge.badge.name}</span>
+              <span className="text-[0.85rem] text-[#e0d9ff] font-semibold text-center max-w-[160px]">{hoveredBadge.badge.badgeId}</span>
             </div>
             <div className="w-3 h-3 bg-[#1a1530] border-r border-b border-[rgba(139,92,246,0.3)] rotate-45 -mt-[6px]" />
           </div>
@@ -405,15 +370,15 @@ function CourseProgressSection({ courses, earnedBadges, navigate }) {
               <div className="flex items-center gap-2 flex-shrink-0">
                 {badges.length > 0 ? (
                   badges.map(b => (
-                    <div key={b.badgeId} title={b.name} className="flex flex-col items-center gap-1">
+                    <div key={b.badgeId} title={b.badgeId} className="flex flex-col items-center gap-1">
                       {b.icon ? (
-                        <img src={b.icon} alt={b.name} className="w-9 h-9 object-contain drop-shadow-md" />
+                        <img src={b.icon} alt={b.badgeId} className="w-9 h-9 object-contain drop-shadow-md" />
                       ) : (
                         <div className="w-9 h-9 rounded-full bg-gradient-to-br from-[#7c3aed] to-[#a78bfa] flex items-center justify-center text-white text-base">
                           🏅
                         </div>
                       )}
-                      <span className="text-[0.6rem] text-[#a78bfa] font-semibold text-center max-w-[56px] truncate">{b.name}</span>
+                      <span className="text-[0.6rem] text-[#a78bfa] font-semibold text-center max-w-[56px] truncate">{b.badgeId}</span>
                     </div>
                   ))
                 ) : c.progress >= 100 ? (
@@ -506,8 +471,24 @@ function JumpBackIn({ course }) {
   );
 }
 
+const SEEN_BADGES_KEY = 'seen_badge_ids';
+
+function getSeenBadgeIds() {
+  try {
+    return new Set(JSON.parse(localStorage.getItem(SEEN_BADGES_KEY) || '[]'));
+  } catch {
+    return new Set();
+  }
+}
+
+function saveSeenBadgeIds(ids) {
+  localStorage.setItem(SEEN_BADGES_KEY, JSON.stringify([...ids]));
+}
+
 export default function HomePage() {
   const navigate = useNavigate();
+  const { addToast } = useToast();
+  const toastFired = useRef(false);
   const [userData,      setUserData]      = useState(null);
   const [courses,       setCourses]       = useState([]);
   const [currentCourse, setCurrentCourse] = useState(null);
@@ -552,6 +533,30 @@ export default function HomePage() {
           if (badgeDetailsMap[ub.badgeId]) earned[ub.badgeId] = badgeDetailsMap[ub.badgeId];
         }
         setEarnedBadges(earned);
+
+        // Badge unlock notifications — only fire once per session
+        if (!toastFired.current) {
+          toastFired.current = true;
+          const seenIds = getSeenBadgeIds();
+          const newBadgeIds = Object.keys(earned).filter(id => !seenIds.has(id));
+          if (newBadgeIds.length > 0) {
+            newBadgeIds.forEach((id, i) => {
+              const badge = earned[id];
+              setTimeout(() => {
+                addToast({
+                  icon: resolveBadgeIcon(badge.icon) || '🏅',
+                  title: 'Badge Unlocked!',
+                  description: badge.badgeId,
+                  duration: 6000,
+                });
+              }, i * 800); // stagger multiple toasts
+            });
+            // Mark all earned badges as seen
+            const allSeen = new Set([...seenIds, ...Object.keys(earned)]);
+            saveSeenBadgeIds(allSeen);
+          }
+        }
+
         setStreakData(streak);
 
         setUserData(user);
@@ -756,7 +761,7 @@ export default function HomePage() {
             <CourseProgressSection courses={courses} earnedBadges={earnedBadges} navigate={navigate} />
           </div>
           <div className="w-[260px] flex-shrink-0 max-md:w-full flex flex-col">
-            <BadgesSection />
+            <BadgesSection badges={Object.values(earnedBadges)} />
           </div>
         </div>
 
