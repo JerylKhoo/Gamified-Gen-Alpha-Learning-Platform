@@ -38,7 +38,7 @@ from fastapi.middleware.cors import CORSMiddleware
 #initialisation
 app = FastAPI()
 
-_raw_origins = os.getenv("ALLOWED_ORIGINS", "http://localhost:5173,http://127.0.0.1:5173")
+_raw_origins = os.getenv("ALLOWED_ORIGINS", "http://localhost:5173,http://127.0.0.1:5173,https://frontend.delightfulwater-5f80a575.southeastasia.azurecontainerapps.io")
 _allowed_origins = [o.strip() for o in _raw_origins.split(",") if o.strip()]
 
 app.add_middleware(
@@ -251,8 +251,8 @@ def grading_conversation(session_id):
 from supabase import create_client
 
 SUPABASE_URL = os.getenv("SUPABASE_URL")
-SUPABASE_ANON_KEY = os.getenv("SUPABASE_SERVICE_KEY")
-supabase = create_client(SUPABASE_URL, SUPABASE_ANON_KEY)
+SUPABASE_SERVICE_KEY = os.getenv("SUPABASE_SERVICE_KEY")
+supabase = create_client(SUPABASE_URL, SUPABASE_SERVICE_KEY)
 from datetime import datetime
 
 def save_conversation_to_supabase(session_id, user_id, chat_history):
