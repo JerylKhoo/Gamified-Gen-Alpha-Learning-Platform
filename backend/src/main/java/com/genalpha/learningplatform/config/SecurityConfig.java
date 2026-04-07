@@ -71,7 +71,9 @@ public class SecurityConfig {
                 "http://localhost:5173",
                 "http://localhost:3000",
                 "https://*.vercel.app",
-                "https://frontend.delightfulwater-5f80a575.southeastasia.azurecontainerapps.io"));
+                "https://frontend.delightfulwater-5f80a575.southeastasia.azurecontainerapps.io",
+                "https://springboot.delightfulwater-5f80a575.southeastasia.azurecontainerapps.io",
+                "https://grading-agent.delightfulwater-5f80a575.southeastasia.azurecontainerapps.io"));
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         config.setAllowedHeaders(List.of("*"));
         config.setAllowCredentials(true);

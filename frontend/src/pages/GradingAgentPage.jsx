@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { supabase } from '../lib/supabaseClient';
 
-const GRADING_AGENT_URL = 'http://localhost:8000';
+const GRADING_AGENT_URL = "https://grading-agent.delightfulwater-5f80a575.southeastasia.azurecontainerapps.io";
 const API_URL = import.meta.env.VITE_API_URL;
 
 const MEDAL = ['🥇', '🥈', '🥉'];
