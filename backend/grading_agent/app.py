@@ -120,7 +120,7 @@ from datetime import datetime, timedelta
 
 def endtime() -> str:
     now = datetime.now()
-    end = now + timedelta(minutes=1)
+    end = now + timedelta(minutes=2)
     return end.strftime("%Y-%m-%d %H:%M:%S")
 
 #chat history management
