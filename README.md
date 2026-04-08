@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="assets/Icon.png" alt="AlphaLingo" width="80" />
+<img src="assets/Icon.jpg" alt="AlphaLingo" width="80" />
 <h1 align="center"><b>AlphaLingo</b></h1>
 
 **A gamified learning platform — master Gen Alpha culture, earn badges, and climb the leaderboard.**
