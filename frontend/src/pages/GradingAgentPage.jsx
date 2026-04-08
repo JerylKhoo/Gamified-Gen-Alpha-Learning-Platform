@@ -1,5 +1,9 @@
 import { useState, useRef, useEffect } from 'react';
 import { supabase } from '../lib/supabaseClient';
+import robotImg from '../assets/robot.png';
+import winningImg from '../assets/winning.png';
+import refreshImg from '../assets/refresh.png';
+import checkedImg from '../assets/checked.png';
 
 const GRADING_AGENT_URL = 'http://localhost:8000';
 const API_URL = import.meta.env.VITE_API_URL;
@@ -14,7 +18,7 @@ const RANK_COLORS = [
 export default function GradingAgentPage() {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
-  const [sessionId] = useState(() => crypto.randomUUID());
+  const [sessionId, setSessionId] = useState(() => crypto.randomUUID());
   const [loading, setLoading] = useState(false);
   const [user, setUser] = useState(null);
   const [error, setError] = useState(null);
@@ -191,6 +195,19 @@ export default function GradingAgentPage() {
     }
   };
 
+  const handleNewChat = () => {
+    setMessages([]);
+    setInput('');
+    setSessionId(crypto.randomUUID());
+    setLoading(false);
+    setError(null);
+    setConversationStarted(false);
+    setStartLoading(false);
+    setTimeLeft(null);
+    setStatus("idle");
+    setScoreData(null);
+  };
+
   const formatTime = (secs) => {
     if (secs === null) return "3:00";
     if (secs <= 0) return "0:00";
@@ -208,14 +225,14 @@ export default function GradingAgentPage() {
         <div className="flex flex-col gap-1">
           <div className="flex justify-between items-center flex-wrap gap-4">
             <h1 className="text-[1.8rem] font-extrabold text-[#f0eeff] m-0 flex items-center gap-3">
-              🤖 Challenge
+              <img src={robotImg} alt="robot" className="w-9 h-9 object-contain" /> Challenge
             </h1>
             <div className="flex items-center gap-3">
               <button
                 onClick={() => setShowLeaderboard(!showLeaderboard)}
                 className={`border font-bold px-4 py-2 rounded-xl transition-colors ${showLeaderboard ? 'bg-[#8b5cf6] text-white border-[#8b5cf6]' : 'bg-[rgba(139,92,246,0.1)] border-[rgba(139,92,246,0.3)] text-[#8b5cf6] hover:bg-[rgba(139,92,246,0.2)]'}`}
               >
-                🏆 Top Agents
+                <span className="flex items-center gap-2"><img src={winningImg} alt="trophy" className="w-5 h-5 object-contain" /> Top Agents</span>
               </button>
               {timeLeft !== null && (
                 <div className={`text-xl font-bold px-4 py-2 flex items-center gap-2 rounded-xl border transition-colors ${timeLeft === 0 ? 'text-[#ef9a9a] border-[#e57373]/30 bg-[#e57373]/10' : 'text-[#8b5cf6] border-[#8b5cf6]/30 bg-[#8b5cf6]/10'}`}>
@@ -233,7 +250,7 @@ export default function GradingAgentPage() {
           <div className="flex-1 overflow-y-auto p-6 flex flex-col gap-4">
             {!conversationStarted && (
               <div className="flex flex-col items-center justify-center flex-1 gap-5 py-16">
-                <div className="text-5xl">🤖</div>
+                <img src={robotImg} alt="robot" className="w-16 h-16 object-contain" />
                 <div className="text-center">
                   <p className="text-[#f0eeff] font-bold text-xl mb-1">Ready for the challenge?</p>
                   <p className="text-[#6b6490] text-sm">You'll get a random question and 1 minute to impress the agent.</p>
@@ -280,13 +297,19 @@ export default function GradingAgentPage() {
 
           {scoreData && (
             <div className="p-6 border-t border-[rgba(139,92,246,0.3)] bg-[rgba(13,11,30,0.8)] flex flex-col gap-3">
-              <h3 className="text-[#f0eeff] text-xl font-bold m-0 flex items-center gap-2">✅ Grading Complete</h3>
+              <h3 className="text-[#f0eeff] text-xl font-bold m-0 flex items-center gap-2"><img src={checkedImg} alt="checked" className="w-6 h-6 object-contain" /> Grading Complete</h3>
               <div className="text-[2.2rem] font-black text-[#8b5cf6] m-0 leading-none">
                 {(scoreData.final_score ?? scoreData.score ?? 0).toLocaleString()} <span className="text-lg text-[#6b6490] font-bold">/ 100K pts</span>
               </div>
               <p className="text-[#c0b8e8] text-[0.95rem] leading-relaxed m-0 border-t border-white/5 pt-3 whitespace-pre-wrap">
                 {scoreData.feedback || scoreData.analysis}
               </p>
+              <button
+                onClick={handleNewChat}
+                className="mt-1 self-start bg-[rgba(139,92,246,0.15)] hover:bg-[rgba(139,92,246,0.25)] border border-[rgba(139,92,246,0.3)] text-[#a78bfa] font-bold px-5 py-2 rounded-xl transition-colors flex items-center gap-2"
+              >
+                <img src={refreshImg} alt="refresh" className="w-4 h-4 object-contain" /> New Chat
+              </button>
             </div>
           )}
 
