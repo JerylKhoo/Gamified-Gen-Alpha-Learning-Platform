@@ -253,7 +253,7 @@ export default function GradingAgentPage() {
                 <img src={robotImg} alt="robot" className="w-16 h-16 object-contain" />
                 <div className="text-center">
                   <p className="text-[#f0eeff] font-bold text-xl mb-1">Ready for the challenge?</p>
-                  <p className="text-[#6b6490] text-sm">You'll get a random question and 1 minute to impress the agent.</p>
+                  <p className="text-[#6b6490] text-sm">You'll get a random question and 2 minutes to impress the agent.</p>
                 </div>
                 <button
                   onClick={handleStart}
