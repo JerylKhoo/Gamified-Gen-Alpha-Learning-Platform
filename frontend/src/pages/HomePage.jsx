@@ -354,7 +354,7 @@ function CourseProgressSection({ courses, earnedBadges, navigate }) {
           return (
             <div
               key={c.courseId}
-              onClick={() => window.open(`/course/${encodeURIComponent(c.courseId)}`, '_blank')}
+              onClick={() => navigate(`/course/${encodeURIComponent(c.courseId)}`)}
               className="flex items-center gap-4 px-5 py-4 bg-[rgba(255,255,255,0.03)] border border-[rgba(139,92,246,0.15)] rounded-[14px] cursor-pointer transition-all hover:border-[rgba(139,92,246,0.35)] hover:bg-[rgba(139,92,246,0.06)]"
             >
               {/* Thumbnail */}
@@ -425,7 +425,7 @@ function CourseThumb({ courseId, image, bg, pattern }) {
   );
 }
 
-function JumpBackIn({ course }) {
+function JumpBackIn({ course, navigate }) {
   const { bg, pattern } = getVisual(course.courseId);
   const [imgOk, setImgOk] = useState(!!course.image);
 
@@ -436,7 +436,7 @@ function JumpBackIn({ course }) {
       </h2>
       <div
         className="relative rounded-[20px] overflow-hidden h-[200px] bg-[#12111f] border border-[rgba(139,92,246,0.15)] cursor-pointer group flex"
-        onClick={() => window.open(`/course/${encodeURIComponent(course.courseId)}`, '_blank')}
+        onClick={() => navigate(`/course/${encodeURIComponent(course.courseId)}`)}
       >
         {/* Left: content */}
         <div className="flex flex-col justify-between p-6 flex-1 min-w-0 z-10">
@@ -458,7 +458,7 @@ function JumpBackIn({ course }) {
               </h3>
             </div>
             <button
-              onClick={e => { e.stopPropagation(); window.open(`/course/${encodeURIComponent(course.courseId)}`, '_blank'); }}
+              onClick={e => { e.stopPropagation(); navigate(`/course/${encodeURIComponent(course.courseId)}`); }}
               className="w-fit px-5 py-2 bg-[#8b5cf6] hover:bg-[#7c3aed] text-white text-sm font-bold rounded-xl border-none cursor-pointer transition-all shadow-[0_4px_18px_rgba(139,92,246,0.5)]"
             >
               {course.jumpState === 'in-progress' ? 'Continue Learning' : 'Start Course'}
