@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabaseClient';
 import { useAuth } from '../../context/AuthContext';
+import LoadingScreen from '../LoadingScreen';
 
 const API_URL = import.meta.env.VITE_API_URL;
 
@@ -574,9 +575,7 @@ export default function CommunityPage() {
 
       {/* ── Thread List ──────────────────────────────────────────────────────── */}
       {loading ? (
-        <div className="flex items-center justify-center py-20 text-[#6b6490]">
-          <p className="text-lg font-semibold animate-pulse">Loading posts...</p>
-        </div>
+        <LoadingScreen />
       ) : filtered.length > 0 ? (
         <div className="flex flex-col gap-3">
 

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabaseClient';
 import { useAuth } from '../../context/AuthContext';
+import LoadingScreen from '../LoadingScreen';
 
 const API_URL = import.meta.env.VITE_API_URL;
 
@@ -682,11 +683,7 @@ export default function LearnPage() {
         )}
       </div>
 
-      {loading && (
-        <div className="flex items-center justify-center py-20 text-[#6b6490]">
-          <p className="text-lg font-semibold animate-pulse">Loading courses...</p>
-        </div>
-      )}
+      {loading && <LoadingScreen />}
 
       {error && (
         <div className="flex items-center justify-center py-20 text-red-400">

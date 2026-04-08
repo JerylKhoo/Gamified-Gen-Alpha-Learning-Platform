@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
+import LoadingScreen from '../components/LoadingScreen';
 
 const API_URL = import.meta.env.VITE_API_URL;
 
@@ -96,13 +97,7 @@ export default function LessonPage() {
   const lessonNumber = currentIndex >= 0 ? currentIndex + 1 : null;
   const totalModules = allModules.length;
 
-  if (loading) {
-    return (
-      <div className="w-full min-h-screen flex items-center justify-center">
-        <p className="text-[#6b6490] text-lg font-semibold animate-pulse">Loading lesson...</p>
-      </div>
-    );
-  }
+  if (loading) return <LoadingScreen />;
 
   if (error) {
     return (
