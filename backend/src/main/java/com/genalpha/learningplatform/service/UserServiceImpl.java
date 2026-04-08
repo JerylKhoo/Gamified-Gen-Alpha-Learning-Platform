@@ -2,6 +2,7 @@ package com.genalpha.learningplatform.service;
 
 import java.util.Comparator;
 import java.util.List;
+import java.util.Objects;
 import java.util.UUID;
 
 import org.springframework.beans.factory.annotation.Value;
@@ -11,6 +12,7 @@ import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -140,7 +142,7 @@ public class UserServiceImpl implements UserService {
                     HttpMethod.DELETE,
                     new HttpEntity<>(headers),
                     Void.class);
-        } catch (Exception e) {
+        } catch (RestClientException e) {
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR,
                     "Failed to delete Supabase auth user: " + e.getMessage());
         }
@@ -152,8 +154,26 @@ public class UserServiceImpl implements UserService {
     @Override
     public List<User> getLeaderboard() {
         return userRepository.findAll().stream()
-                .sorted(Comparator.comparingInt((User u) -> u.getPoints() != null ? u.getPoints() : 0).reversed())
+                .sorted(Comparator.<User, Integer>comparing(u -> Objects.requireNonNullElse(u.getPoints(), 0)).reversed())
                 .toList();
+    }
+
+    private static final int COLLABORATOR_THRESHOLD = 80_000;
+
+    @Override
+    @Transactional
+    public User promoteToCollaboratorIfEligible(UUID userId) {
+        User user = getById(userId);
+        // Idempotent: do nothing if already Collaborator or Admin
+        if (!Role.User.name().equals(user.getRole())) {
+            return user;
+        }
+        int points = Objects.requireNonNullElse(user.getPoints(), 0);
+        if (points >= COLLABORATOR_THRESHOLD) {
+            userRepository.updateRole(userId, Role.Collaborator.name());
+            return getById(userId);
+        }
+        return user;
     }
 
     @Override
@@ -162,8 +182,10 @@ public class UserServiceImpl implements UserService {
         java.util.Map<UUID, Integer> maxScores = new java.util.HashMap<>();
 
         for (com.genalpha.learningplatform.model.ChatBot cb : chatBots) {
-            int score = cb.getScore() != null ? cb.getScore() : 0;
-            if (!maxScores.containsKey(cb.getUserId()) || score > maxScores.get(cb.getUserId())) {
+            Integer raw = cb.getScore();
+            int score = raw != null ? raw : 0;
+            Integer existing = maxScores.get(cb.getUserId());
+            if (existing == null || score > existing) {
                 maxScores.put(cb.getUserId(), score);
             }
         }

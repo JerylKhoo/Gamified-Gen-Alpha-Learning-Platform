@@ -83,4 +83,19 @@ public class UserController {
         UUID requesterId = AuthUtils.userId(authentication);
         return ResponseEntity.ok(ApiResponse.ok(userService.update(userId, updates, requesterId)));
     }
+
+    @Operation(
+        summary = "Promote user to Collaborator if eligible",
+        description = "Checks whether the user's points >= 80,000 and promotes them to Collaborator. " +
+                      "Idempotent: already-Collaborator or Admin users are returned unchanged."
+    )
+    @ApiResponses({
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "User returned (promoted or already eligible role)"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "User not found", content = @Content)
+    })
+    @PostMapping("/{userId}/promote")
+    public ResponseEntity<ApiResponse<User>> promoteToCollaborator(
+            @Parameter(description = "UUID of the user to evaluate for promotion") @PathVariable UUID userId) {
+        return ResponseEntity.ok(ApiResponse.ok(userService.promoteToCollaboratorIfEligible(userId)));
+    }
 }

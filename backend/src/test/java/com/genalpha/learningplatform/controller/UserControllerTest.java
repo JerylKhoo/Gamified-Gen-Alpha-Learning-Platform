@@ -20,7 +20,9 @@ import static org.mockito.Mockito.*;
 import static org.springframework.http.HttpStatus.FORBIDDEN;
 import static org.springframework.http.HttpStatus.NOT_FOUND;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 /**
@@ -147,5 +149,81 @@ class UserControllerTest {
                 .andExpect(status().isForbidden());
 
         verify(userService, times(1)).update(eq(targetId), any(User.class), eq(requesterId));
+    }
+
+    // ── CSD-262: POST /api/v1/users/{userId}/promote ──────────────────────────
+
+    @Test
+    @WithMockUser
+    @DisplayName("POST /{userId}/promote → 200 with Collaborator role when user is eligible")
+    void promote_returns200WithCollaboratorRole_whenEligible() throws Exception {
+        UUID userId = UUID.randomUUID();
+        User promoted = new User();
+        promoted.setUserId(userId);
+        promoted.setRole("Collaborator");
+        promoted.setPoints(80_000);
+
+        when(userService.promoteToCollaboratorIfEligible(userId)).thenReturn(promoted);
+
+        mockMvc.perform(post("/api/v1/users/{userId}/promote", userId).with(csrf()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.role").value("Collaborator"));
+
+        verify(userService, times(1)).promoteToCollaboratorIfEligible(userId);
+    }
+
+    @Test
+    @WithMockUser
+    @DisplayName("POST /{userId}/promote → 200 with User role when points are below threshold")
+    void promote_returns200WithUserRole_whenNotEligible() throws Exception {
+        UUID userId = UUID.randomUUID();
+        User user = new User();
+        user.setUserId(userId);
+        user.setRole("User");
+        user.setPoints(50_000);
+
+        when(userService.promoteToCollaboratorIfEligible(userId)).thenReturn(user);
+
+        mockMvc.perform(post("/api/v1/users/{userId}/promote", userId).with(csrf()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.role").value("User"));
+
+        verify(userService, times(1)).promoteToCollaboratorIfEligible(userId);
+    }
+
+    @Test
+    @WithMockUser
+    @DisplayName("POST /{userId}/promote → 200 with Collaborator role when already Collaborator (idempotent)")
+    void promote_returns200_whenAlreadyCollaborator() throws Exception {
+        UUID userId = UUID.randomUUID();
+        User user = new User();
+        user.setUserId(userId);
+        user.setRole("Collaborator");
+        user.setPoints(90_000);
+
+        when(userService.promoteToCollaboratorIfEligible(userId)).thenReturn(user);
+
+        mockMvc.perform(post("/api/v1/users/{userId}/promote", userId).with(csrf()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.role").value("Collaborator"));
+
+        verify(userService, times(1)).promoteToCollaboratorIfEligible(userId);
+    }
+
+    @Test
+    @WithMockUser
+    @DisplayName("POST /{userId}/promote → 404 when user does not exist")
+    void promote_returns404_whenUserNotFound() throws Exception {
+        UUID userId = UUID.randomUUID();
+
+        when(userService.promoteToCollaboratorIfEligible(userId))
+                .thenThrow(new ResponseStatusException(NOT_FOUND, "User not found"));
+
+        mockMvc.perform(post("/api/v1/users/{userId}/promote", userId).with(csrf()))
+                .andExpect(status().isNotFound());
+
+        verify(userService, times(1)).promoteToCollaboratorIfEligible(userId);
     }
 }
