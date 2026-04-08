@@ -55,21 +55,21 @@ app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 
 QUESTION_BANK = [
-    "If you could only eat one food for the rest of your life, what would it be and why?",
-    "Would you rather be able to fly or be invisible? Walk me through your thinking.",
-    "What's a skill you wish you had but never learned? What stopped you?",
-    "If you woke up tomorrow with no responsibilities, how would you spend your day?",
-    "What's the most controversial opinion you hold that you're willing to defend?",
-    "If you could have dinner with anyone — alive or dead — who would it be and what would you ask?",
-    "What's something most people think is overrated that you actually love?",
-    "If you had to move to a different country tomorrow, where would you go and why?",
-    "What's a piece of advice you've received that you actually ignored — and were you right to?",
-    "If you could go back and change one decision in your life, would you? Why or why not?",
-    "What do you think is the most important invention of the last 50 years?",
-    "If you could master any subject in an instant, what would it be and what would you do with it?",
-    "What's something that used to scare you that you've completely gotten over?",
-    "Would you rather live in the past, present, or future? Defend your answer.",
-    "What's an unpopular hobby or interest you have that people don't expect from you?",
+    "What's your most used app and why is it lowkey running your whole life?",
+    "If you could only watch one creator on YouTube or TikTok forever, who would it be and why?",
+    "Be honest — do you think social media is more sus or more based? Explain yourself.",
+    "What's a trend that went totally mid that you still secretly enjoy?",
+    "If an AI could do your work forever, would you let it? What's the catch?",
+    "What's your hottest take on a popular game, show, or song right now?",
+    "Would you rather be TikTok famous or genuinely rich but unknown? Walk me through it.",
+    "What's something your parents just don't get about your generation no matter how many times you explain it?",
+    "If you could be the main character in any video game for a week, which one and why?",
+    "What's a piece of internet advice that actually slapped and you still follow it?",
+    "Is being chronically online a personality trait or a red flag? Make your case.",
+    "What's one thing you think Gen Alpha will fix that previous generations totally fumbled?",
+    "If you had to explain your vibe in three emojis, what would they be and why?",
+    "What's something that hits different now compared to when you were younger?",
+    "If you could go viral for anything, what would it be and would you actually want that life?",
 ]
 
 class StartRequest(BaseModel):
