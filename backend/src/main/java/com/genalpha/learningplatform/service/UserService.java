@@ -32,4 +32,12 @@ public interface UserService {
     void decrementReportCount(UUID userId, int count);
 
     void deleteUser(UUID userId, UUID requesterId);
+
+    /**
+     * Promotes a user to Collaborator if their points >= 80,000.
+     * Idempotent: already-Collaborator or Admin users are left unchanged.
+     *
+     * @return the (possibly updated) user
+     */
+    User promoteToCollaboratorIfEligible(UUID userId);
 }
