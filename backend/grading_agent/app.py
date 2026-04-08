@@ -75,6 +75,35 @@ QUESTION_BANK = [
 class StartRequest(BaseModel):
     session_id: str
 
+_INJECTION_PATTERNS = [
+    # Instruction override
+    r"ignore\s+(all\s+)?(previous|prior|above|your|the)\s+instructions?",
+    r"forget\s+(all\s+)?(previous|prior|above|your|the)\s+instructions?",
+    r"disregard\s+(all\s+)?(previous|prior|above|your|the)\s+instructions?",
+    r"override\s+(your\s+)?(previous\s+)?instructions?",
+    r"(your\s+)?(new|real|actual|true)\s+instructions?\s+(are|is)\b",
+    # Role / persona hijacking
+    r"\byou\s+are\s+now\s+(a|an|the|my)\b",
+    r"\bact\s+as\s+(a|an|the|my)\b",
+    r"\bpretend\s+(you\s+are|to\s+be)\s+(a|an|the|my)\b",
+    r"\byou\s+must\s+(now\s+)?behave\s+as\b",
+    r"\bfrom\s+now\s+on\s+(ignore|forget|act\s+as|you\s+are)\b",
+    # System prompt extraction
+    r"\breveal\b.{0,30}\b(system\s+prompt|instructions?|rules?)\b",
+    r"\brepeat\b.{0,30}\b(system\s+prompt|instructions?|rules?)\b",
+    r"\bprint\b.{0,30}\b(system\s+prompt|instructions?|rules?)\b",
+    # Model-specific delimiter injection
+    r"<\|.{0,20}\|>",       # <|im_start|>, <|system|>, etc.
+    r"\[INST\]",
+    r"\[/INST\]",
+    r"<<SYS>>",
+    r"###\s*(System|Instruction|Prompt)\b",
+]
+_INJECTION_RE = re.compile(
+    "|".join(_INJECTION_PATTERNS),
+    flags=re.IGNORECASE,
+)
+
 class ChatRequest(BaseModel):
     user_id: str
     session_id: str
@@ -86,6 +115,8 @@ class ChatRequest(BaseModel):
             raise ValueError("Message cannot be empty")
         if len(v) > 2000:
             raise ValueError("Message too long")
+        if _INJECTION_RE.search(v):
+            raise ValueError("Message contains disallowed content")
         return v
 
 #system prompt
@@ -236,14 +267,27 @@ def role_sanitation(messages_data)-> list:
 
     return messages
 
+def role_user_only(messages_data) -> list:
+    if messages_data:
+        try:
+            parsed = json.loads(messages_data)
+            return [msg for msg in parsed if msg.get("role") == "user"]
+        except Exception as e:
+            print("No conversation recorded:", e)
+    return []
+
 #grading helper
 def grading_conversation(session_id):
     with open("./grading_agent.md") as f:
         system_prompt = f.read()
-    
-    messages = [{"role": "system", "content": system_prompt}]
+
     conversation = redis_client.get(f"chat:{session_id}:recent")
-    messages.append({"role": "user", "content": conversation})
+    user_messages = role_user_only(conversation)
+    messages = [
+        {"role": "system", "content": system_prompt},
+        {"role": "user", "content": json.dumps(user_messages)},
+    ]
+    print(messages)
 
     return messages
 
