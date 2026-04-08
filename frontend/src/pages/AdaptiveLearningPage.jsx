@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
+import { useToast } from '../context/ToastContext';
 
 const API_URL = import.meta.env.VITE_API_URL;
 
@@ -163,8 +164,7 @@ function MatchingCard({ options, answer, onComplete, submitted, submittedPairs }
   function handleDrop(i) {
     if (dragIndex === null || dragIndex === i) return;
     const next = [...rightOrder];
-    const [moved] = next.splice(dragIndex, 1);
-    next.splice(i, 0, moved);
+    [next[dragIndex], next[i]] = [next[i], next[dragIndex]];
     setRightOrder(next);
     setDragIndex(null);
     setDragOverIndex(null);
@@ -268,9 +268,19 @@ function MatchingCard({ options, answer, onComplete, submitted, submittedPairs }
 
 // ── Main Page ───────────────────────────────────────────────────────────────
 
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
+
+function resolveBadgeIcon(icon) {
+  if (!icon) return null;
+  if (icon.startsWith('http')) return icon;
+  return `${SUPABASE_URL}/storage/v1/object/public/badges/${icon}`;
+}
+
 export default function AdaptiveLearningPage() {
   const { courseId } = useParams();
   const navigate     = useNavigate();
+  const { addToast } = useToast();
+  const badgeNotified = useRef(false);
 
   const [question, setQuestion]    = useState(null);
   const [abilityScore, setAbility] = useState(0);
@@ -351,7 +361,35 @@ export default function AdaptiveLearningPage() {
       if (!res.ok) throw new Error('Failed to fetch question');
       const json = await res.json();
       const data = json.data;
+      const prevScore = abilityScore;
       setAbility(data.abilityScore);
+
+      // Badge unlock: score just crossed 80
+      if (data.abilityScore >= 80 && prevScore < 80 && !badgeNotified.current) {
+        badgeNotified.current = true;
+        try {
+          const badgeRes = await fetch(`${API_URL}/api/v1/badges/${encodeURIComponent(courseId)}`, {
+            headers: { Authorization: `Bearer ${session.access_token}` },
+          });
+          if (badgeRes.ok) {
+            const badgeJson = await badgeRes.json();
+            const badge = badgeJson.data;
+            addToast({
+              icon: resolveBadgeIcon(badge?.icon) || '🏅',
+              title: 'Badge Unlocked!',
+              description: badge?.badgeId || courseId,
+              duration: 6000,
+            });
+            // Update localStorage so homepage doesn't re-notify
+            try {
+              const seen = new Set(JSON.parse(localStorage.getItem('seen_badge_ids') || '[]'));
+              seen.add(courseId);
+              localStorage.setItem('seen_badge_ids', JSON.stringify([...seen]));
+            } catch {}
+          }
+        } catch {}
+      }
+
       if (!data.nextQuestion) { setMastered(true); setQuestion(null); }
       else { setQuestion(data.nextQuestion); setCount(c => c + 1); }
     } catch (err) {
