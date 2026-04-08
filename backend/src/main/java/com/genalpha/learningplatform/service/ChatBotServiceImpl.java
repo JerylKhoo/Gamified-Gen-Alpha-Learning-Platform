@@ -40,7 +40,7 @@ public class ChatBotServiceImpl implements ChatBotService {
 
     @Override
     public ChatBot create(ChatBot chatBot, UUID requesterId) {
-        chatBot.setChatId(null);
+        chatBot.setSessionId(UUID.randomUUID());
         chatBot.setUserId(requesterId);
         if (chatBot.getScore() == null)       chatBot.setScore(0);
         if (chatBot.getChatHistory() == null) chatBot.setChatHistory("{}");

@@ -6,6 +6,7 @@ import lombok.Setter;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 import java.util.UUID;
+import java.time.OffsetDateTime;
 
 /**
  * Represents a chatbot session associated with a user.
@@ -17,9 +18,8 @@ import java.util.UUID;
 public class ChatBot {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
-    @Column(name = "chat_id")
-    private UUID chatId;
+    @Column(name = "session_id")
+    private UUID sessionId;
 
     @Column(name = "user_id", nullable = false)
     private UUID userId;
@@ -30,4 +30,10 @@ public class ChatBot {
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "chat_history", columnDefinition = "jsonb")
     private String chatHistory;
+
+    @Column(name = "feedback")
+    private String feedback;
+
+    @Column(name = "created_at")
+    private OffsetDateTime createdAt;
 }
