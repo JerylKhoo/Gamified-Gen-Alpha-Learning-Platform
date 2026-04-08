@@ -275,7 +275,7 @@ function BadgesSection({ badges = [] }) {
               className="flex flex-col items-center gap-2 w-[72px] cursor-default"
               onMouseEnter={e => {
                 const rect = e.currentTarget.getBoundingClientRect();
-                setHoveredBadge({ badge: b, x: rect.left + rect.width / 2, y: rect.top });
+                setHoveredBadge({ badge: b, x: rect.left + rect.width / 2, y: rect.bottom });
               }}
               onMouseLeave={() => setHoveredBadge(null)}
             >
@@ -295,17 +295,17 @@ function BadgesSection({ badges = [] }) {
         {hoveredBadge && (
           <div
             className="pointer-events-none fixed z-[9999] flex flex-col items-center"
-            style={{ left: hoveredBadge.x, top: hoveredBadge.y - 8, transform: 'translate(-50%, -100%)' }}
+            style={{ left: hoveredBadge.x, top: hoveredBadge.y + 8, transform: 'translate(-50%, 0)' }}
           >
-            <div className="bg-[#1a1530] border border-[rgba(139,92,246,0.3)] rounded-[14px] p-4 shadow-[0_8px_32px_rgba(0,0,0,0.7)] flex flex-col items-center gap-3">
+            <div className="w-3 h-3 bg-[#1a1530] border-l border-t border-[rgba(139,92,246,0.3)] rotate-45 mb-[-6px]" />
+            <div className="bg-[#1a1530] border border-[rgba(139,92,246,0.3)] rounded-[12px] p-3 shadow-[0_8px_32px_rgba(0,0,0,0.7)] flex flex-col items-center gap-2">
               {hoveredBadge.badge.icon ? (
-                <img src={resolveBadgeIcon(hoveredBadge.badge.icon)} alt={hoveredBadge.badge.badgeId} className="w-48 h-48 object-contain drop-shadow-lg" />
+                <img src={resolveBadgeIcon(hoveredBadge.badge.icon)} alt={hoveredBadge.badge.badgeId} className="w-20 h-20 object-contain drop-shadow-lg" />
               ) : (
-                <div className="w-48 h-48 rounded-full bg-gradient-to-br from-[#7c3aed] to-[#a78bfa] flex items-center justify-center text-8xl">🏅</div>
+                <div className="w-20 h-20 rounded-full bg-gradient-to-br from-[#7c3aed] to-[#a78bfa] flex items-center justify-center text-4xl">🏅</div>
               )}
-              <span className="text-[0.85rem] text-[#e0d9ff] font-semibold text-center max-w-[160px]">{hoveredBadge.badge.badgeId}</span>
+              <span className="text-[0.78rem] text-[#e0d9ff] font-semibold text-center max-w-[100px]">{hoveredBadge.badge.badgeId}</span>
             </div>
-            <div className="w-3 h-3 bg-[#1a1530] border-r border-b border-[rgba(139,92,246,0.3)] rotate-45 -mt-[6px]" />
           </div>
         )}
         </>
