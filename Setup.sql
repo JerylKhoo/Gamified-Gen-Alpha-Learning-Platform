@@ -115,10 +115,12 @@ CREATE TABLE IF NOT EXISTS public.COURSE_PROGRESS (
 
 -- CHAT_BOT
 CREATE TABLE IF NOT EXISTS public.CHAT_BOT (
-    Chat_ID         UUID    PRIMARY KEY DEFAULT gen_random_uuid(),
+    Session_ID      UUID    PRIMARY KEY DEFAULT gen_random_uuid(),
     User_ID         UUID    NOT NULL REFERENCES public."USER"(User_ID) ON DELETE CASCADE,
     Score           INTEGER NOT NULL DEFAULT 0,
-    Chat_History    JSONB   NOT NULL DEFAULT '{}'
+    Chat_History    JSONB   NOT NULL DEFAULT '{}',
+    Feedback        TEXT,
+    Created_At      TIMESTAMPTZ DEFAULT NOW()
 );
 
 
@@ -392,6 +394,40 @@ CREATE TRIGGER on_course_progress_insert
     AFTER INSERT ON public.COURSE_PROGRESS
     FOR EACH ROW
     EXECUTE FUNCTION public.handle_course_progress_streak();
+
+
+-- ============================================================
+-- TRIGGER: Auto-promote User → Collaborator on grading score >= 80,000
+-- ============================================================
+CREATE OR REPLACE FUNCTION public.handle_chatbot_role_upgrade()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+BEGIN
+    -- Only proceed if score is 80% or above (80,000 out of 100,000)
+    IF NEW.Score IS NULL OR NEW.Score < 80000 THEN
+        RETURN NEW;
+    END IF;
+
+    -- Idempotent: only upgrade users with role = 'User'
+    -- This will NOT downgrade Admins or re-set existing Collaborators
+    UPDATE public."USER"
+    SET Role = 'Collaborator'
+    WHERE User_ID = NEW.User_ID
+      AND Role = 'User';
+
+    RETURN NEW;
+END;
+$$;
+
+
+DROP TRIGGER IF EXISTS on_chatbot_role_upgrade ON public.CHAT_BOT;
+
+CREATE TRIGGER on_chatbot_role_upgrade
+    AFTER INSERT OR UPDATE ON public.CHAT_BOT
+    FOR EACH ROW
+    EXECUTE FUNCTION public.handle_chatbot_role_upgrade();
 
 
 -- ============================================================
