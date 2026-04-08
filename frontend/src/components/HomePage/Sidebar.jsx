@@ -74,8 +74,8 @@ export default function Sidebar() {
 
   return (
     <aside
-      className={`min-h-screen bg-[rgba(13,11,30,0.95)] border-r border-[rgba(139,92,246,0.2)] flex flex-col py-8 px-4 gap-4 flex-shrink-0 overflow-hidden transition-[width] duration-[250ms] ease-in-out max-sm:px-2 ${
-        collapsed ? 'w-16' : 'w-[220px] max-sm:w-16'
+      className={`min-h-screen bg-[rgba(13,11,30,0.95)] border-r border-[rgba(139,92,246,0.2)] flex flex-col py-8 px-4 gap-4 flex-shrink-0 transition-[width] duration-[250ms] ease-in-out max-sm:px-2 ${
+        collapsed ? 'w-16 overflow-visible' : 'w-[220px] max-sm:w-16 overflow-hidden'
       }`}
     >
       {/* Header */}
@@ -127,7 +127,7 @@ export default function Sidebar() {
       {/* Bottom profile */}
       <div className="mt-auto relative" ref={profileRef}>
         {profileOpen && (
-          <div className="absolute bottom-[calc(100%+8px)] left-0 right-0 bg-[rgba(22,18,48,0.98)] border border-[rgba(139,92,246,0.25)] rounded-[10px] overflow-hidden shadow-[0_-4px_20px_rgba(0,0,0,0.4)]">
+          <div className={`absolute bg-[rgba(22,18,48,0.98)] border border-[rgba(139,92,246,0.25)] rounded-[10px] overflow-hidden shadow-[0_-4px_20px_rgba(0,0,0,0.4)] ${collapsed ? 'bottom-0 left-full ml-2 w-44' : 'bottom-[calc(100%+8px)] left-0 right-0'}`}>
             <button
               className="flex items-center gap-[0.6rem] w-full px-4 py-[0.7rem] border-none bg-transparent text-[#c0b8e8] text-[0.9rem] font-medium cursor-pointer transition-all text-left hover:bg-[rgba(139,92,246,0.12)] hover:text-[#f0eeff]"
               onClick={() => { navigate('/home'); setProfileOpen(false); }}
