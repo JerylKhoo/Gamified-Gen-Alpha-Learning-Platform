@@ -50,7 +50,8 @@ export default function Sidebar() {
   const [profileOpen, setProfileOpen] = useState(false);
   const profileRef = useRef(null);
   const navigate = useNavigate();
-  const { isAdmin } = useAuth();
+  const { isAdmin, session } = useAuth();
+  const username = session?.user?.user_metadata?.username || session?.user?.email?.split('@')[0] || 'Profile';
 
   useEffect(() => {
     function handleClickOutside(e) {
@@ -73,8 +74,8 @@ export default function Sidebar() {
 
   return (
     <aside
-      className={`min-h-screen bg-[rgba(13,11,30,0.95)] border-r border-[rgba(139,92,246,0.2)] flex flex-col py-8 px-4 gap-4 flex-shrink-0 overflow-hidden transition-[width] duration-[250ms] ease-in-out max-sm:px-2 ${
-        collapsed ? 'w-16' : 'w-[220px] max-sm:w-16'
+      className={`min-h-screen bg-[rgba(13,11,30,0.95)] border-r border-[rgba(139,92,246,0.2)] flex flex-col py-8 px-4 gap-4 flex-shrink-0 transition-[width] duration-[250ms] ease-in-out max-sm:px-2 ${
+        collapsed ? 'w-16 overflow-visible' : 'w-[220px] max-sm:w-16 overflow-hidden'
       }`}
     >
       {/* Header */}
@@ -126,7 +127,7 @@ export default function Sidebar() {
       {/* Bottom profile */}
       <div className="mt-auto relative" ref={profileRef}>
         {profileOpen && (
-          <div className="absolute bottom-[calc(100%+8px)] left-0 right-0 bg-[rgba(22,18,48,0.98)] border border-[rgba(139,92,246,0.25)] rounded-[10px] overflow-hidden shadow-[0_-4px_20px_rgba(0,0,0,0.4)]">
+          <div className={`absolute bg-[rgba(22,18,48,0.98)] border border-[rgba(139,92,246,0.25)] rounded-[10px] overflow-hidden shadow-[0_-4px_20px_rgba(0,0,0,0.4)] ${collapsed ? 'bottom-0 left-full ml-2 w-44' : 'bottom-[calc(100%+8px)] left-0 right-0'}`}>
             <button
               className="flex items-center gap-[0.6rem] w-full px-4 py-[0.7rem] border-none bg-transparent text-[#c0b8e8] text-[0.9rem] font-medium cursor-pointer transition-all text-left hover:bg-[rgba(139,92,246,0.12)] hover:text-[#f0eeff]"
               onClick={() => { navigate('/home'); setProfileOpen(false); }}
@@ -151,7 +152,7 @@ export default function Sidebar() {
           <span className="flex items-center flex-shrink-0">
             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><path fill="currentColor" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10s10-4.48 10-10S17.52 2 12 2m0 4c1.93 0 3.5 1.57 3.5 3.5S13.93 13 12 13s-3.5-1.57-3.5-3.5S10.07 6 12 6m0 14c-2.03 0-4.43-.82-6.14-2.88a9.95 9.95 0 0 1 12.28 0C16.43 19.18 14.03 20 12 20"/></svg>
           </span>
-          {!collapsed && <span className="max-sm:hidden">Profile</span>}
+          {!collapsed && <span className="max-sm:hidden">{username}</span>}
         </button>
       </div>
     </aside>

@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
 import { useToast } from '../context/ToastContext';
 import characterImg from '../assets/trippiTroppi.png';
+import LoadingScreen from '../components/LoadingScreen';
 
 const badgeScrollStyle = `
   .badge-scroll::-webkit-scrollbar { width: 4px; }
@@ -274,7 +275,7 @@ function BadgesSection({ badges = [] }) {
               className="flex flex-col items-center gap-2 w-[72px] cursor-default"
               onMouseEnter={e => {
                 const rect = e.currentTarget.getBoundingClientRect();
-                setHoveredBadge({ badge: b, x: rect.left + rect.width / 2, y: rect.top });
+                setHoveredBadge({ badge: b, x: rect.left + rect.width / 2, y: rect.bottom });
               }}
               onMouseLeave={() => setHoveredBadge(null)}
             >
@@ -294,17 +295,17 @@ function BadgesSection({ badges = [] }) {
         {hoveredBadge && (
           <div
             className="pointer-events-none fixed z-[9999] flex flex-col items-center"
-            style={{ left: hoveredBadge.x, top: hoveredBadge.y - 8, transform: 'translate(-50%, -100%)' }}
+            style={{ left: hoveredBadge.x, top: hoveredBadge.y + 8, transform: 'translate(-50%, 0)' }}
           >
-            <div className="bg-[#1a1530] border border-[rgba(139,92,246,0.3)] rounded-[14px] p-4 shadow-[0_8px_32px_rgba(0,0,0,0.7)] flex flex-col items-center gap-3">
+            <div className="w-3 h-3 bg-[#1a1530] border-l border-t border-[rgba(139,92,246,0.3)] rotate-45 mb-[-6px]" />
+            <div className="bg-[#1a1530] border border-[rgba(139,92,246,0.3)] rounded-[12px] p-3 shadow-[0_8px_32px_rgba(0,0,0,0.7)] flex flex-col items-center gap-2">
               {hoveredBadge.badge.icon ? (
-                <img src={resolveBadgeIcon(hoveredBadge.badge.icon)} alt={hoveredBadge.badge.badgeId} className="w-48 h-48 object-contain drop-shadow-lg" />
+                <img src={resolveBadgeIcon(hoveredBadge.badge.icon)} alt={hoveredBadge.badge.badgeId} className="w-20 h-20 object-contain drop-shadow-lg" />
               ) : (
-                <div className="w-48 h-48 rounded-full bg-gradient-to-br from-[#7c3aed] to-[#a78bfa] flex items-center justify-center text-8xl">🏅</div>
+                <div className="w-20 h-20 rounded-full bg-gradient-to-br from-[#7c3aed] to-[#a78bfa] flex items-center justify-center text-4xl">🏅</div>
               )}
-              <span className="text-[0.85rem] text-[#e0d9ff] font-semibold text-center max-w-[160px]">{hoveredBadge.badge.badgeId}</span>
+              <span className="text-[0.78rem] text-[#e0d9ff] font-semibold text-center max-w-[100px]">{hoveredBadge.badge.badgeId}</span>
             </div>
-            <div className="w-3 h-3 bg-[#1a1530] border-r border-b border-[rgba(139,92,246,0.3)] rotate-45 -mt-[6px]" />
           </div>
         )}
         </>
@@ -658,61 +659,7 @@ export default function HomePage() {
   const level = xpToLevel(xp);
   const rank  = levelToRank(level);
 
-  if (loading) {
-    return (
-      <main className="h-full flex flex-col items-center p-7 overflow-auto max-sm:p-4">
-        <style>{`
-          @keyframes shimmer {
-            0%   { background-position: -600px 0; }
-            100% { background-position:  600px 0; }
-          }
-          .sk {
-            background: linear-gradient(90deg, rgba(139,92,246,0.07) 25%, rgba(139,92,246,0.16) 50%, rgba(139,92,246,0.07) 75%);
-            background-size: 600px 100%;
-            animation: shimmer 1.6s infinite linear;
-            border-radius: 10px;
-          }
-        `}</style>
-        <div className="grid grid-cols-[auto_auto] gap-[1.1rem] w-fit min-w-[70%] max-lg:min-w-[90%] max-sm:w-full max-sm:flex max-sm:flex-col">
-
-          {/* Profile Card Skeleton */}
-          <div className={`${cardCls} col-start-1 row-start-1 flex items-center gap-7 min-w-[440px] max-lg:min-w-0`}>
-            <div className="flex-shrink-0 flex flex-col items-center gap-2">
-              <div className="sk w-[90px] h-[90px] rounded-full" />
-              <div className="sk w-16 h-6 rounded-lg" />
-            </div>
-            <div className="flex flex-col gap-3 flex-1 min-w-0">
-              <div className="sk w-24 h-3 rounded" />
-              <div className="sk w-52 h-10 rounded-lg" />
-              <div className="sk w-28 h-9 rounded-[10px]" />
-            </div>
-            <div className="flex flex-col gap-2 flex-shrink-0 ml-auto max-sm:hidden">
-              <div className="sk w-24 h-9 rounded-[20px]" />
-              <div className="sk w-24 h-9 rounded-[20px]" />
-              <div className="sk w-24 h-9 rounded-[20px]" />
-            </div>
-          </div>
-
-          {/* Ongoing Courses Card Skeleton */}
-          <div className={`${cardCls} col-start-2 row-start-1 flex flex-col min-w-[260px] max-lg:min-w-0`}>
-            <div className="sk w-28 h-3 rounded mb-4" />
-            <ul className="list-none m-0 p-0 flex flex-col gap-[0.55rem]">
-              {[140, 100, 120].map((w, i) => (
-                <li key={i} className="flex flex-col gap-[0.4rem] px-[0.9rem] py-[0.6rem] bg-[rgba(255,255,255,0.03)] border border-[rgba(139,92,246,0.12)] rounded-[10px]">
-                  <div className="flex items-center justify-between">
-                    <div className="sk h-3 rounded" style={{ width: w }} />
-                    <div className="sk w-8 h-3 rounded ml-3" />
-                  </div>
-                  <div className="sk h-[5px] rounded-full w-full" />
-                </li>
-              ))}
-            </ul>
-          </div>
-
-        </div>
-      </main>
-    );
-  }
+  if (loading) return <LoadingScreen />;
 
   return (
     <main className="h-full flex flex-col items-center p-7 overflow-auto max-sm:p-4">

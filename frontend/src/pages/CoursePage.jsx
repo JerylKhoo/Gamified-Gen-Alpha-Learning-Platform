@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
 import { useAuth } from '../context/AuthContext';
 import gsap from 'gsap';
+import LoadingScreenTung from '../components/LoadingScreenTung';
 
 const API_URL = import.meta.env.VITE_API_URL;
 
@@ -356,7 +357,7 @@ export default function CoursePage() {
         </button>
       </div>
 
-      {loading && <div className="flex items-center justify-center py-40"><p className="text-[#6b6490] text-lg font-semibold animate-pulse">Loading...</p></div>}
+      {loading && <LoadingScreenTung />}
       {error && <div className="flex items-center justify-center py-40 text-red-400"><p className="text-lg font-semibold">{error}</p></div>}
 
       {!loading && !error && (
