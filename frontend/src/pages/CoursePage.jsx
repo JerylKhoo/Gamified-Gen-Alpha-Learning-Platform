@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
 import { useAuth } from '../context/AuthContext';
 import gsap from 'gsap';
+import LoadingScreenTung from '../components/LoadingScreenTung';
 
 const API_URL = import.meta.env.VITE_API_URL;
 
@@ -154,6 +155,7 @@ export default function CoursePage() {
   const [course, setCourse]     = useState(null);
   const [modules, setModules]   = useState([]);
   const [completed, setCompleted] = useState(new Set());
+  const [quizStarted, setQuizStarted] = useState(false);
   const [loading, setLoading]   = useState(true);
   const [error, setError]       = useState('');
 
@@ -194,13 +196,26 @@ export default function CoursePage() {
     async function fetchProgress() {
       try {
         const { data: { session } } = await supabase.auth.getSession();
-        const res = await fetch(`${API_URL}/api/v1/course-progress/me/${encodeURIComponent(courseId)}`, {
-          headers: { Authorization: `Bearer ${session.access_token}` },
-        });
-        if (res.ok) {
-          const json = await res.json();
+        const headers = { Authorization: `Bearer ${session.access_token}` };
+        const [progressRes, quizRes] = await Promise.all([
+          fetch(`${API_URL}/api/v1/course-progress/me/${encodeURIComponent(courseId)}`, { headers }),
+          fetch(`${API_URL}/api/v1/quiz-progress/me/${encodeURIComponent(courseId)}`, { headers }),
+        ]);
+        if (progressRes.ok) {
+          const json = await progressRes.json();
           const data = json.data ?? [];
           setCompleted(new Set(data.map(p => p.moduleId)));
+        }
+        if (quizRes.ok) {
+          const quizJson = await quizRes.json();
+          const qp = quizJson.data;
+          if (qp) {
+            try {
+              const score = typeof qp.adaptiveScore === 'string' ? JSON.parse(qp.adaptiveScore) : qp.adaptiveScore;
+              // started if a record exists with theta < 3.0 (not yet mastered)
+              setQuizStarted(score?.theta !== undefined && score.theta < 3.0);
+            } catch { setQuizStarted(true); }
+          }
         }
       } catch { /* non-critical */ }
     }
@@ -342,7 +357,7 @@ export default function CoursePage() {
         </button>
       </div>
 
-      {loading && <div className="flex items-center justify-center py-40"><p className="text-[#6b6490] text-lg font-semibold animate-pulse">Loading...</p></div>}
+      {loading && <LoadingScreenTung />}
       {error && <div className="flex items-center justify-center py-40 text-red-400"><p className="text-lg font-semibold">{error}</p></div>}
 
       {!loading && !error && (
@@ -481,7 +496,7 @@ export default function CoursePage() {
                       onClick={() => navigate(`/learn/${encodeURIComponent(courseId)}`)}
                       className="w-full py-3 font-bold text-[0.95rem] rounded-xl border-none transition-all disabled:bg-[rgba(255,255,255,0.05)] disabled:text-[#4b5563] disabled:cursor-not-allowed enabled:bg-gradient-to-br enabled:from-[#8b5cf6] enabled:to-[#6d28d9] enabled:text-white enabled:cursor-pointer enabled:shadow-[0_4px_18px_rgba(139,92,246,0.4)] enabled:hover:opacity-90 enabled:hover:-translate-y-px"
                     >
-                      {allDone ? 'Start Quiz →' : `Start Quiz (${completedCount}/${modules.length} modules done)`}
+                      {allDone ? (quizStarted ? 'Continue Quiz →' : 'Start Quiz →') : `Start Quiz (${completedCount}/${modules.length} modules done)`}
                     </button>
                   </div>
                 )}

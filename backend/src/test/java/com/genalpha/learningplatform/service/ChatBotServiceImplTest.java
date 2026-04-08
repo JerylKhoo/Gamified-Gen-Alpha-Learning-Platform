@@ -44,7 +44,7 @@ class ChatBotServiceImplTest {
         userId = UUID.randomUUID();
         adminId = UUID.randomUUID();
         chatBot = new ChatBot();
-        chatBot.setChatId(UUID.randomUUID());
+        chatBot.setSessionId(UUID.randomUUID());
         chatBot.setUserId(userId);
         chatBot.setScore(0);
         chatBot.setChatHistory("{}");
@@ -71,7 +71,7 @@ class ChatBotServiceImplTest {
     @DisplayName("Should return chat when requester is the owner")
     void getById_returnsChat_whenOwner() {
         // Arrange
-        UUID chatId = chatBot.getChatId();
+        UUID chatId = chatBot.getSessionId();
         when(chatBotRepository.findById(chatId)).thenReturn(Optional.of(chatBot));
 
         // Act
@@ -79,7 +79,7 @@ class ChatBotServiceImplTest {
 
         // Assert
         assertNotNull(result);
-        assertEquals(chatId, result.getChatId());
+        assertEquals(chatId, result.getSessionId());
         verify(chatBotRepository, times(1)).findById(chatId);
     }
 
@@ -87,7 +87,7 @@ class ChatBotServiceImplTest {
     @DisplayName("Should return chat when requester is admin")
     void getById_returnsChat_whenAdmin() {
         // Arrange
-        UUID chatId = chatBot.getChatId();
+        UUID chatId = chatBot.getSessionId();
         when(chatBotRepository.findById(chatId)).thenReturn(Optional.of(chatBot));
         when(userService.isAdmin(adminId)).thenReturn(true);
 
@@ -96,7 +96,7 @@ class ChatBotServiceImplTest {
 
         // Assert
         assertNotNull(result);
-        assertEquals(chatId, result.getChatId());
+        assertEquals(chatId, result.getSessionId());
         verify(chatBotRepository, times(1)).findById(chatId);
         verify(userService, times(1)).isAdmin(adminId);
     }
@@ -105,7 +105,7 @@ class ChatBotServiceImplTest {
     @DisplayName("Should throw ResponseStatusException when requester is neither owner nor admin")
     void getById_throwsForbidden_whenNeitherOwnerNorAdmin() {
         // Arrange
-        UUID chatId = chatBot.getChatId();
+        UUID chatId = chatBot.getSessionId();
         UUID otherId = UUID.randomUUID();
         when(chatBotRepository.findById(chatId)).thenReturn(Optional.of(chatBot));
         when(userService.isAdmin(otherId)).thenReturn(false);
@@ -153,7 +153,7 @@ class ChatBotServiceImplTest {
     @DisplayName("Should update chat fields when requester is the owner")
     void update_updatesFields_whenOwner() {
         // Arrange
-        UUID chatId = chatBot.getChatId();
+        UUID chatId = chatBot.getSessionId();
         when(chatBotRepository.findById(chatId)).thenReturn(Optional.of(chatBot));
         ChatBot updates = new ChatBot();
         updates.setScore(10);
@@ -175,7 +175,7 @@ class ChatBotServiceImplTest {
     @DisplayName("Should delete chat session when requester is admin")
     void delete_deletesChat_whenAdmin() {
         // Arrange
-        UUID chatId = chatBot.getChatId();
+        UUID chatId = chatBot.getSessionId();
         when(userService.isAdmin(adminId)).thenReturn(true);
         when(chatBotRepository.findById(chatId)).thenReturn(Optional.of(chatBot));
 

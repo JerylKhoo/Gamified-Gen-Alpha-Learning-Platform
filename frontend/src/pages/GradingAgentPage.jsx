@@ -112,34 +112,13 @@ export default function GradingAgentPage() {
     try {
       const { data: { session } } = await supabase.auth.getSession();
 
-      const res = await fetch(`${API_URL}/api/v1/users/leaderboard`, {
+      const res = await fetch(`${API_URL}/api/v1/users/agent-leaderboard`, {
         headers: { Authorization: `Bearer ${session.access_token}` },
       });
-      if (!res.ok) throw new Error("Failed to load user info");
-      const usersInfo = await res.json();
+      if (!res.ok) throw new Error("Failed to load leaderboard");
+      const leaderboard = await res.json();
 
-      const { data: convData, error: dbError } = await supabase
-        .from('chat_bot')
-        .select('user_id, score');
-
-      if (dbError) throw dbError;
-
-      // score is stored as raw final_score out of 100,000
-      const maxScores = {};
-      convData?.forEach(c => {
-        const score = c.score ? parseFloat(c.score) : 0;
-        if (!maxScores[c.user_id] || score > maxScores[c.user_id]) {
-          maxScores[c.user_id] = score;
-        }
-      });
-
-      const merged = usersInfo.map(u => ({
-        ...u,
-        agentScore: maxScores[u.userId] || 0
-      })).filter(u => u.agentScore > 0)
-        .sort((a, b) => b.agentScore - a.agentScore);
-
-      setBoardUsers(merged);
+      setBoardUsers(leaderboard);
     } catch (e) {
       console.error(e);
     } finally {
