@@ -76,24 +76,20 @@ class StartRequest(BaseModel):
     session_id: str
 
 _INJECTION_PATTERNS = [
-    # Instruction override
     r"ignore\s+(all\s+)?(previous|prior|above|your|the)\s+instructions?",
     r"forget\s+(all\s+)?(previous|prior|above|your|the)\s+instructions?",
     r"disregard\s+(all\s+)?(previous|prior|above|your|the)\s+instructions?",
     r"override\s+(your\s+)?(previous\s+)?instructions?",
     r"(your\s+)?(new|real|actual|true)\s+instructions?\s+(are|is)\b",
-    # Role / persona hijacking
     r"\byou\s+are\s+now\s+(a|an|the|my)\b",
     r"\bact\s+as\s+(a|an|the|my)\b",
     r"\bpretend\s+(you\s+are|to\s+be)\s+(a|an|the|my)\b",
     r"\byou\s+must\s+(now\s+)?behave\s+as\b",
     r"\bfrom\s+now\s+on\s+(ignore|forget|act\s+as|you\s+are)\b",
-    # System prompt extraction
     r"\breveal\b.{0,30}\b(system\s+prompt|instructions?|rules?)\b",
     r"\brepeat\b.{0,30}\b(system\s+prompt|instructions?|rules?)\b",
     r"\bprint\b.{0,30}\b(system\s+prompt|instructions?|rules?)\b",
-    # Model-specific delimiter injection
-    r"<\|.{0,20}\|>",       # <|im_start|>, <|system|>, etc.
+    r"<\|.{0,20}\|>",
     r"\[INST\]",
     r"\[/INST\]",
     r"<<SYS>>",
