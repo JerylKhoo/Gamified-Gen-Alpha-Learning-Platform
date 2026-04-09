@@ -431,6 +431,33 @@ CREATE TRIGGER on_chatbot_role_upgrade
 
 
 -- ============================================================
+-- TRIGGER: Update USER points when CHAT_BOT row inserted
+-- ============================================================
+CREATE OR REPLACE FUNCTION public.handle_chatbot_points_update()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+BEGIN
+    UPDATE public."USER"
+    SET Points = NEW.Score
+    WHERE User_ID = NEW.User_ID
+      AND NEW.Score > Points;
+
+    RETURN NEW;
+END;
+$$;
+
+
+DROP TRIGGER IF EXISTS on_chatbot_points_update ON public.CHAT_BOT;
+
+CREATE TRIGGER on_chatbot_points_update
+    AFTER INSERT ON public.CHAT_BOT
+    FOR EACH ROW
+    EXECUTE FUNCTION public.handle_chatbot_points_update();
+
+
+-- ============================================================
 -- ROW LEVEL SECURITY
 -- ============================================================
 ALTER TABLE public."USER"           ENABLE ROW LEVEL SECURITY;
